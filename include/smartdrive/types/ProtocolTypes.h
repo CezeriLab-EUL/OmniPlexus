@@ -8,6 +8,12 @@
 #include <cstdint>
 #include "../core/Config.h"
 
+struct RawData {
+    uint8_t* data ;
+    size_t size;
+};
+
+
 #pragma pack(push, 1)
 
 struct Command {

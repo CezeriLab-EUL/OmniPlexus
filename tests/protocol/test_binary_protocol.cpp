@@ -57,7 +57,10 @@ int main() {
 
         // Deserialize
         Command receivedCmd;
-        bool success = protocol.deserializeCommand(serialized.data, serialized.size, receivedCmd);
+        RawData rawData;
+        rawData.data = serialized.data;
+        rawData.size = serialized.size;
+        bool success = protocol.deserializeCommand(rawData, receivedCmd);
 
         // Verify
         bool passed = success &&
@@ -96,7 +99,10 @@ int main() {
 
         // Deserialize
         DiscoveryResponse receivedResp;
-        bool success = protocol.deserializeDiscovery(serialized.data, serialized.size, receivedResp);
+        RawData rawData;
+        rawData.data = serialized.data;
+        rawData.size = serialized.size;
+        bool success = protocol.deserializeDiscovery(rawData, receivedResp);
 
         // Verify
         bool passed = success &&
@@ -129,7 +135,10 @@ int main() {
 
         // Deserialize
         TelemetryData receivedTelem;
-        bool success = protocol.deserializeTelemetry(serialized.data, serialized.size, receivedTelem);
+        RawData rawData;
+        rawData.data = serialized.data;
+        rawData.size = serialized.size;
+        bool success = protocol.deserializeTelemetry(rawData, receivedTelem);
 
         // Verify
         bool passed = success &&
@@ -160,7 +169,10 @@ int main() {
 
         // Deserialize
         ValueSource receivedValue;
-        bool success = protocol.deserializeValue(serialized.data, serialized.size, receivedValue);
+        RawData rawData;
+        rawData.data = serialized.data;
+        rawData.size = serialized.size;
+        bool success = protocol.deserializeValue(rawData, receivedValue);
 
         // Verify
         bool passed = success &&
@@ -192,7 +204,10 @@ int main() {
 
         // Try to deserialize
         Command receivedCmd;
-        bool success = protocol.deserializeCommand(serialized.data, serialized.size, receivedCmd);
+        RawData rawData;
+        rawData.data = serialized.data;
+        rawData.size = serialized.size;
+        bool success = protocol.deserializeCommand(rawData, receivedCmd);
 
         // Should fail due to CRC mismatch
         if (!success) {

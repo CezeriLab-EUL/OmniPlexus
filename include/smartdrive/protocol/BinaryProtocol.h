@@ -5,21 +5,30 @@
 #ifndef SMARTDRIVE_BINARYPROTOCOL_H
 #define SMARTDRIVE_BINARYPROTOCOL_H
 
+#include <array>
 #include <cstring>
 #include "../interfaces/IProtocol.h"
 #include "../types/ProtocolTypes.h"
 #include "../types/RobotData.h"
 #include "../utils/Logger.h"
+#include "../core/Config.h"
+
+#if DEBUG_ENABLED
+    #define BUFFER_ACCESS(buf, idx) (buf).at(idx)
+#else
+    #define BUFFER_ACCESS(buf, idx) (buf)[idx]
+#endif
+
 
 class BinaryProtocol : public IProtocol {
 private:
-    uint8_t frameBuffer[ProtocolConstants::MAX_FRAME_SIZE];
+    std::array<uint8_t, ProtocolConstants::MAX_FRAME_SIZE> frameBuffer;
 
-    static uint16_t calculateCRC16(const uint8_t *data, const size_t length) {
+    static uint16_t calculateCRC16(const RawData& rawData) {
         uint16_t crc = 0xFFFF;
 
-        for (size_t i = 0; i < length; ++i) {
-            crc ^= static_cast<uint16_t>(data[i]) << 8;
+        for (size_t i = 0; i < rawData.size; ++i) {
+            crc ^= static_cast<uint16_t>(rawData.data[i]) << 8;
 
             for (uint8_t bit = 0; bit < 8; ++bit) {
                 if (crc & 0x8000) {
@@ -42,7 +51,7 @@ private:
                (static_cast<uint16_t>(src[1]) << 8);
     }
 
-    static inline void  writeUint32LE(uint8_t *dest, const uint32_t value) {
+    static inline void writeUint32LE(uint8_t *dest, const uint32_t value) {
         dest[0] = value & 0xFF;
         dest[1] = (value >> 8) & 0xFF;
         dest[2] = (value >> 16) & 0xFF;
@@ -60,53 +69,57 @@ private:
                       const void *payload,
                       const size_t payloadSize
     ) {
-        if (payloadSize > ProtocolConstants::MAX_PAYLOAD_SIZE) {
-            LOG(LogLevel::ERROR, "Payload exceeds max size");
-            return 0;
-        }
-
         size_t offset = 0;
 
-        frameBuffer[offset++] = ProtocolConstants::encodeHeader(type);
+        BUFFER_ACCESS(frameBuffer, offset) = ProtocolConstants::encodeHeader(type);
+        offset++;
 
-        frameBuffer[offset++] = static_cast<uint8_t>(payloadSize);
+        BUFFER_ACCESS(frameBuffer, offset) = static_cast<uint8_t>(payloadSize);
+        offset++;
 
-        memcpy(&frameBuffer[offset], payload, payloadSize);
+        memcpy(&BUFFER_ACCESS(frameBuffer, offset), payload, payloadSize);
         offset += payloadSize;
 
-        const uint16_t crc = calculateCRC16(frameBuffer, offset);
-        writeUint16LE(&frameBuffer[offset], crc);
+        RawData rawData{};
+        rawData.data = frameBuffer.data();
+        rawData.size = offset;
+
+        const uint16_t crc = calculateCRC16(rawData);
+        writeUint16LE(&BUFFER_ACCESS(frameBuffer, offset), crc);
         offset += 2;
 
         return offset;
     }
 
-    bool parseFrame(const uint8_t *data,
-                    const size_t dataSize,
+    bool parseFrame(const RawData& rawData,
                     const ProtocolConstants::FrameType expectedType,
                     void *payloadOut,
                     const size_t expectedPayloadSize) const {
-        if (dataSize < ProtocolConstants::PROTOCOL_OVERHEAD) {
+        if (rawData.size < ProtocolConstants::PROTOCOL_OVERHEAD) {
             LOG(LogLevel::ERROR, "Frame too small");
             return false;
         }
 
         size_t offset = 0;
 
-        const uint8_t header = data[offset++];
+        const uint8_t header = rawData.data[offset];
+        offset++;
+
         if (!ProtocolConstants::isValidHeader(header)) {
             LOG(LogLevel::ERROR, "Invalid header");
             return false;
         }
 
-        if (const ProtocolConstants::FrameType frameType = ProtocolConstants::decodeType(header); frameType != expectedType) {
+        if (const ProtocolConstants::FrameType frameType = ProtocolConstants::decodeType(header);
+            frameType != expectedType) {
             LOG(LogLevel::ERROR, "Frame type mismatch");
             return false;
         }
 
-        const uint8_t payloadLength = data[offset++];
+        const uint8_t payloadLength = rawData.data[offset];
+        offset++;
 
-        if (dataSize != offset + payloadLength + 2) {//+2 is for the crc
+        if (rawData.size != offset + payloadLength + 2) {//+2 is for the crc
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -117,20 +130,23 @@ private:
         }
 
         const size_t crcOffset = offset + payloadLength;
-        const uint16_t receivedCrc = readUint16LE(&data[crcOffset]);
+        const uint16_t receivedCrc = readUint16LE(&rawData.data[crcOffset]);
 
-        if (const uint16_t calculatedCRC = calculateCRC16(data, crcOffset); receivedCrc != calculatedCRC) {
+        RawData data;
+        data.size = crcOffset;
+        data.data = rawData.data;
+        if (const uint16_t calculatedCRC = calculateCRC16(data); receivedCrc != calculatedCRC) {
             LOG(LogLevel::ERROR, "CRC mismatch");
             return false;
         }
 
-        memcpy(payloadOut, &data[offset], payloadLength);
+        memcpy(payloadOut, &rawData.data[offset], payloadLength);
         return true;
     }
 
 public:
     BinaryProtocol() {
-        memset(frameBuffer, 0, sizeof(frameBuffer));
+        frameBuffer.fill(0);
     }
 
     SerializedData serializeCommand(const Command &cmd) override {
@@ -138,13 +154,13 @@ public:
         result.size = buildFrame(ProtocolConstants::FrameType::COMMAND,
                                  &cmd, sizeof(Command));
         if (result.size > 0) {
-            memcpy(result.data, frameBuffer, result.size);
+            memcpy(result.data, frameBuffer.data(), result.size);
         }
         return result;
     }
 
-    bool deserializeCommand(const uint8_t *data, size_t size, Command &cmdOut) override {
-        return parseFrame(data, size,
+    bool deserializeCommand(const RawData& rawData, Command &cmdOut) override {
+        return parseFrame(rawData,
                           ProtocolConstants::FrameType::COMMAND,
                           &cmdOut,
                           sizeof(Command));
@@ -155,13 +171,13 @@ public:
         result.size = buildFrame(ProtocolConstants::FrameType::DISCOVERY,
                                  &resp, sizeof(DiscoveryResponse));
         if (result.size > 0) {
-            memcpy(result.data, frameBuffer, result.size);
+            memcpy(result.data, frameBuffer.data(), result.size);
         }
         return result;
     }
 
-    bool deserializeDiscovery(const uint8_t *data, size_t size, DiscoveryResponse &respOut) override {
-        return parseFrame(data, size,
+    bool deserializeDiscovery(const RawData& rawData, DiscoveryResponse &respOut) override {
+        return parseFrame(rawData,
                           ProtocolConstants::FrameType::DISCOVERY,
                           &respOut,
                           sizeof(DiscoveryResponse));
@@ -172,13 +188,13 @@ public:
         result.size = buildFrame(ProtocolConstants::FrameType::VALUE_SOURCE,
                                  &value, sizeof(ValueSource));
         if (result.size > 0) {
-            memcpy(result.data, frameBuffer, result.size);
+            memcpy(result.data, frameBuffer.data(), result.size);
         }
         return result;
     }
 
-    bool deserializeValue(const uint8_t *data, size_t size, ValueSource &valueOut) override {
-        return parseFrame(data, size,
+    bool deserializeValue(const RawData& rawData, ValueSource &valueOut) override {
+        return parseFrame(rawData,
                           ProtocolConstants::FrameType::VALUE_SOURCE,
                           &valueOut,
                           sizeof(ValueSource));
@@ -189,13 +205,13 @@ public:
         result.size = buildFrame(ProtocolConstants::FrameType::TELEMETRY,
                                  &telemetry, sizeof(TelemetryData));
         if (result.size > 0) {
-            memcpy(result.data, frameBuffer, result.size);
+            memcpy(result.data, frameBuffer.data(), result.size);
         }
         return result;
     }
 
-    bool deserializeTelemetry(const uint8_t *data, size_t size, TelemetryData &telemetryOut) override {
-        return parseFrame(data, size,
+    bool deserializeTelemetry(const RawData& rawData, TelemetryData &telemetryOut) override {
+        return parseFrame(rawData,
                           ProtocolConstants::FrameType::TELEMETRY,
                           &telemetryOut,
                           sizeof(TelemetryData));
@@ -205,20 +221,20 @@ public:
         SerializedData result;
         result.size = buildFrame(ProtocolConstants::FrameType::SETTINGS, &settings, sizeof(SettingsData));
         if (result.size > 0) {
-            memcpy(result.data, frameBuffer, result.size);
+            memcpy(result.data, frameBuffer.data(), result.size);
         }
         return result;
     }
 
-    bool deserializeSettings(const uint8_t *data, size_t size, SettingsData &settingsOut) override {
-        return parseFrame(data, size,
+    bool deserializeSettings(const RawData& rawData, SettingsData &settingsOut) override {
+        return parseFrame(rawData,
                           ProtocolConstants::FrameType::SETTINGS,
                           &settingsOut,
                           sizeof(SettingsData));
     }
 
-    uint16_t computeIntegrityCode(const uint8_t *data, size_t length) override {
-        return calculateCRC16(data, length);
+    uint16_t computeIntegrityCode(const RawData& rawData) override {
+        return calculateCRC16(rawData);
     }
 };
 

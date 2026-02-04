@@ -21,25 +21,25 @@ public:
 
     //Command Serialization & Deserialization
     virtual SerializedData serializeCommand(const Command& cmd) = 0;
-    virtual bool deserializeCommand(const uint8_t* data, size_t size, Command& cmdOut) = 0;
+    virtual bool deserializeCommand(const RawData& rawData, Command& cmdOut) = 0;
 
     //Discovery Serialization & Deserialization
     virtual SerializedData serializeDiscovery(const DiscoveryResponse& resp) = 0;
-    virtual bool deserializeDiscovery(const uint8_t* data, size_t size, DiscoveryResponse& respOut) = 0;
+    virtual bool deserializeDiscovery(const RawData& rawData, DiscoveryResponse& respOut) = 0;
 
     //ValueSource Serialization & Deserialization
     virtual SerializedData serializeValue(const ValueSource& value) = 0;
-    virtual bool deserializeValue(const uint8_t* data, size_t size, ValueSource& valueOut) = 0;
+    virtual bool deserializeValue(const RawData& rawData, ValueSource& valueOut) = 0;
 
     //Telemetry Serialization & Deserialization
     virtual SerializedData serializeTelemetry(const TelemetryData& telemetry) = 0;
-    virtual bool deserializeTelemetry(const uint8_t* data, size_t size, TelemetryData& telemetryOut) = 0;
+    virtual bool deserializeTelemetry(const RawData& rawData, TelemetryData& telemetryOut) = 0;
 
     //Settings Serialization & Deserialization
     virtual SerializedData serializeSettings(const SettingsData& settings) = 0;
-    virtual bool deserializeSettings(const uint8_t* data, size_t size, SettingsData& settingsOut) = 0;
+    virtual bool deserializeSettings(const RawData& rawData, SettingsData& settingsOut) = 0;
 
-    virtual uint16_t computeIntegrityCode(const uint8_t* data, size_t length) = 0;
+    virtual uint16_t computeIntegrityCode(const RawData& rawData) = 0;
 };
 
 #endif //SMARTDRIVE_IPROTOCOL_H
