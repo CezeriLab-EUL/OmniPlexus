@@ -10,7 +10,7 @@
 
 struct RawData {
     uint8_t* data ;
-    size_t size;
+    std::size_t size;
 };
 
 

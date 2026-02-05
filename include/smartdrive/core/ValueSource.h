@@ -10,7 +10,7 @@
 #include <type_traits>
 #include "../utils/Logger.h"
 
-enum class ValueType : uint16_t {
+enum class ValueType : uint8_t {
     EMPTY = 0,
     INT32 = 1,
     UINT16 = 2,
@@ -97,5 +97,5 @@ public:
 };
 #pragma pack(pop)
 
-static_assert(sizeof(ValueSource) == 18, "ValueSource must be exactly 18 bytes");
+static_assert(sizeof(ValueSource) == 17, "ValueSource must be exactly 17 bytes");
 #endif //SMARTDRIVE_VALUESOURCE_H
