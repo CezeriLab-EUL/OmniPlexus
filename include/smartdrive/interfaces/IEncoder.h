@@ -2,8 +2,8 @@
 // Created by dunamis on 29/01/2026.
 //
 
-#ifndef SMARTDRIVE_IPROTOCOL_H
-#define SMARTDRIVE_IPROTOCOL_H
+#ifndef SMARTDRIVE_IENCODER_H
+#define SMARTDRIVE_IENCODER_H
 
 #include <cstdint>
 #include "../constants/ProtocolConstants.h"
@@ -15,9 +15,9 @@ struct SerializedData {
     size_t size = 0;
 };
 
-class IProtocol {
+class IEncoder {
 public:
-    virtual ~IProtocol() = default;
+    virtual ~IEncoder() = default;
 
     //Command Serialization & Deserialization
     virtual SerializedData serializeCommand(const Command& cmd) = 0;
@@ -42,4 +42,4 @@ public:
     virtual uint16_t computeIntegrityCode(const RawData& rawData) = 0;
 };
 
-#endif //SMARTDRIVE_IPROTOCOL_H
+#endif //SMARTDRIVE_IENCODER_H

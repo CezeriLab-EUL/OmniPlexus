@@ -2,12 +2,12 @@
 // Created by dunamis on 28/01/2026.
 //
 
-#ifndef SMARTDRIVE_BINARYPROTOCOL_H
-#define SMARTDRIVE_BINARYPROTOCOL_H
+#ifndef SMARTDRIVE_BINARYENCODER_H
+#define SMARTDRIVE_BINARYENCODER_H
 
 #include <array>
 #include <cstring>
-#include "../interfaces/IProtocol.h"
+#include "../interfaces/IEncoder.h"
 #include "../types/ProtocolTypes.h"
 #include "../types/RobotData.h"
 #include "../utils/Logger.h"
@@ -20,7 +20,7 @@
 #endif
 
 
-class BinaryProtocol : public IProtocol {
+class BinaryEncoder : public IEncoder {
 private:
     std::array<uint8_t, ProtocolConstants::MAX_FRAME_SIZE> frameBuffer;
 
@@ -145,7 +145,7 @@ private:
     }
 
 public:
-    BinaryProtocol() {
+    BinaryEncoder() {
         frameBuffer.fill(0);
     }
 
@@ -238,4 +238,4 @@ public:
     }
 };
 
-#endif //SMARTDRIVE_BINARYPROTOCOL_H
+#endif //SMARTDRIVE_BINARYENCODER_H

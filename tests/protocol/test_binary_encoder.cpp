@@ -1,6 +1,6 @@
 #include <iostream>
 #include <iomanip>
-#include "smartdrive/protocol/BinaryProtocol.h"
+#include "smartdrive/protocol/BinaryEncoder.h"
 #include "smartdrive/utils/Logger.h"
 
 // Simple logger callback for console output
@@ -32,7 +32,7 @@ int main() {
 
     std::cout << "=== SmartDrive BinaryProtocol Test Suite ===" << std::endl;
 
-    BinaryProtocol protocol;
+    BinaryEncoder encoder;
     int testsPassed = 0;
     int testsFailed = 0;
 
@@ -52,7 +52,7 @@ int main() {
         originalCmd.v = 400;
 
         // Serialize
-        SerializedData serialized = protocol.serializeCommand(originalCmd);
+        SerializedData serialized = encoder.serializeCommand(originalCmd);
         printHex(serialized.data, serialized.size, "Serialized Command");
 
         // Deserialize
@@ -60,7 +60,7 @@ int main() {
         RawData rawData;
         rawData.data = serialized.data;
         rawData.size = serialized.size;
-        bool success = protocol.deserializeCommand(rawData, receivedCmd);
+        bool success = encoder.deserializeCommand(rawData, receivedCmd);
 
         // Verify
         bool passed = success &&
@@ -94,7 +94,7 @@ int main() {
         originalResp.modules[2] = {0x0003, 0x03, 0x0055};
 
         // Serialize
-        SerializedData serialized = protocol.serializeDiscovery(originalResp);
+        SerializedData serialized = encoder.serializeDiscovery(originalResp);
         printHex(serialized.data, serialized.size, "Serialized Discovery");
 
         // Deserialize
@@ -102,7 +102,7 @@ int main() {
         RawData rawData;
         rawData.data = serialized.data;
         rawData.size = serialized.size;
-        bool success = protocol.deserializeDiscovery(rawData, receivedResp);
+        bool success = encoder.deserializeDiscovery(rawData, receivedResp);
 
         // Verify
         bool passed = success &&
@@ -130,7 +130,7 @@ int main() {
         originalTelem.pack<float>(42.5f);
 
         // Serialize
-        SerializedData serialized = protocol.serializeTelemetry(originalTelem);
+        SerializedData serialized = encoder.serializeTelemetry(originalTelem);
         printHex(serialized.data, serialized.size, "Serialized Telemetry");
 
         // Deserialize
@@ -138,7 +138,7 @@ int main() {
         RawData rawData;
         rawData.data = serialized.data;
         rawData.size = serialized.size;
-        bool success = protocol.deserializeTelemetry(rawData, receivedTelem);
+        bool success = encoder.deserializeTelemetry(rawData, receivedTelem);
 
         // Verify
         bool passed = success &&
@@ -164,7 +164,7 @@ int main() {
         originalValue.packString("Hello Robot");
 
         // Serialize
-        SerializedData serialized = protocol.serializeValue(originalValue);
+        SerializedData serialized = encoder.serializeValue(originalValue);
         printHex(serialized.data, serialized.size, "Serialized ValueSource");
 
         // Deserialize
@@ -172,7 +172,7 @@ int main() {
         RawData rawData;
         rawData.data = serialized.data;
         rawData.size = serialized.size;
-        bool success = protocol.deserializeValue(rawData, receivedValue);
+        bool success = encoder.deserializeValue(rawData, receivedValue);
 
         // Verify
         bool passed = success &&
@@ -197,7 +197,7 @@ int main() {
         originalCmd.w = 10.0f;
 
         // Serialize
-        SerializedData serialized = protocol.serializeCommand(originalCmd);
+        SerializedData serialized = encoder.serializeCommand(originalCmd);
 
         // Corrupt one byte in the payload
         serialized.data[5] ^= 0xFF;
@@ -207,7 +207,7 @@ int main() {
         RawData rawData;
         rawData.data = serialized.data;
         rawData.size = serialized.size;
-        bool success = protocol.deserializeCommand(rawData, receivedCmd);
+        bool success = encoder.deserializeCommand(rawData, receivedCmd);
 
         // Should fail due to CRC mismatch
         if (!success) {
@@ -226,7 +226,7 @@ int main() {
         Command cmd;
         cmd.commandType = 0xABCD;
 
-        SerializedData serialized = protocol.serializeCommand(cmd);
+        SerializedData serialized = encoder.serializeCommand(cmd);
 
         // Expected size: Header(1) + Length(1) + Command(26) + CRC(2) = 30 bytes
         size_t expectedSize = 30;
@@ -246,7 +246,7 @@ int main() {
         std::cout << "\n--- Test 7: Header Byte Encoding ---" << std::endl;
 
         Command cmd;
-        SerializedData serialized = protocol.serializeCommand(cmd);
+        SerializedData serialized = encoder.serializeCommand(cmd);
 
         // First byte should be 0x02 for COMMAND (type=0, STX=0x02)
         uint8_t expectedHeader = 0x02;
