@@ -12,21 +12,25 @@
 
 enum class ValueType : uint8_t {
     EMPTY = 0x0,
-    INT8 = 0x1,
-    INT16 = 0x2,
-    INT32 = 0x3,
-    UINT8 = 0X4,
-    UINT16 = 0x5,
+    UINT8 = 0X1,
+    INT8 = 0x2,
+    FLOAT = 0x3,
+    UINT16 = 0x4,
+    INT16 = 0x5,
     UINT32 = 0x6,
-    FLOAT = 0x7,
+    INT32 = 0x7,
     STRING = 0x8
 };
 
 constexpr const char *typeToString(const ValueType t) {
     switch (t) {
-        case ValueType::INT32: return "int32";
-        case ValueType::UINT16: return "uint16";
+        case ValueType::UINT8: return "uint8";
+        case ValueType::INT8: return "int8";
         case ValueType::FLOAT: return "float";
+        case ValueType::UINT16: return "uint16";
+        case ValueType::INT16: return "int16";
+        case ValueType::UINT32: return "uint32";
+        case ValueType::INT32: return "int32";
         case ValueType::STRING: return "string";
         default: return "empty";
     }
