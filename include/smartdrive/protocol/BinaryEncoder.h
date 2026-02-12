@@ -60,15 +60,15 @@ private:
         return result;
     };
 
-    static uint16_t calculateCRC16(const RawData &rawData) {
-        uint16_t crc = 0xFFFF;
+    static uint8_t calculateCRC8(const RawData &rawData) {
+        uint8_t crc = 0x00;
 
         for (size_t i = 0; i < rawData.size; ++i) {
-            crc ^= static_cast<uint16_t>(rawData.data[i]) << 8;
+            crc ^= rawData.data[i];
 
             for (uint8_t bit = 0; bit < 8; ++bit) {
-                if (crc & 0x8000) {
-                    crc = (crc << 1) ^ 0x1021;
+                if (crc & 0x80) {
+                    crc = (crc << 1) ^ 0x07;  // CRC8-CCITT polynomial
                 } else {
                     crc <<= 1;
                 }
@@ -78,15 +78,15 @@ private:
     }
 
     bool verifyCRC(const RawData &rawData, size_t crcOffset) const {
-        const uint16_t receivedCrc = readUint16LE(&rawData.data[crcOffset]);
+        const uint8_t receivedCrc = rawData.data[crcOffset];
 
         const RawData crcData = {rawData.data, crcOffset};
 
-        if (const uint16_t calculatedCRC = calculateCRC16(crcData);
+        if (const uint8_t calculatedCRC = calculateCRC8(crcData);
             receivedCrc != calculatedCRC) {
             LOG(LogLevel::ERROR, "CRC mismatch");
             return false;
-        }
+            }
 
         return true;
     }
@@ -134,9 +134,9 @@ private:
         rawData.data = frameBuffer.data();
         rawData.size = offset;
 
-        const uint16_t crc = calculateCRC16(rawData);
-        writeUint16LE(&BUFFER_ACCESS(frameBuffer, offset), crc);
-        offset += 2;
+        const uint8_t crc = calculateCRC8(rawData);
+        BUFFER_ACCESS(frameBuffer, offset) = crc;
+        offset += 1;
 
         return offset;
     }
@@ -169,7 +169,7 @@ private:
         const uint8_t payloadLength = rawData.data[offset];
         offset++;
 
-        if (rawData.size != offset + payloadLength + 2) {//+2 is for the crc
+        if (rawData.size != offset + payloadLength + ProtocolConstants::CRC_OFFSET) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -180,12 +180,12 @@ private:
         }
 
         const size_t crcOffset = offset + payloadLength;
-        const uint16_t receivedCrc = readUint16LE(&rawData.data[crcOffset]);
+        const uint8_t receivedCrc = rawData.data[crcOffset];
 
         RawData data;
         data.size = crcOffset;
         data.data = rawData.data;
-        if (const uint16_t calculatedCRC = calculateCRC16(data); receivedCrc != calculatedCRC) {
+        if (const uint8_t calculatedCRC = calculateCRC8(data); receivedCrc != calculatedCRC) {
             LOG(LogLevel::ERROR, "CRC mismatch");
             return false;
         }
@@ -240,7 +240,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + 2) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -287,7 +287,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + 2) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -349,7 +349,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + 2) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -419,7 +419,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + 2) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -452,8 +452,8 @@ public:
         return true;
     }
 
-    uint16_t computeIntegrityCode(const RawData &rawData) override {
-        return calculateCRC16(rawData);
+    uint8_t computeIntegrityCode(const RawData &rawData) override {
+        return calculateCRC8(rawData);
     }
 };
 

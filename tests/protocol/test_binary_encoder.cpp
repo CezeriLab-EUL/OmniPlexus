@@ -228,8 +228,8 @@ int main() {
 
         SerializedData serialized = encoder.serializeCommand(cmd);
 
-        // Expected size: Header(1) + Length(1) + Command(26) + CRC(2) = 30 bytes
-        size_t expectedSize = 30;
+        // Expected size: Header(1) + Length(1) + Command(26) + CRC(1) = 29 bytes
+        size_t expectedSize = 29;
 
         if (serialized.size == expectedSize) {
             std::cout << "✓ PASSED: Frame size is " << expectedSize << " bytes" << std::endl;
