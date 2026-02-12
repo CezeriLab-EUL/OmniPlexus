@@ -11,10 +11,11 @@ namespace ProtocolConstants {
     constexpr uint8_t STX_PATTERN = 0x02;
     constexpr uint8_t STX_MASK = 0x1F; //Lower 5 bits
     constexpr uint8_t TYPE_SHIFT = 5; //Upper 3 bits for type
+    constexpr uint8_t CRC_OFFSET = 1; //1 byte is used for CRC
 
     constexpr uint16_t MAX_PAYLOAD_SIZE = 64;
 
-    constexpr uint16_t PROTOCOL_OVERHEAD = 4; //STX+TYPE(1) + LENGTH(1) + CRC(2)
+    constexpr uint16_t PROTOCOL_OVERHEAD = 3; //STX+TYPE(1) + LENGTH(1) + CRC(1)
     constexpr uint16_t MAX_FRAME_SIZE = MAX_PAYLOAD_SIZE + PROTOCOL_OVERHEAD;
 
     enum class FrameType : uint8_t {

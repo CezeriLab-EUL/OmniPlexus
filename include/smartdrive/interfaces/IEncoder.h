@@ -39,7 +39,7 @@ public:
     virtual SerializedData serializeSettings(const SettingsData& settings) = 0;
     virtual bool deserializeSettings(const RawData& rawData, SettingsData& settingsOut) = 0;
 
-    virtual uint16_t computeIntegrityCode(const RawData& rawData) = 0;
+    virtual uint8_t computeIntegrityCode(const RawData& rawData) = 0;
 };
 
 #endif //SMARTDRIVE_IENCODER_H
