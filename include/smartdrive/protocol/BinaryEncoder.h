@@ -136,7 +136,7 @@ private:
 
         const uint8_t crc = calculateCRC8(rawData);
         BUFFER_ACCESS(frameBuffer, offset) = crc;
-        offset += 1;
+        offset += ProtocolConstants::CRC_OFFSET;
 
         return offset;
     }
@@ -264,7 +264,7 @@ public:
     }
 
     SerializedData serializeValue(const ValueSource &value) override {
-        const size_t actualSize = 1 + value.getDataSize(); //+1 because of the typeAndSize byte
+        const size_t actualSize = ProtocolConstants::TYPE_AND_SIZE_BYTE + value.getDataSize();
 
         uint8_t compactPayload[actualSize];
         compactPayload[0] = value.getTypeAndSize();
@@ -282,7 +282,7 @@ public:
         auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::VALUE_SOURCE);
         if (!frameInfo.valid){ return false;}
 
-        if (frameInfo.payloadLength < 1) {
+        if (frameInfo.payloadLength < ProtocolConstants::TYPE_AND_SIZE_BYTE) {
             LOG(LogLevel::ERROR, "ValueSource payload too small");
             return false;
         }
@@ -300,7 +300,7 @@ public:
         temp.setTypeAndSizeRaw(typeAndSize);
         const size_t expectedSize = temp.getDataSize();
 
-        if (frameInfo.payloadLength != 1 + expectedSize) {
+        if (frameInfo.payloadLength != ProtocolConstants::TYPE_AND_SIZE_BYTE + expectedSize) {
             LOG(LogLevel::ERROR, "Payload size mismatch");
             return false;
         }
@@ -315,11 +315,11 @@ public:
     }
 
     SerializedData serializeTelemetry(const TelemetryData &telemetry) override {
-       const size_t valueSize = 1 + telemetry.getDataSize(); //1 is for the typeAndSize byte in ValueSource
+        const size_t valueSize = ProtocolConstants::TYPE_AND_SIZE_BYTE + telemetry.getDataSize();
         const size_t totalSize = sizeof(uint16_t) + sizeof(uint32_t) + valueSize;
 
         uint8_t payload[totalSize];
-       size_t offset = 0;
+        size_t offset = 0;
 
         writeUint16LE(&payload[offset], telemetry.sourceID);
         offset += sizeof(uint16_t);
@@ -344,7 +344,7 @@ public:
         auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::TELEMETRY);
         if (!frameInfo.valid){return false;}
 
-        if (frameInfo.payloadLength < 7) {
+        if (frameInfo.payloadLength < sizeof(uint16_t) + sizeof(uint32_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE) {
             LOG(LogLevel::ERROR, "Telemetry payload too small");
             return false;
         }
@@ -368,7 +368,7 @@ public:
         temp.setTypeAndSizeRaw(typeAndSize);
         const size_t expectedSize = temp.getDataSize();
 
-        if (frameInfo.payloadLength != sizeof(uint16_t) + sizeof(uint32_t) + 1 + expectedSize) {
+        if (frameInfo.payloadLength != sizeof(uint16_t) + sizeof(uint32_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE + expectedSize) {
             LOG(LogLevel::ERROR, "Payload size mismatch");
             return false;
         }
@@ -388,7 +388,7 @@ public:
     }
 
     SerializedData serializeSettings(const SettingsData &settings) override {
-        const size_t valueSize = 1 + settings.getDataSize(); //1 is for the typeAndSize byte
+        const size_t valueSize = ProtocolConstants::TYPE_AND_SIZE_BYTE + settings.getDataSize();
         const size_t totalSize = sizeof(uint16_t) + valueSize;
 
         uint8_t payload[totalSize];
@@ -414,7 +414,7 @@ public:
         auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::SETTINGS);
         if (!frameInfo.valid){return false;}
 
-        if (frameInfo.payloadLength < 3) {
+        if (frameInfo.payloadLength < sizeof(uint16_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE) {
             LOG(LogLevel::ERROR, "Settings payload too small");
             return false;
         }
@@ -435,7 +435,7 @@ public:
         temp.setTypeAndSizeRaw(typeAndSize);
         const size_t expectedSize = temp.getDataSize();
 
-        if (frameInfo.payloadLength != sizeof(uint16_t) + 1 + expectedSize) {
+        if (frameInfo.payloadLength != sizeof(uint16_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE + expectedSize) {
             LOG(LogLevel::ERROR, "Payload size mismatch");
             return false;
         }
