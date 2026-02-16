@@ -48,6 +48,110 @@ protected:
 public:
     ValueSource() = default;
 
+    ValueSource(uint8_t value) {
+        pack(value);
+    }
+
+    ValueSource(int8_t value) {
+        pack(value);
+    }
+
+    ValueSource(uint16_t value) {
+        pack(value);
+    }
+
+    ValueSource(int16_t value) {
+        pack(value);
+    }
+
+    ValueSource(uint32_t value) {
+        pack(value);
+    }
+
+    ValueSource(int32_t value) {
+        pack(value);
+    }
+
+    ValueSource(float value) {
+        pack(value);
+    }
+
+    ValueSource(const char *value) {
+        packString(value);
+    }
+
+    ValueSource& operator=(uint8_t value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(int8_t value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(uint16_t value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(int16_t value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(uint32_t value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(int32_t value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(float value) {
+        pack(value);
+        return *this;
+    }
+
+    ValueSource& operator=(const char *value) {
+        packString(value);
+        return *this;
+    }
+
+    operator uint8_t() const {
+        return unpack<uint8_t>();
+    }
+
+    operator int8_t() const {
+        return unpack<int8_t>();
+    }
+
+    operator uint16_t() const {
+        return unpack<uint16_t>();
+    }
+
+    operator int16_t() const {
+        return unpack<int16_t>();
+    }
+
+    operator uint32_t() const {
+        return unpack<uint32_t>();
+    }
+
+    operator int32_t() const {
+        return unpack<int32_t>();
+    }
+
+    operator float() const {
+        return unpack<float>();
+    }
+
+    operator const char *() const {
+        return unpackString();
+    }
+
     constexpr void setTypeAndSize(ValueType type, uint8_t sizeValue)
     {
         typeAndSize = (static_cast<uint8_t>(type) << 4) | (sizeValue & 0x0F);

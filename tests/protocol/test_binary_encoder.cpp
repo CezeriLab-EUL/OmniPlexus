@@ -145,7 +145,7 @@ int main() {
                       receivedTelem.sourceID == originalTelem.sourceID &&
                       receivedTelem.timestamp == originalTelem.timestamp &&
                       receivedTelem.getType() == ValueType::FLOAT &&
-                      receivedTelem.unpack<float>() == 42.5f;
+                      static_cast<float>(receivedTelem) == 42.5f;
 
         if (passed) {
             std::cout << "✓ PASSED: Telemetry data matches" << std::endl;
@@ -160,8 +160,7 @@ int main() {
     {
         std::cout << "\n--- Test 4: ValueSource String Round-Trip ---" << std::endl;
 
-        ValueSource originalValue;
-        originalValue.packString("Hello Robot");
+        ValueSource originalValue = "Hello Robot";
 
         // Serialize
         SerializedData serialized = encoder.serializeValue(originalValue);
@@ -177,7 +176,7 @@ int main() {
         // Verify
         bool passed = success &&
                       receivedValue.getType() == ValueType::STRING &&
-                      std::strcmp(receivedValue.unpackString(), "Hello Robot") == 0;
+                      std::strcmp(receivedValue, "Hello Robot") == 0;
 
         if (passed) {
             std::cout << "✓ PASSED: String value matches" << std::endl;
