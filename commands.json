@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "commands": [
+    {
+      "id": 1,
+      "name": "STOP",
+      "description": "Emergency stop",
+      "params": []
+    },
+    {
+      "id": 2,
+      "name": "MOVE",
+      "description": "Move to coordinates",
+      "params": [
+        {
+          "name": "distance",
+          "type": "FLOAT",
+          "required": true,
+          "description": "Distance coordinate"
+        }
+      ]
+    }
+  ]
+}
