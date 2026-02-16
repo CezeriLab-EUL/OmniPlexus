@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include "../core/Config.h"
+#include "../core/ValueSource.h"
 
 struct RawData {
     uint8_t* data ;
@@ -18,14 +19,7 @@ struct RawData {
 
 struct Command {
     uint16_t commandType;
-    float w;
-    float x;
-    float  y;
-    float  z;
-    int16_t s;
-    int16_t t;
-    int16_t u;
-    int16_t v;
+    ValueSource params[3];
 };
 
 struct ModuleInfo {
@@ -41,7 +35,7 @@ struct DiscoveryResponse {
 
 #pragma pack(pop)
 
-static_assert(sizeof(Command) == 26, "Command must be exactly 26 bytes");
+static_assert(sizeof(Command) == 53, "Command must be exactly 26 bytes");
 static_assert(sizeof(ModuleInfo) == 7, "ModuleInfo must be exactly 7 bytes");
 static_assert(sizeof(DiscoveryResponse) == ((7*MAX_NUM_MODULES)+1), "DiscoveryResponse has invalid size");
 
