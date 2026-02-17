@@ -1,10 +1,16 @@
-add_executable(SmartDrive_Test
-        tests/protocol/test_binary_encoder.cpp
-        include/smartdrive/protocol/BinaryEncoder.h
-        include/smartdrive/utils/Logger.h
-        include/smartdrive/generated/CommandTypes.h
-        include/smartdrive/generated/CommandPacker.h
-        include/smartdrive/registry/CommandRegistry.h
+add_library(SmartDrive
+        src/generated/CommandRegistry.cpp
 )
 
-target_include_directories(SmartDrive_Test PRIVATE include)
+target_include_directories(SmartDrive PUBLIC include)
+
+add_executable(SmartDrive_Test_BinaryEncoder
+        tests/protocol/test_binary_encoder.cpp
+)
+
+add_executable(SmartDrive_Test_Command
+        tests/test_command_registry.cpp
+)
+
+target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
+target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)

@@ -12,6 +12,7 @@
 #include "../types/RobotData.h"
 #include "../utils/Logger.h"
 #include "../core/Config.h"
+#include "../generated/CommandPacker.h"
 
 #if DEBUG_ENABLED
 #define BUFFER_ACCESS(buf, idx) (buf).at(idx)
@@ -141,68 +142,23 @@ private:
         return offset;
     }
 
-    bool parseFrame(const RawData &rawData,
-                    const ProtocolConstants::FrameType expectedType,
-                    void *payloadOut,
-                    const size_t expectedPayloadSize) const {
-        if (rawData.size < ProtocolConstants::PROTOCOL_OVERHEAD) {
-            LOG(LogLevel::ERROR, "Frame too small");
-            return false;
-        }
-
-        size_t offset = 0;
-
-        const uint8_t header = rawData.data[offset];
-        offset++;
-
-        if (!ProtocolConstants::isValidHeader(header)) {
-            LOG(LogLevel::ERROR, "Invalid header");
-            return false;
-        }
-
-        if (const ProtocolConstants::FrameType frameType = ProtocolConstants::decodeType(header);
-            frameType != expectedType) {
-            LOG(LogLevel::ERROR, "Frame type mismatch");
-            return false;
-        }
-
-        const uint8_t payloadLength = rawData.data[offset];
-        offset++;
-
-        if (rawData.size != offset + payloadLength + ProtocolConstants::CRC_OFFSET) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
-            return false;
-        }
-
-        if (payloadLength != expectedPayloadSize) {
-            LOG(LogLevel::ERROR, "Payload size mismatch");
-            return false;
-        }
-
-        const size_t crcOffset = offset + payloadLength;
-        const uint8_t receivedCrc = rawData.data[crcOffset];
-
-        RawData data;
-        data.size = crcOffset;
-        data.data = rawData.data;
-        if (const uint8_t calculatedCRC = calculateCRC8(data); receivedCrc != calculatedCRC) {
-            LOG(LogLevel::ERROR, "CRC mismatch");
-            return false;
-        }
-
-        memcpy(payloadOut, &rawData.data[offset], payloadLength);
-        return true;
-    }
-
 public:
     BinaryEncoder() {
         frameBuffer.fill(0);
     }
 
     SerializedData serializeCommand(const Command &cmd) override {
+        uint8_t payload[ProtocolConstants::MAX_FRAME_SIZE];
+        size_t payloadSize = CommandPacker::pack(cmd, payload);
+
+        if (payloadSize == 0) {
+            LOG(LogLevel::ERROR, "Failed to pack command");
+            return SerializedData{};
+        }
+
         SerializedData result;
         result.size = buildFrame(ProtocolConstants::FrameType::COMMAND,
-                                 &cmd, sizeof(Command));
+                                 payload, payloadSize);
         if (result.size > 0) {
             memcpy(result.data, frameBuffer.data(), result.size);
         }
@@ -210,10 +166,18 @@ public:
     }
 
     bool deserializeCommand(const RawData &rawData, Command &cmdOut) override {
-        return parseFrame(rawData,
-                          ProtocolConstants::FrameType::COMMAND,
-                          &cmdOut,
-                          sizeof(Command));
+       auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::COMMAND);
+        if (!frameInfo.valid){return false;}
+
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
+            LOG(LogLevel::ERROR, "Invalid frame size");
+            return false;
+        }
+
+        size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
+        if (!verifyCRC(rawData, crcOffset)) {return false;}
+
+        return CommandPacker::unpack(&rawData.data[frameInfo.payloadStart], frameInfo.payloadLength, cmdOut);
     }
 
     SerializedData serializeDiscovery(const DiscoveryResponse &resp) override {

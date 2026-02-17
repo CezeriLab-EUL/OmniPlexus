@@ -41,15 +41,8 @@ int main() {
         std::cout << "\n--- Test 1: Command Round-Trip ---" << std::endl;
 
         Command originalCmd;
-        originalCmd.commandType = 0x1234;
-        originalCmd.w = 1.5f;
-        originalCmd.x = 2.5f;
-        originalCmd.y = 3.5f;
-        originalCmd.z = 4.5f;
-        originalCmd.s = 100;
-        originalCmd.t = 200;
-        originalCmd.u = 300;
-        originalCmd.v = 400;
+        originalCmd.commandType = 0x0002;
+        originalCmd.params[0] = 10.5f;
 
         // Serialize
         SerializedData serialized = encoder.serializeCommand(originalCmd);
@@ -65,14 +58,7 @@ int main() {
         // Verify
         bool passed = success &&
                       receivedCmd.commandType == originalCmd.commandType &&
-                      receivedCmd.w == originalCmd.w &&
-                      receivedCmd.x == originalCmd.x &&
-                      receivedCmd.y == originalCmd.y &&
-                      receivedCmd.z == originalCmd.z &&
-                      receivedCmd.s == originalCmd.s &&
-                      receivedCmd.t == originalCmd.t &&
-                      receivedCmd.u == originalCmd.u &&
-                      receivedCmd.v == originalCmd.v;
+                      static_cast<float>(receivedCmd.params[0]) == 10.5f;
 
         if (passed) {
             std::cout << "✓ PASSED: Command data matches" << std::endl;
@@ -192,14 +178,14 @@ int main() {
         std::cout << "\n--- Test 5: CRC Corruption Detection ---" << std::endl;
 
         Command originalCmd;
-        originalCmd.commandType = 0x5678;
-        originalCmd.w = 10.0f;
+        originalCmd.commandType = 0x0002;
+        originalCmd.params[0] = 10.0f;
 
         // Serialize
         SerializedData serialized = encoder.serializeCommand(originalCmd);
 
         // Corrupt one byte in the payload
-        serialized.data[5] ^= 0xFF;
+        serialized.data[4] ^= 0xFF;
 
         // Try to deserialize
         Command receivedCmd;
@@ -223,12 +209,13 @@ int main() {
         std::cout << "\n--- Test 6: Frame Size Validation ---" << std::endl;
 
         Command cmd;
-        cmd.commandType = 0xABCD;
+        cmd.commandType = 0x0002;
+        cmd.params[0] = 1.5f;
 
         SerializedData serialized = encoder.serializeCommand(cmd);
 
-        // Expected size: Header(1) + Length(1) + Command(26) + CRC(1) = 29 bytes
-        size_t expectedSize = 29;
+        // Expected size: Header(1) + Length(1) + Command(6) + CRC(1) = 9 bytes
+        size_t expectedSize = 9;
 
         if (serialized.size == expectedSize) {
             std::cout << "✓ PASSED: Frame size is " << expectedSize << " bytes" << std::endl;
