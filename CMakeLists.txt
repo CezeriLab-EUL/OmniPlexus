@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Build the tool
 add_subdirectory(tools/CommandGenerator)
 
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/include/smartdrive/generated)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
+
 # Auto-run generator when commands.json changes
 add_custom_command(
         OUTPUT
@@ -21,9 +24,10 @@ add_custom_command(
         ${CMAKE_SOURCE_DIR}/commands.json
         CommandGenerator
         COMMENT "Generating command files from commands.json..."
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
-# Step 3: Create a target for the generated files
+# Create a target for the generated files
 add_custom_target(GenerateCommands ALL
         DEPENDS
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
@@ -33,7 +37,6 @@ add_custom_target(GenerateCommands ALL
 
 add_library(SmartDrive
         src/generated/CommandRegistry.cpp
-        tools/CommandGenerator/main.cpp
 )
 
 target_include_directories(SmartDrive PUBLIC include)
