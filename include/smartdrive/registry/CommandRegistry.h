@@ -12,6 +12,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <optional>
 
 struct ParamInfo {
     std::string name;
@@ -38,16 +39,17 @@ public:
         commands[meta.commandType] = meta;
     }
 
-    const CommandMeta* getCommandInfo(uint16_t commandType) const {
+    std::optional<CommandMeta> getCommandInfo(uint16_t commandType) const {
         auto it = commands.find(commandType);
-        return it != commands.end() ? &it->second : nullptr;
+        if (it != commands.end()) return it->second;
+        return std::nullopt;
     }
 
-    const CommandMeta* findByName(const std::string& name) const {
+    std::optional<CommandMeta> findByName(const std::string& name) const {
         for (const auto& [id, meta]: commands) {
-            if (meta.name == name) return &meta;
+            if (meta.name == name) return meta;
         }
-        return nullptr;
+        return std::nullopt;
     }
 
     std::vector<const CommandMeta*> getAllCommands() const {
