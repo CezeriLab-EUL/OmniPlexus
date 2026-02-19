@@ -31,7 +31,7 @@ public:
                 return offset;
             }
 
-            case CommandType::MOVE + 1: {
+            case CommandType::MOVE: {
                 // params[0]: distance (FLOAT, required)
                 std::memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
                 offset += sizeof(float);

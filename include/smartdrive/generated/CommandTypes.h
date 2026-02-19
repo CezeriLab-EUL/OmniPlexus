@@ -18,7 +18,7 @@ namespace CommandType {
     constexpr uint16_t MOVE = 0x0002;
 
     // Rotate the robot by a given angle
-    constexpr uint16_t ROTATE = 0x0003;
+    constexpr uint16_t ROTATE = 0x0004;
 
 } // namespace CommandType
 

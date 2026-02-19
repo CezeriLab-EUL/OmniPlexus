@@ -107,6 +107,18 @@ private:
         }
     }
 
+    static bool isValidCommandName(const std::string& name) {
+        if (name.empty()) return false;
+
+        if (!std::isalpha(name[0]) && name[0] != '_') return false;
+
+        for (char c : name) {
+            if (!std::isalnum(c) && c != '_') return false;
+        }
+
+        return true;
+    }
+
 public:
     static ValidationResult validate(const json& data) {
         ValidationResult result;
@@ -141,6 +153,14 @@ public:
             }
 
             const std::string name = cmd["name"].get<std::string>();
+
+            if (!isValidCommandName(name)) {
+                result.addError(
+                    "Command '" + name + "' has invalid name format. "
+                    "Names must start with a letter or underscore, and contain only "
+                    "alphanumeric characters and underscores (no spaces or special characters)"
+                );
+            }
 
             if (!cmd.contains("id") || !cmd["id"].is_number_unsigned()) {
                 result.addError(cmdLabel + " is missing a valid 'id' field");

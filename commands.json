@@ -14,7 +14,7 @@
         {
           "name": "distance",
           "type": "FLOAT",
-          "required": false,
+          "required": true,
           "description": "Distance to move in meters"
         }
       ]
