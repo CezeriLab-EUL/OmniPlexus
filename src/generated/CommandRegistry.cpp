@@ -27,6 +27,7 @@ void CommandRegistry::initialize() {
         "Move the robot by a given distance",
         {
             {"distance", ValueType::FLOAT, true, "Distance to move in meters", 0, ""},
+            {"speed", ValueType::FLOAT, false, "Movement speed in m/s (default: 1.0)", 0, "1.0"},
         }
     });
 
@@ -37,6 +38,18 @@ void CommandRegistry::initialize() {
         "Rotate the robot by a given angle",
         {
             {"angle", ValueType::FLOAT, true, "Rotation angle in degrees", 0, ""},
+        }
+    });
+
+    // SERVO_SET
+    registerCommand({
+        CommandType::SERVO_SET,
+        "SERVO_SET",
+        "Set servo position",
+        {
+            {"servo_id", ValueType::UINT8, true, "Servo ID (0-15)", 0, ""},
+            {"angle", ValueType::UINT16, true, "Target angle in degrees (0-180)", 0, ""},
+            {"speed", ValueType::UINT8, false, "Movement speed (0-255, default: 100)", 0, "100"},
         }
     });
 

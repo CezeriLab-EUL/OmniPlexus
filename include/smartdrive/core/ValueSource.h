@@ -296,6 +296,10 @@ public:
         std::memset(data, 0, sizeof(data));
     }
 
+    bool isEmpty() const {
+        return getType() == ValueType::EMPTY;
+    }
+
     ValueType getType() const
     {
         return static_cast<ValueType>((typeAndSize >> 4) & 0x0F);

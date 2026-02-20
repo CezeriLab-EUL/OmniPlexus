@@ -13,9 +13,8 @@ using json = nlohmann::json;
 
 class Generator {
 private:
-
     // Write a string to a file, throws on failure
-    static void writeFile(const std::string& path, const std::string& content) {
+    static void writeFile(const std::string &path, const std::string &content) {
         std::ofstream file(path);
         if (!file.is_open()) {
             throw std::runtime_error("Could not open file for writing: " + path);
@@ -28,18 +27,18 @@ private:
     static std::string toHex(const uint16_t value) {
         std::ostringstream oss;
         oss << "0x" << std::uppercase << std::hex
-            << std::setw(4) << std::setfill('0') << value;
+                << std::setw(4) << std::setfill('0') << value;
         return oss.str();
     }
 
     // Map a JSON type string to the C++ default initializer for unpack
-    static std::string defaultForType(const std::string& type) {
-        if (type == "FLOAT")  return "0.0f";
-        if (type == "INT8")   return "int8_t(0)";
-        if (type == "UINT8")  return "uint8_t(0)";
-        if (type == "INT16")  return "int16_t(0)";
+    static std::string defaultForType(const std::string &type) {
+        if (type == "FLOAT") return "0.0f";
+        if (type == "INT8") return "int8_t(0)";
+        if (type == "UINT8") return "uint8_t(0)";
+        if (type == "INT16") return "int16_t(0)";
         if (type == "UINT16") return "uint16_t(0)";
-        if (type == "INT32")  return "int32_t(0)";
+        if (type == "INT32") return "int32_t(0)";
         if (type == "UINT32") return "uint32_t(0)";
         if (type == "STRING") return "\"\"";
         return "0";
@@ -47,48 +46,72 @@ private:
 
     // Map a JSON type string to sizeof expression
     // string uses getDataSize()
-    static std::string sizeofForType(const std::string& type) {
-        if (type == "FLOAT")  return "sizeof(float)";
-        if (type == "INT8")   return "sizeof(int8_t)";
-        if (type == "UINT8")  return "sizeof(uint8_t)";
-        if (type == "INT16")  return "sizeof(int16_t)";
+    static std::string sizeofForType(const std::string &type) {
+        if (type == "FLOAT") return "sizeof(float)";
+        if (type == "INT8") return "sizeof(int8_t)";
+        if (type == "UINT8") return "sizeof(uint8_t)";
+        if (type == "INT16") return "sizeof(int16_t)";
         if (type == "UINT16") return "sizeof(uint16_t)";
-        if (type == "INT32")  return "sizeof(int32_t)";
+        if (type == "INT32") return "sizeof(int32_t)";
         if (type == "UINT32") return "sizeof(uint32_t)";
         return "0";
     }
 
     // Map a JSON type string to the ValueType enum name
-    static std::string valueTypeEnum(const std::string& type) {
+    static std::string valueTypeEnum(const std::string &type) {
         return "ValueType::" + type;
     }
 
     // Compute the minimum expected payload size for a command (required params only)
-    static size_t minPayloadSize(const json& cmd) {
+    static size_t minPayloadSize(const json &cmd) {
         size_t size = 2; // commandType is always 2 bytes
         if (!cmd.contains("params")) return size;
 
-        for (const auto& param : cmd["params"]) {
+        for (const auto &param: cmd["params"]) {
             if (!param["required"].get<bool>()) continue;
 
             const std::string type = param["type"].get<std::string>();
-            if (type == "FLOAT")        size += 4;
-            else if (type == "INT8")    size += 1;
-            else if (type == "UINT8")   size += 1;
-            else if (type == "INT16")   size += 2;
-            else if (type == "UINT16")  size += 2;
-            else if (type == "INT32")   size += 4;
-            else if (type == "UINT32")  size += 4;
-            else if (type == "STRING")  size += 1; // At minimum 1 byte (typeAndSize only for empty string)
+            if (type == "FLOAT") size += 4;
+            else if (type == "INT8") size += 1;
+            else if (type == "UINT8") size += 1;
+            else if (type == "INT16") size += 2;
+            else if (type == "UINT16") size += 2;
+            else if (type == "INT32") size += 4;
+            else if (type == "UINT32") size += 4;
+            else if (type == "STRING") size += 1; // At minimum 1 byte (typeAndSize only for empty string)
         }
         return size;
     }
+
+    static bool hasOptionalParam(const json &cmd) {
+        if (!cmd.contains("params")) return false;
+
+        for (const auto &param: cmd["params"]) {
+            if (param.contains("required") && !param["required"].get<bool>()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static int getOptionalParamIndex(const json &cmd) {
+        if (!cmd.contains("params")) return -1;
+
+        for (size_t i = 0; i < cmd["params"].size(); ++i) {
+            if (cmd["params"][i].contains("required") &&
+                !cmd["params"][i]["required"].get<bool>()) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────
     // File Generators
     // ─────────────────────────────────────────────────────────────────────
 
-    static std::string generateCommandTypesContent(const json& data) {
+    static std::string generateCommandTypesContent(const json &data) {
         std::ostringstream out;
 
         out << "//\n";
@@ -101,16 +124,16 @@ private:
         out << "#include <cstdint>\n\n";
         out << "namespace CommandType {\n\n";
 
-        for (const auto& cmd : data["commands"]) {
+        for (const auto &cmd: data["commands"]) {
             const std::string name = cmd["name"].get<std::string>();
-            const uint16_t    id   = cmd["id"].get<uint16_t>();
+            const uint16_t id = cmd["id"].get<uint16_t>();
 
             // Include description as comment if available
             if (cmd.contains("description") && !cmd["description"].get<std::string>().empty()) {
                 out << "    // " << cmd["description"].get<std::string>() << "\n";
             }
             out << "    constexpr uint16_t " << name
-                << " = " << toHex(id) << ";\n\n";
+                    << " = " << toHex(id) << ";\n\n";
         }
 
         out << "} // namespace CommandType\n\n";
@@ -119,7 +142,7 @@ private:
         return out.str();
     }
 
-    static std::string generateCommandPackerContent(const json& data) {
+    static std::string generateCommandPackerContent(const json &data) {
         std::ostringstream out;
 
         out << "//\n";
@@ -146,8 +169,9 @@ private:
         out << "        buffer[offset++] = (cmd.commandType >> 8) & 0xFF;\n\n";
         out << "        switch(cmd.commandType) {\n\n";
 
-        for (const auto& cmd : data["commands"]) {
+        for (const auto &cmd: data["commands"]) {
             const std::string name = cmd["name"].get<std::string>();
+            const int optionalIdx = getOptionalParamIndex(cmd);
 
             out << "            case CommandType::" << name << ": {\n";
 
@@ -155,37 +179,41 @@ private:
                 out << "                // No parameters\n";
                 out << "                return offset;\n";
             } else {
-                int paramIdx = 0;
-                for (const auto& param : cmd["params"]) {
-                    // Phase 1: Only serialize required parameters
-                    if (!param["required"].get<bool>()) {
-                        paramIdx++;
-                        continue;
-                    }
-
+                for (size_t i = 0; i < cmd["params"].size(); ++i) {
+                    const auto &param = cmd["params"][i];
                     const std::string paramName = param["name"].get<std::string>();
-                    const std::string type      = param["type"].get<std::string>();
+                    const std::string type = param["type"].get<std::string>();
+                    const bool isOptional = (static_cast<int>(i) == optionalIdx);
 
-                    out << "                // params[" << paramIdx << "]: "
-                        << paramName << " (" << type << ", required)\n";
+                    if (isOptional) {
+                        out << "                // params[" << i << "]: " << paramName
+                                << " (" << type << ", optional)\n";
+                        out << "                if (!cmd.params[" << i << "].isEmpty()) {\n";
+                        out << "                    ";
+                    } else {
+                        out << "                // params[" << i << "]: " << paramName
+                                << " (" << type << ", required)\n";
+                        out << "                ";
+                    }
 
                     if (type == "STRING") {
-                        // STRING: use getDataSize() for variable length
-                        out << "                {\n";
-                        out << "                    const size_t strSize = cmd.params["
-                            << paramIdx << "].getDataSize();\n";
-                        out << "                    std::memcpy(&buffer[offset], cmd.params["
-                            << paramIdx << "].getData(), strSize);\n";
-                        out << "                    offset += strSize;\n";
-                        out << "                }\n";
+                        out << "const size_t strSize" << i << " = cmd.params["
+                                << i << "].getDataSize();\n";
+                        if (isOptional) out << "                    ";
+                        out << "std::memcpy(&buffer[offset], cmd.params["
+                                << i << "].getData(), strSize" << i << ");\n";
+                        if (isOptional) out << "                    ";
+                        out << "offset += strSize" << i << ";\n";
                     } else {
-                        // Numeric: fixed size via sizeof
-                        out << "                std::memcpy(&buffer[offset], cmd.params["
-                            << paramIdx << "].getData(), " << sizeofForType(type) << ");\n";
-                        out << "                offset += " << sizeofForType(type) << ";\n";
+                        out << "std::memcpy(&buffer[offset], cmd.params["
+                                << i << "].getData(), " << sizeofForType(type) << ");\n";
+                        if (isOptional) out << "                    ";
+                        out << "offset += " << sizeofForType(type) << ";\n";
                     }
 
-                    paramIdx++;
+                    if (isOptional) {
+                        out << "                }\n";
+                    }
                 }
                 out << "                return offset;\n";
             }
@@ -212,9 +240,10 @@ private:
         out << "        cmdOut.commandType = cmdType;\n\n";
         out << "        switch(cmdType) {\n\n";
 
-        for (const auto& cmd : data["commands"]) {
-            const std::string name    = cmd["name"].get<std::string>();
-            const size_t      minSize = minPayloadSize(cmd);
+        for (const auto &cmd: data["commands"]) {
+            const std::string name = cmd["name"].get<std::string>();
+            const size_t minSize = minPayloadSize(cmd);
+            const int optionalIdx = getOptionalParamIndex(cmd);
 
             out << "            case CommandType::" << name << ": {\n";
 
@@ -222,45 +251,100 @@ private:
                 out << "                // No parameters\n";
                 out << "                return true;\n";
             } else {
-                out << "                if (bufferSize < " << minSize << ") return false;\n\n";
+                out << "                if (bufferSize < " << minSize << ") return false;\n";
+                out << "                size_t remainingBytes = bufferSize - offset;\n\n";
 
-                int paramIdx = 0;
-                for (const auto& param : cmd["params"]) {
-                    // Phase 1: Only deserialize required parameters
-                    if (!param["required"].get<bool>()) {
-                        paramIdx++;
-                        continue;
-                    }
-
+                for (size_t i = 0; i < cmd["params"].size(); ++i) {
+                    const auto &param = cmd["params"][i];
                     const std::string paramName = param["name"].get<std::string>();
-                    const std::string type      = param["type"].get<std::string>();
-                    const std::string defVal    = defaultForType(type);
+                    const std::string type = param["type"].get<std::string>();
+                    const bool isOptional = (static_cast<int>(i) == optionalIdx);
+                    const std::string defVal = defaultForType(type);
+                    const std::string defaultValue = param.contains("default")
+                                                         ? param["default"].get<std::string>()
+                                                         : "";
 
-                    out << "                // params[" << paramIdx << "]: "
-                        << paramName << " (" << type << ", required)\n";
+                    out << "                // params[" << i << "]: " << paramName
+                            << " (" << type << ", " << (isOptional ? "optional" : "required") << ")\n";
 
-                    if (type == "STRING") {
-                        out << "                cmdOut.params[" << paramIdx
-                            << "] = " << defVal << "; // Set type\n";
-                        out << "                {\n";
-                        out << "                    const size_t strSize = cmdOut.params["
-                            << paramIdx << "].getDataSize();\n";
-                        out << "                    if (bufferSize < offset + strSize) return false;\n";
-                        out << "                    std::memcpy(cmdOut.params[" << paramIdx
-                            << "].getDataMutable(), &buffer[offset], strSize);\n";
-                        out << "                    offset += strSize;\n";
-                        out << "                }\n";
+                    if (isOptional) {
+                        // Optional parameter - check remaining bytes
+                        if (type == "STRING") {
+                            out << "                if (remainingBytes > 0) {\n";
+                            out << "                    cmdOut.params[" << i << "] = \"\";\n";
+                            out << "                    const size_t strSize" << i
+                                    << " = cmdOut.params[" << i << "].getDataSize();\n";
+                            out << "                    if (remainingBytes < strSize" << i << ") return false;\n";
+                            out << "                    std::memcpy(cmdOut.params[" << i
+                                    << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
+                            out << "                    offset += strSize" << i << ";\n";
+                            out << "                    remainingBytes -= strSize" << i << ";\n";
+                            out << "                } else {\n";
+                            out << "                    // Use default\n";
+                            out << "                    cmdOut.params[" << i << "] = \""
+                                    << defaultValue << "\";\n";
+                            out << "                }\n";
+                        } else {
+                            out << "                if (remainingBytes >= " << sizeofForType(type) << ") {\n";
+                            out << "                    cmdOut.params[" << i << "] = " << defVal << ";\n";
+                            out << "                    std::memcpy(cmdOut.params[" << i
+                                    << "].getDataMutable(), &buffer[offset], "
+                                    << sizeofForType(type) << ");\n";
+                            out << "                    offset += " << sizeofForType(type) << ";\n";
+                            out << "                    remainingBytes -= " << sizeofForType(type) << ";\n";
+                            out << "                } else {\n";
+                            out << "                    // Use default\n";
+
+                            // Format default value based on type
+                            std::string formattedDefault;
+                            if (type == "FLOAT") {
+                                formattedDefault = defaultValue + "f";
+                            } else if (type == "INT8") {
+                                formattedDefault = "int8_t(" + defaultValue + ")";
+                            } else if (type == "UINT8") {
+                                formattedDefault = "uint8_t(" + defaultValue + ")";
+                            } else if (type == "INT16") {
+                                formattedDefault = "int16_t(" + defaultValue + ")";
+                            } else if (type == "UINT16") {
+                                formattedDefault = "uint16_t(" + defaultValue + ")";
+                            } else if (type == "INT32") {
+                                formattedDefault = "int32_t(" + defaultValue + ")";
+                            } else if (type == "UINT32") {
+                                formattedDefault = "uint32_t(" + defaultValue + ")";
+                            } else {
+                                formattedDefault = defaultValue;
+                            }
+
+                            out << "                    cmdOut.params[" << i << "] = "
+                                    << formattedDefault << ";\n";
+                            out << "                }\n";
+                        }
                     } else {
-                        out << "                cmdOut.params[" << paramIdx
-                            << "] = " << defVal << "; // Set type\n";
-                        out << "                std::memcpy(cmdOut.params[" << paramIdx
-                            << "].getDataMutable(), &buffer[offset], "
-                            << sizeofForType(type) << ");\n";
-                        out << "                offset += " << sizeofForType(type) << ";\n";
+                        // Required parameter
+                        out << "                cmdOut.params[" << i << "] = " << defVal << ";\n";
+
+                        if (type == "STRING") {
+                            out << "                {\n";
+                            out << "                    const size_t strSize" << i
+                                    << " = cmdOut.params[" << i << "].getDataSize();\n";
+                            out << "                    if (remainingBytes < strSize" << i << ") return false;\n";
+                            out << "                    std::memcpy(cmdOut.params[" << i
+                                    << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
+                            out << "                    offset += strSize" << i << ";\n";
+                            out << "                    remainingBytes -= strSize" << i << ";\n";
+                            out << "                }\n";
+                        } else {
+                            out << "                if (remainingBytes < " << sizeofForType(type) <<
+                                    ") return false;\n";
+                            out << "                std::memcpy(cmdOut.params[" << i
+                                    << "].getDataMutable(), &buffer[offset], "
+                                    << sizeofForType(type) << ");\n";
+                            out << "                offset += " << sizeofForType(type) << ";\n";
+                            out << "                remainingBytes -= " << sizeofForType(type) << ";\n";
+                        }
                     }
 
                     out << "\n";
-                    paramIdx++;
                 }
 
                 out << "                return true;\n";
@@ -280,7 +364,7 @@ private:
         return out.str();
     }
 
-    static std::string generateCommandRegistryContent(const json& data) {
+    static std::string generateCommandRegistryContent(const json &data) {
         std::ostringstream out;
 
         out << "//\n";
@@ -293,11 +377,11 @@ private:
         out << "#ifndef EMBEDDED_BUILD\n\n";
         out << "void CommandRegistry::initialize() {\n\n";
 
-        for (const auto& cmd : data["commands"]) {
+        for (const auto &cmd: data["commands"]) {
             const std::string name = cmd["name"].get<std::string>();
             const std::string desc = cmd.contains("description")
-                                     ? cmd["description"].get<std::string>()
-                                     : "";
+                                         ? cmd["description"].get<std::string>()
+                                         : "";
 
             out << "    // " << name << "\n";
             out << "    registerCommand({\n";
@@ -307,26 +391,26 @@ private:
             out << "        {\n";
 
             if (cmd.contains("params")) {
-                for (const auto& param : cmd["params"]) {
+                for (const auto &param: cmd["params"]) {
                     const std::string paramName = param["name"].get<std::string>();
-                    const std::string type      = param["type"].get<std::string>();
-                    const bool        required  = param["required"].get<bool>();
+                    const std::string type = param["type"].get<std::string>();
+                    const bool required = param["required"].get<bool>();
                     const std::string paramDesc = param.contains("description")
-                                                  ? param["description"].get<std::string>()
-                                                  : "";
+                                                      ? param["description"].get<std::string>()
+                                                      : "";
                     const size_t maxLength = (type == "STRING" && param.contains("max_length"))
-                                             ? param["max_length"].get<size_t>()
-                                             : 0;
+                                                 ? param["max_length"].get<size_t>()
+                                                 : 0;
                     const std::string defVal = param.contains("default")
-                                               ? param["default"].get<std::string>()
-                                               : "";
+                                                   ? param["default"].get<std::string>()
+                                                   : "";
 
-                    out << "            {\""  << paramName << "\", "
-                        << valueTypeEnum(type) << ", "
-                        << (required ? "true" : "false") << ", "
-                        << "\"" << paramDesc << "\", "
-                        << maxLength << ", "
-                        << "\"" << defVal << "\"},\n";
+                    out << "            {\"" << paramName << "\", "
+                            << valueTypeEnum(type) << ", "
+                            << (required ? "true" : "false") << ", "
+                            << "\"" << paramDesc << "\", "
+                            << maxLength << ", "
+                            << "\"" << defVal << "\"},\n";
                 }
             }
 
@@ -341,14 +425,12 @@ private:
     }
 
 public:
-
     // Generate all three output files
     // headerOutputDir → where CommandTypes.h and CommandPacker.h are written
     // sourceOutputDir → where CommandRegistry.cpp is written
-    static void generate(const json& data,
-                         const std::string& headerOutputDir,
-                         const std::string& sourceOutputDir) {
-
+    static void generate(const json &data,
+                         const std::string &headerOutputDir,
+                         const std::string &sourceOutputDir) {
         // Normalize paths (ensure trailing slash)
         std::string headerDir = headerOutputDir;
         std::string sourceDir = sourceOutputDir;

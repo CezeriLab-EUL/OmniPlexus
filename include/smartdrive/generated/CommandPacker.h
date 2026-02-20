@@ -34,14 +34,34 @@ public:
             case CommandType::MOVE: {
                 // params[0]: distance (FLOAT, required)
                 std::memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
-                offset += sizeof(float);
+offset += sizeof(float);
+                // params[1]: speed (FLOAT, optional)
+                if (!cmd.params[1].isEmpty()) {
+                    std::memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(float));
+                    offset += sizeof(float);
+                }
                 return offset;
             }
 
             case CommandType::ROTATE: {
                 // params[0]: angle (FLOAT, required)
                 std::memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
-                offset += sizeof(float);
+offset += sizeof(float);
+                return offset;
+            }
+
+            case CommandType::SERVO_SET: {
+                // params[0]: servo_id (UINT8, required)
+                std::memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[1]: angle (UINT16, required)
+                std::memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[2]: speed (UINT8, optional)
+                if (!cmd.params[2].isEmpty()) {
+                    std::memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint8_t));
+                    offset += sizeof(uint8_t);
+                }
                 return offset;
             }
 
@@ -73,22 +93,71 @@ public:
 
             case CommandType::MOVE: {
                 if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
 
                 // params[0]: distance (FLOAT, required)
-                cmdOut.params[0] = 0.0f; // Set type
+                cmdOut.params[0] = 0.0f;
+                if (remainingBytes < sizeof(float)) return false;
                 std::memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(float));
                 offset += sizeof(float);
+                remainingBytes -= sizeof(float);
+
+                // params[1]: speed (FLOAT, optional)
+                if (remainingBytes >= sizeof(float)) {
+                    cmdOut.params[1] = 0.0f;
+                    std::memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(float));
+                    offset += sizeof(float);
+                    remainingBytes -= sizeof(float);
+                } else {
+                    // Use default
+                    cmdOut.params[1] = 1.0f;
+                }
 
                 return true;
             }
 
             case CommandType::ROTATE: {
                 if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
 
                 // params[0]: angle (FLOAT, required)
-                cmdOut.params[0] = 0.0f; // Set type
+                cmdOut.params[0] = 0.0f;
+                if (remainingBytes < sizeof(float)) return false;
                 std::memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(float));
                 offset += sizeof(float);
+                remainingBytes -= sizeof(float);
+
+                return true;
+            }
+
+            case CommandType::SERVO_SET: {
+                if (bufferSize < 5) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: servo_id (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                std::memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[1]: angle (UINT16, required)
+                cmdOut.params[1] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                std::memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[2]: speed (UINT8, optional)
+                if (remainingBytes >= sizeof(uint8_t)) {
+                    cmdOut.params[2] = uint8_t(0);
+                    std::memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                    offset += sizeof(uint8_t);
+                    remainingBytes -= sizeof(uint8_t);
+                } else {
+                    // Use default
+                    cmdOut.params[2] = uint8_t(100);
+                }
 
                 return true;
             }

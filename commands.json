@@ -1,4 +1,5 @@
 {
+  "version": "1.0",
   "commands": [
     {
       "id": 1,
@@ -16,11 +17,18 @@
           "type": "FLOAT",
           "required": true,
           "description": "Distance to move in meters"
+        },
+        {
+          "name": "speed",
+          "type": "FLOAT",
+          "required": false,
+          "default": "1.0",
+          "description": "Movement speed in m/s (default: 1.0)"
         }
       ]
     },
     {
-      "id": 4,
+      "id": 3,
       "name": "ROTATE",
       "description": "Rotate the robot by a given angle",
       "params": [
@@ -29,6 +37,32 @@
           "type": "FLOAT",
           "required": true,
           "description": "Rotation angle in degrees"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "SERVO_SET",
+      "description": "Set servo position",
+      "params": [
+        {
+          "name": "servo_id",
+          "type": "UINT8",
+          "required": true,
+          "description": "Servo ID (0-15)"
+        },
+        {
+          "name": "angle",
+          "type": "UINT16",
+          "required": true,
+          "description": "Target angle in degrees (0-180)"
+        },
+        {
+          "name": "speed",
+          "type": "UINT8",
+          "required": false,
+          "default": "100",
+          "description": "Movement speed (0-255, default: 100)"
         }
       ]
     }
