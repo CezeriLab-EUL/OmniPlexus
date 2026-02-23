@@ -11,6 +11,8 @@
 
 using json = nlohmann::json;
 
+static const int COMMAND_TYPE_SIZE = 2; // uint16_t
+
 class Generator {
 private:
     // Write a string to a file, throws on failure
@@ -64,21 +66,21 @@ private:
 
     // Compute the minimum expected payload size for a command (required params only)
     static size_t minPayloadSize(const json &cmd) {
-        size_t size = 2; // commandType is always 2 bytes
+        size_t size = COMMAND_TYPE_SIZE;
         if (!cmd.contains("params")) return size;
 
         for (const auto &param: cmd["params"]) {
             if (!param["required"].get<bool>()) continue;
 
             const std::string type = param["type"].get<std::string>();
-            if (type == "FLOAT") size += 4;
-            else if (type == "INT8") size += 1;
-            else if (type == "UINT8") size += 1;
-            else if (type == "INT16") size += 2;
-            else if (type == "UINT16") size += 2;
-            else if (type == "INT32") size += 4;
-            else if (type == "UINT32") size += 4;
-            else if (type == "STRING") size += 1; // At minimum 1 byte (typeAndSize only for empty string)
+            if (type == "FLOAT") size += sizeof(float);
+            else if (type == "INT8") size += sizeof(int8_t);
+            else if (type == "UINT8") size += sizeof(uint8_t);
+            else if (type == "INT16") size += sizeof(int16_t);
+            else if (type == "UINT16") size += sizeof(uint16_t);
+            else if (type == "INT32") size += sizeof(int32_t);
+            else if (type == "UINT32") size += sizeof(uint32_t);
+            else if (type == "STRING") size += 2; // At minimum 2 bytes(1 for typeAndSize and null terminator for empty string)
         }
         return size;
     }
@@ -197,13 +199,18 @@ private:
                     }
 
                     if (type == "STRING") {
-                        out << "const size_t strSize" << i << " = cmd.params["
-                                << i << "].getDataSize();\n";
+                        // Write typeAndSize byte first
+                        out << "buffer[offset++] = cmd.params[" << i << "].getTypeAndSize();\n";
+                        if (isOptional) out << "                    ";
+
+                        // Then write string data
+                        out << "const size_t strDataSize" << i << " = cmd.params["
+                            << i << "].getDataSize();\n";
                         if (isOptional) out << "                    ";
                         out << "std::memcpy(&buffer[offset], cmd.params["
-                                << i << "].getData(), strSize" << i << ");\n";
+                            << i << "].getData(), strDataSize" << i << ");\n";
                         if (isOptional) out << "                    ";
-                        out << "offset += strSize" << i << ";\n";
+                        out << "offset += strDataSize" << i << ";\n";
                     } else {
                         out << "std::memcpy(&buffer[offset], cmd.params["
                                 << i << "].getData(), " << sizeofForType(type) << ");\n";
@@ -271,18 +278,23 @@ private:
                         // Optional parameter - check remaining bytes
                         if (type == "STRING") {
                             out << "                if (remainingBytes > 0) {\n";
-                            out << "                    cmdOut.params[" << i << "] = \"\";\n";
+                            out << "                    // Read typeAndSize byte first\n";
+                            out << "                    const uint8_t typeAndSize" << i << " = buffer[offset++];\n";
+                            out << "                    cmdOut.params[" << i << "].setTypeAndSizeRaw(typeAndSize" << i << ");\n";
+                            out << "                    remainingBytes--;\n";
+                            out << "                    \n";
+                            out << "                    // Now read string data\n";
                             out << "                    const size_t strSize" << i
-                                    << " = cmdOut.params[" << i << "].getDataSize();\n";
+                                << " = cmdOut.params[" << i << "].getDataSize();\n";
                             out << "                    if (remainingBytes < strSize" << i << ") return false;\n";
                             out << "                    std::memcpy(cmdOut.params[" << i
-                                    << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
+                                << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
                             out << "                    offset += strSize" << i << ";\n";
                             out << "                    remainingBytes -= strSize" << i << ";\n";
                             out << "                } else {\n";
                             out << "                    // Use default\n";
                             out << "                    cmdOut.params[" << i << "] = \""
-                                    << defaultValue << "\";\n";
+                                << defaultValue << "\";\n";
                             out << "                }\n";
                         } else {
                             out << "                if (remainingBytes >= " << sizeofForType(type) << ") {\n";
@@ -325,11 +337,18 @@ private:
 
                         if (type == "STRING") {
                             out << "                {\n";
+                            out << "                    // Read typeAndSize byte first\n";
+                            out << "                    if (remainingBytes < 1) return false;\n";
+                            out << "                    const uint8_t typeAndSize" << i << " = buffer[offset++];\n";
+                            out << "                    cmdOut.params[" << i << "].setTypeAndSizeRaw(typeAndSize" << i << ");\n";
+                            out << "                    remainingBytes--;\n";
+                            out << "                    \n";
+                            out << "                    // Now read string data\n";
                             out << "                    const size_t strSize" << i
-                                    << " = cmdOut.params[" << i << "].getDataSize();\n";
+                                << " = cmdOut.params[" << i << "].getDataSize();\n";
                             out << "                    if (remainingBytes < strSize" << i << ") return false;\n";
                             out << "                    std::memcpy(cmdOut.params[" << i
-                                    << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
+                                << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
                             out << "                    offset += strSize" << i << ";\n";
                             out << "                    remainingBytes -= strSize" << i << ";\n";
                             out << "                }\n";

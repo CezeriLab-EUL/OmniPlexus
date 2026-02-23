@@ -53,6 +53,17 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // LOG_MESSAGE
+    registerCommand({
+        CommandType::LOG_MESSAGE,
+        "LOG_MESSAGE",
+        "Log a message to the robot console",
+        {
+            {"timestamp", ValueType::FLOAT, true, "Time in seconds", 0, ""},
+            {"message", ValueType::STRING, false, "Optional log message", 0, "default log"},
+        }
+    });
+
 } // CommandRegistry::initialize()
 
 #endif // EMBEDDED_BUILD

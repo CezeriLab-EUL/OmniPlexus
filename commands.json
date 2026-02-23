@@ -1,3 +1,4 @@
+
 {
   "version": "1.0",
   "commands": [
@@ -63,6 +64,27 @@
           "required": false,
           "default": "100",
           "description": "Movement speed (0-255, default: 100)"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "LOG_MESSAGE",
+      "description": "Log a message to the robot console",
+      "params": [
+        {
+          "name": "timestamp",
+          "type": "FLOAT",
+          "required": true,
+          "description": "Time in seconds"
+        },
+        {
+          "name": "message",
+          "type": "STRING",
+          "required": false,
+          "default": "default log",
+          "maxLength": 15,
+          "description": "Optional log message"
         }
       ]
     }

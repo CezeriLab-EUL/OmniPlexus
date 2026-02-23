@@ -20,6 +20,7 @@ static const std::set<std::string> VALID_TYPES = {
 };
 
 static const int MAX_PARAMS = 3;
+static const int MAX_OPTIONAL_PARAMS = 1;
 static const uint16_t MIN_ID = 0x0001;
 static const uint16_t MAX_ID = 0xFFFF;
 
@@ -97,10 +98,10 @@ private:
         }
 
         if (param.contains("type") && param["type"].is_string() && param["type"].get<std::string>() == "STRING") {
-            if (!param.contains("maxLength") || !param["maxLength"].is_number_integer()) {
+            if (!param.contains("maxLength") || !param["maxLength"].is_number_unsigned()) {
                 result.addError(
                     "Command '" + cmdName + "' param '" + paramName +
-                    "' is missing the 'maxLength' field (must be a positive integer)"
+                    "' is missing a valid 'maxLength' field (must be a positive integer)"
                 );
             }
 
@@ -127,10 +128,6 @@ private:
 
         for (size_t i = 0; i < params.size(); ++i) {
             const auto &param = params[i];
-
-            if (!param.contains("required") || !param["required"].is_boolean()) {
-                continue; // Already validated in validateParam
-            }
 
             const bool isRequired = param["required"].get<bool>();
             const std::string paramName = param.contains("name") && param["name"].is_string()
@@ -169,17 +166,15 @@ private:
             }
         }
 
-        if (optionalCount > 1) {
+        if (optionalCount > MAX_OPTIONAL_PARAMS) {
             result.addError(
                 "Command '" + cmdName + "' has " + std::to_string(optionalCount) +
-                " optional parameters. Maximum is 1 optional parameter per command."
+                " optional parameters. Maximum is " + std::to_string(MAX_OPTIONAL_PARAMS) + " optional parameter per command."
             );
         }
     }
 
     static bool isValidCommandName(const std::string &name) {
-        if (name.empty()) return false;
-
         if (!std::isalpha(name[0]) && name[0] != '_') return false;
 
         for (char c: name) {

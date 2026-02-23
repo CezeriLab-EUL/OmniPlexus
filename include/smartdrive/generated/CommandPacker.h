@@ -65,6 +65,20 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case CommandType::LOG_MESSAGE: {
+                // params[0]: timestamp (FLOAT, required)
+                std::memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
+offset += sizeof(float);
+                // params[1]: message (STRING, optional)
+                if (!cmd.params[1].isEmpty()) {
+                    buffer[offset++] = cmd.params[1].getTypeAndSize();
+                    const size_t strDataSize1 = cmd.params[1].getDataSize();
+                    std::memcpy(&buffer[offset], cmd.params[1].getData(), strDataSize1);
+                    offset += strDataSize1;
+                }
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -157,6 +171,38 @@ offset += sizeof(uint16_t);
                 } else {
                     // Use default
                     cmdOut.params[2] = uint8_t(100);
+                }
+
+                return true;
+            }
+
+            case CommandType::LOG_MESSAGE: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: timestamp (FLOAT, required)
+                cmdOut.params[0] = 0.0f;
+                if (remainingBytes < sizeof(float)) return false;
+                std::memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(float));
+                offset += sizeof(float);
+                remainingBytes -= sizeof(float);
+
+                // params[1]: message (STRING, optional)
+                if (remainingBytes > 0) {
+                    // Read typeAndSize byte first
+                    const uint8_t typeAndSize1 = buffer[offset++];
+                    cmdOut.params[1].setTypeAndSizeRaw(typeAndSize1);
+                    remainingBytes--;
+                    
+                    // Now read string data
+                    const size_t strSize1 = cmdOut.params[1].getDataSize();
+                    if (remainingBytes < strSize1) return false;
+                    std::memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], strSize1);
+                    offset += strSize1;
+                    remainingBytes -= strSize1;
+                } else {
+                    // Use default
+                    cmdOut.params[1] = "default log";
                 }
 
                 return true;

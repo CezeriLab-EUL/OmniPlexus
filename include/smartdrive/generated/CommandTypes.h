@@ -23,6 +23,9 @@ namespace CommandType {
     // Set servo position
     constexpr uint16_t SERVO_SET = 0x0004;
 
+    // Log a message to the robot console
+    constexpr uint16_t LOG_MESSAGE = 0x0005;
+
 } // namespace CommandType
 
 #endif // SMARTDRIVE_COMMANDTYPES_H
