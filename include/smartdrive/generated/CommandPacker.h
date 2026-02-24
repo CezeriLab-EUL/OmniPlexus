@@ -78,6 +78,20 @@ offset += sizeof(float);
                 return offset;
             }
 
+            case CommandType::SET_LABEL: {
+                // params[0]: label (STRING, required)
+                buffer[offset++] = cmd.params[0].getTypeAndSize();
+const size_t strDataSize0 = cmd.params[0].getDataSize();
+memcpy(&buffer[offset], cmd.params[0].getData(), strDataSize0);
+offset += strDataSize0;
+                // params[1]: weight (FLOAT, optional)
+                if (!cmd.params[1].isEmpty()) {
+                    memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(float));
+                    offset += sizeof(float);
+                }
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -202,6 +216,41 @@ offset += sizeof(float);
                 } else {
                     // Use default
                     cmdOut.params[1] = "default log";
+                }
+
+                return true;
+            }
+
+            case CommandType::SET_LABEL: {
+                if (bufferSize < 4) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: label (STRING, required)
+                cmdOut.params[0] = "";
+                {
+                    // Read typeAndSize byte first
+                    if (remainingBytes < 1) return false;
+                    const uint8_t typeAndSize0 = buffer[offset++];
+                    cmdOut.params[0].setTypeAndSizeRaw(typeAndSize0);
+                    remainingBytes--;
+                    
+                    // Now read string data
+                    const size_t strSize0 = cmdOut.params[0].getDataSize();
+                    if (remainingBytes < strSize0) return false;
+                    memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], strSize0);
+                    offset += strSize0;
+                    remainingBytes -= strSize0;
+                }
+
+                // params[1]: weight (FLOAT, optional)
+                if (remainingBytes >= sizeof(float)) {
+                    cmdOut.params[1] = 0.0f;
+                    memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(float));
+                    offset += sizeof(float);
+                    remainingBytes -= sizeof(float);
+                } else {
+                    // Use default
+                    cmdOut.params[1] = 0.0f;
                 }
 
                 return true;

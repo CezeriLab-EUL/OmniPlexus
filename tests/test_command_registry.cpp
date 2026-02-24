@@ -84,13 +84,10 @@ int main() {
     }
 
     std::cout << "\n--- Test 3: LOG_MESSAGE with timestamp and message ---" << std::endl;
-    ValueSource vs;
-    vs.packString("Hello, worlduukjt!");
-
     Command cmd3;
     cmd3.commandType = CommandType::LOG_MESSAGE;
     cmd3.params[0] = 1890.0f;
-    cmd3.params[1] = vs;
+    cmd3.params[1] = "Hello wertghuhjgfdssdg";
 
     uint8_t buffer3[64];
     size_t size3 = CommandPacker::pack(cmd3, buffer3);
@@ -105,11 +102,26 @@ int main() {
         std::cout << "✗ Failed to unpack" << std::endl;
     }
 
-    // Test size difference
-    std::cout << "\n--- Size Comparison ---" << std::endl;
-    std::cout << "MOVE without optional: " << size1 << " bytes" << std::endl;
-    std::cout << "MOVE with optional:    " << size2 << " bytes" << std::endl;
-    std::cout << "Savings: " << (size2 - size1) << " bytes when optional not sent" << std::endl;
+    std::cout << "\n--- Test 4: SET_LABEL with label and weight ---" << std::endl;
+    Command cmd4;
+    cmd4.commandType = CommandType::SET_LABEL;
+    cmd4.params[0] = "Testhhhehehehbrueue3hrjenjenjnfjnef";
+    cmd4.params[1] = 12.4f;
+
+    uint8_t buffer4[64];
+    size_t size4 = CommandPacker::pack(cmd4, buffer4);
+    if (size4 > 0) {
+        std::cout << "✓ Packed SET_LABEL command: " << size4 << " bytes" << std::endl;
+    }
+
+    Command received4;
+    if (CommandPacker::unpack(buffer4, size4, received4)) {
+        std::cout << "✓ Unpacked successfully" << std::endl;
+        std::cout << "  Label = " << received4.params[0].getData() << std::endl;
+        std::cout << "  Value = " << float(received4.params[1]) << std::endl;
+    }else {
+        std::cout << "✗ Failed to unpack" << std::endl;
+    }
 
     return 0;
 }

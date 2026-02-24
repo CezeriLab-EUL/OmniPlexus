@@ -87,6 +87,27 @@
           "description": "Optional log message"
         }
       ]
+    },
+    {
+      "id": 6,
+      "name": "SET_LABEL",
+      "description": "Assign a label with an optional weight value",
+      "params": [
+        {
+          "name": "label",
+          "type": "STRING",
+          "required": true,
+          "maxLength": 20,
+          "description": "Label to assign"
+        },
+        {
+          "name": "weight",
+          "type": "FLOAT",
+          "required": false,
+          "default": "0.0",
+          "description": "Optional weight value"
+        }
+      ]
     }
   ]
 }

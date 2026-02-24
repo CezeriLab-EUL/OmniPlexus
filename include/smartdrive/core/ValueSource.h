@@ -218,7 +218,7 @@ public:
             case static_cast<uint8_t>(ValueType::FLOAT):
                 return 4 * (size + 1);
             case static_cast<uint8_t>(ValueType::STRING):
-                return size; // string should be the exact length
+                return size + 1; // Adding 1 for null terminator when reading
             default:
                 return 0;
         }
@@ -255,7 +255,7 @@ public:
             len = 15;
         }
 
-        setTypeAndSize(ValueType::STRING, static_cast<uint8_t>(len + 1)); // Added one for the null character
+        setTypeAndSize(ValueType::STRING, static_cast<uint8_t>(len));
         memcpy(data, src, len);
         data[len] = '\0';
     }

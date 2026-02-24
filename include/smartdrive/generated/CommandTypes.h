@@ -26,6 +26,9 @@ namespace CommandType {
     // Log a message to the robot console
     constexpr uint16_t LOG_MESSAGE = 0x0005;
 
+    // Assign a label with an optional weight value
+    constexpr uint16_t SET_LABEL = 0x0006;
+
 } // namespace CommandType
 
 #endif // SMARTDRIVE_COMMANDTYPES_H
