@@ -7,7 +7,7 @@
 #ifndef SMARTDRIVE_COMMANDTYPES_H
 #define SMARTDRIVE_COMMANDTYPES_H
 
-#include <cstdint>
+#include "../core/platform.h"
 
 namespace CommandType {
 

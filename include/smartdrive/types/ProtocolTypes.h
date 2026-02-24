@@ -5,13 +5,12 @@
 #ifndef SMARTDRIVE_PROTOCOLTYPES_H
 #define SMARTDRIVE_PROTOCOLTYPES_H
 
-#include <cstdint>
 #include "../core/Config.h"
 #include "../core/ValueSource.h"
 
 struct RawData {
     uint8_t* data ;
-    std::size_t size;
+    size_t size;
 };
 
 

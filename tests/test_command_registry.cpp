@@ -83,6 +83,28 @@ int main() {
         std::cout << "✗ Failed to unpack" << std::endl;
     }
 
+    std::cout << "\n--- Test 3: LOG_MESSAGE with timestamp and message ---" << std::endl;
+    ValueSource vs;
+    vs.packString("Hello, worlduukjt!");
+
+    Command cmd3;
+    cmd3.commandType = CommandType::LOG_MESSAGE;
+    cmd3.params[0] = 1890.0f;
+    cmd3.params[1] = vs;
+
+    uint8_t buffer3[64];
+    size_t size3 = CommandPacker::pack(cmd3, buffer3);
+    std::cout << "✓ Packed LOG_MESSAGE command: " << size3 << " bytes" << std::endl;
+
+    Command received3;
+    if (CommandPacker::unpack(buffer3, size3, received3)) {
+        std::cout << "✓ Unpacked successfully" << std::endl;
+        std::cout << "  Timestamp = " << float(received3.params[0]) << std::endl;
+        std::cout << "  Message = " << received3.params[1].getData() << " (user-provided)" << std::endl;
+    } else {
+        std::cout << "✗ Failed to unpack" << std::endl;
+    }
+
     // Test size difference
     std::cout << "\n--- Size Comparison ---" << std::endl;
     std::cout << "MOVE without optional: " << size1 << " bytes" << std::endl;

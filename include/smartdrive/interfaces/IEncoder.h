@@ -5,7 +5,6 @@
 #ifndef SMARTDRIVE_IENCODER_H
 #define SMARTDRIVE_IENCODER_H
 
-#include <cstdint>
 #include "../constants/ProtocolConstants.h"
 #include "../types/ProtocolTypes.h"
 #include "../types/RobotData.h"

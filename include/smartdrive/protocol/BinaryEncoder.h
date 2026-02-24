@@ -5,8 +5,9 @@
 #ifndef SMARTDRIVE_BINARYENCODER_H
 #define SMARTDRIVE_BINARYENCODER_H
 
+#ifndef __AVR__
 #include <array>
-#include <cstring>
+#endif
 #include "../interfaces/IEncoder.h"
 #include "../types/ProtocolTypes.h"
 #include "../types/RobotData.h"
@@ -19,11 +20,19 @@
 #else
 #define BUFFER_ACCESS(buf, idx) (buf)[idx]
 #endif
+#ifdef __AVR__
+#define BUFFER_ACCESS(buf, idx) buf[idx]
+#endif
 
 
 class BinaryEncoder : public IEncoder {
 private:
+#ifndef __AVR__
     std::array<uint8_t, ProtocolConstants::MAX_FRAME_SIZE> frameBuffer;
+#endif
+#ifdef __AVR__
+    uint8_t frameBuffer[ProtocolConstants::MAX_FRAME_SIZE];
+#endif
 
     struct FrameParseResult {
         bool valid;
@@ -132,7 +141,12 @@ private:
         offset += payloadSize;
 
         RawData rawData{};
+#ifdef __AVR__
+        rawData.data = frameBuffer;
+#else
         rawData.data = frameBuffer.data();
+#endif
+
         rawData.size = offset;
 
         const uint8_t crc = calculateCRC8(rawData);
@@ -144,7 +158,12 @@ private:
 
 public:
     BinaryEncoder() {
-        frameBuffer.fill(0);
+#ifdef __AVR__
+        memset(frameBuffer, 0, sizeof(frameBuffer));
+#else
+         frameBuffer.fill(0);
+#endif
+
     }
 
     SerializedData serializeCommand(const Command &cmd) override {
@@ -160,7 +179,11 @@ public:
         result.size = buildFrame(ProtocolConstants::FrameType::COMMAND,
                                  payload, payloadSize);
         if (result.size > 0) {
+#ifdef __AVR__
+            memcpy(result.data, frameBuffer, result.size);
+#else
             memcpy(result.data, frameBuffer.data(), result.size);
+#endif
         }
         return result;
     }
@@ -185,12 +208,16 @@ public:
 
         uint8_t payload[actualSize];
         payload[0] = resp.moduleCount;
-        std::memcpy(&payload[1], resp.modules, resp.moduleCount * sizeof(ModuleInfo));
+        memcpy(&payload[1], resp.modules, resp.moduleCount * sizeof(ModuleInfo));
 
         SerializedData result;
         result.size = buildFrame(ProtocolConstants::FrameType::DISCOVERY, payload, actualSize);
         if (result.size > 0) {
+#ifdef __AVR__
+            memcpy(result.data, frameBuffer, result.size);
+#else
             memcpy(result.data, frameBuffer.data(), result.size);
+#endif
         }
         return result;
     }
@@ -221,7 +248,7 @@ public:
 
         DiscoveryResponse temp;
         temp.moduleCount = moduleCount;
-        std::memcpy(temp.modules, &rawData.data[offset], moduleCount * sizeof(ModuleInfo));
+        memcpy(temp.modules, &rawData.data[offset], moduleCount * sizeof(ModuleInfo));
         respOut = temp;
 
         return true;
@@ -232,12 +259,16 @@ public:
 
         uint8_t compactPayload[actualSize];
         compactPayload[0] = value.getTypeAndSize();
-        std::memcpy(&compactPayload[1], value.getData(), value.getDataSize());
+        memcpy(&compactPayload[1], value.getData(), value.getDataSize());
 
         SerializedData result;
         result.size = buildFrame(ProtocolConstants::FrameType::VALUE_SOURCE, compactPayload, actualSize);
         if (result.size > 0) {
+#ifdef __AVR__
+            memcpy(result.data, frameBuffer, result.size);
+#else
             memcpy(result.data, frameBuffer.data(), result.size);
+#endif
         }
         return result;
     }
@@ -272,7 +303,7 @@ public:
         const size_t crcOffset = offset + expectedSize;
         if (!verifyCRC(rawData, crcOffset)) {return false;}
 
-        std::memcpy(temp.getDataMutable(), &rawData.data[offset], expectedSize);
+        memcpy(temp.getDataMutable(), &rawData.data[offset], expectedSize);
         valueOut = temp;
 
         return true;
@@ -292,13 +323,17 @@ public:
         offset += sizeof(uint32_t);
 
         payload[offset++] = telemetry.getTypeAndSize();
-        std::memcpy(&payload[offset], telemetry.getData(), telemetry.getDataSize());
+        memcpy(&payload[offset], telemetry.getData(), telemetry.getDataSize());
 
         SerializedData result;
         result.size = buildFrame(ProtocolConstants::FrameType::TELEMETRY, payload, totalSize);
 
         if (result.size > 0) {
+#ifdef __AVR__
+            memcpy(result.data, frameBuffer, result.size);
+#else
             memcpy(result.data, frameBuffer.data(), result.size);
+#endif
         }
 
         return result;
@@ -344,7 +379,7 @@ public:
         result.sourceID = sourceID;
         result.timestamp = timestamp;
         result.setTypeAndSizeRaw(typeAndSize);
-        std::memcpy(result.getDataMutable(), &rawData.data[offset], expectedSize);
+        memcpy(result.getDataMutable(), &rawData.data[offset], expectedSize);
         telemetryOut = result;
 
         return true;
@@ -362,13 +397,17 @@ public:
         offset += sizeof(uint16_t);
 
         payload[offset++] = settings.getTypeAndSize();
-        std::memcpy(&payload[offset], settings.getData(), settings.getDataSize());
+        memcpy(&payload[offset], settings.getData(), settings.getDataSize());
 
         SerializedData result;
         result.size = buildFrame(ProtocolConstants::FrameType::SETTINGS, payload, totalSize);
 
         if (result.size > 0) {
+#ifdef __AVR__
+            memcpy(result.data, frameBuffer, result.size);
+#else
             memcpy(result.data, frameBuffer.data(), result.size);
+#endif
         }
 
         return result;
@@ -410,7 +449,7 @@ public:
         SettingsData result;
         result.settingsID = settingsID;
         result.setTypeAndSizeRaw(typeAndSize);
-        std::memcpy(result.getDataMutable(), &rawData.data[offset], expectedSize);
+        memcpy(result.getDataMutable(), &rawData.data[offset], expectedSize);
 
         settingsOut = result;
         return true;
