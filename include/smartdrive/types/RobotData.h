@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_ROBOTDATA_H
 #define SMARTDRIVE_ROBOTDATA_H
 
-#include <cstdint>
+#include "../core/platform.h"
 #include "../core/ValueSource.h"
 
 #pragma pack(push, 1)

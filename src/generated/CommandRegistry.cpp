@@ -64,6 +64,17 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // SET_LABEL
+    registerCommand({
+        CommandType::SET_LABEL,
+        "SET_LABEL",
+        "Assign a label with an optional weight value",
+        {
+            {"label", ValueType::STRING, true, "Label to assign", 0, ""},
+            {"weight", ValueType::FLOAT, false, "Optional weight value", 0, "0.0"},
+        }
+    });
+
 } // CommandRegistry::initialize()
 
 #endif // EMBEDDED_BUILD

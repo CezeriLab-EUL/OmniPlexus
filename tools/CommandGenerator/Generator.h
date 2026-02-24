@@ -123,7 +123,7 @@ private:
         out << "//\n\n";
         out << "#ifndef SMARTDRIVE_COMMANDTYPES_H\n";
         out << "#define SMARTDRIVE_COMMANDTYPES_H\n\n";
-        out << "#include <cstdint>\n\n";
+        out << "#include \"../core/platform.h\"\n\n";
         out << "namespace CommandType {\n\n";
 
         for (const auto &cmd: data["commands"]) {
@@ -154,8 +154,7 @@ private:
         out << "//\n\n";
         out << "#ifndef SMARTDRIVE_COMMANDPACKER_H\n";
         out << "#define SMARTDRIVE_COMMANDPACKER_H\n\n";
-        out << "#include <cstdint>\n";
-        out << "#include <cstring>\n";
+        out << "#include \"../core/platform.h\"\n";
         out << "#include \"CommandTypes.h\"\n";
         out << "#include \"../types/ProtocolTypes.h\"\n\n";
         out << "class CommandPacker {\n";
@@ -207,12 +206,12 @@ private:
                         out << "const size_t strDataSize" << i << " = cmd.params["
                             << i << "].getDataSize();\n";
                         if (isOptional) out << "                    ";
-                        out << "std::memcpy(&buffer[offset], cmd.params["
+                        out << "memcpy(&buffer[offset], cmd.params["
                             << i << "].getData(), strDataSize" << i << ");\n";
                         if (isOptional) out << "                    ";
                         out << "offset += strDataSize" << i << ";\n";
                     } else {
-                        out << "std::memcpy(&buffer[offset], cmd.params["
+                        out << "memcpy(&buffer[offset], cmd.params["
                                 << i << "].getData(), " << sizeofForType(type) << ");\n";
                         if (isOptional) out << "                    ";
                         out << "offset += " << sizeofForType(type) << ";\n";
@@ -287,7 +286,7 @@ private:
                             out << "                    const size_t strSize" << i
                                 << " = cmdOut.params[" << i << "].getDataSize();\n";
                             out << "                    if (remainingBytes < strSize" << i << ") return false;\n";
-                            out << "                    std::memcpy(cmdOut.params[" << i
+                            out << "                    memcpy(cmdOut.params[" << i
                                 << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
                             out << "                    offset += strSize" << i << ";\n";
                             out << "                    remainingBytes -= strSize" << i << ";\n";
@@ -299,7 +298,7 @@ private:
                         } else {
                             out << "                if (remainingBytes >= " << sizeofForType(type) << ") {\n";
                             out << "                    cmdOut.params[" << i << "] = " << defVal << ";\n";
-                            out << "                    std::memcpy(cmdOut.params[" << i
+                            out << "                    memcpy(cmdOut.params[" << i
                                     << "].getDataMutable(), &buffer[offset], "
                                     << sizeofForType(type) << ");\n";
                             out << "                    offset += " << sizeofForType(type) << ";\n";
@@ -347,7 +346,7 @@ private:
                             out << "                    const size_t strSize" << i
                                 << " = cmdOut.params[" << i << "].getDataSize();\n";
                             out << "                    if (remainingBytes < strSize" << i << ") return false;\n";
-                            out << "                    std::memcpy(cmdOut.params[" << i
+                            out << "                    memcpy(cmdOut.params[" << i
                                 << "].getDataMutable(), &buffer[offset], strSize" << i << ");\n";
                             out << "                    offset += strSize" << i << ";\n";
                             out << "                    remainingBytes -= strSize" << i << ";\n";
@@ -355,7 +354,7 @@ private:
                         } else {
                             out << "                if (remainingBytes < " << sizeofForType(type) <<
                                     ") return false;\n";
-                            out << "                std::memcpy(cmdOut.params[" << i
+                            out << "                memcpy(cmdOut.params[" << i
                                     << "].getDataMutable(), &buffer[offset], "
                                     << sizeofForType(type) << ");\n";
                             out << "                offset += " << sizeofForType(type) << ";\n";

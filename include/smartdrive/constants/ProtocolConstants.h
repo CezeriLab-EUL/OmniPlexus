@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_PROTOCOLCONSTANTS_H
 #define SMARTDRIVE_PROTOCOLCONSTANTS_H
 
-#include <cstdint>
+#include "../core/platform.h"
 
 namespace ProtocolConstants {
     constexpr uint8_t STX_PATTERN = 0x02;

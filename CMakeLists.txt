@@ -37,6 +37,7 @@ add_custom_target(GenerateCommands ALL
 
 add_library(SmartDrive
         src/generated/CommandRegistry.cpp
+        include/smartdrive/core/platform.h
 )
 
 target_include_directories(SmartDrive PUBLIC include)
