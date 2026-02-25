@@ -39,6 +39,8 @@ add_library(SmartDrive
         src/generated/CommandRegistry.cpp
         include/smartdrive/core/platform.h
         include/smartdrive/interfaces/ITransport.h
+        include/smartdrive/utils/CommandQueue.h
+        include/smartdrive/core/CommunicationManager.h
 )
 
 target_include_directories(SmartDrive PUBLIC include)
