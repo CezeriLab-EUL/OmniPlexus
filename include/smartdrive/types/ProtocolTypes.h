@@ -7,10 +7,16 @@
 
 #include "../core/Config.h"
 #include "../core/ValueSource.h"
+#include "../constants/ProtocolConstants.h"
 
 struct RawData {
     uint8_t* data ;
     size_t size;
+};
+
+struct SerializedData {
+    uint8_t data[ProtocolConstants::MAX_FRAME_SIZE];
+    size_t size = 0;
 };
 
 

@@ -5,14 +5,8 @@
 #ifndef SMARTDRIVE_IENCODER_H
 #define SMARTDRIVE_IENCODER_H
 
-#include "../constants/ProtocolConstants.h"
 #include "../types/ProtocolTypes.h"
 #include "../types/RobotData.h"
-
-struct SerializedData {
-    uint8_t data[ProtocolConstants::MAX_FRAME_SIZE];
-    size_t size = 0;
-};
 
 class IEncoder {
 public:
