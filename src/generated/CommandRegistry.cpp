@@ -11,67 +11,160 @@
 
 void CommandRegistry::initialize() {
 
-    // STOP
+    // OLED_PRINT_STR
     registerCommand({
-        CommandType::STOP,
-        "STOP",
-        "Emergency stop - halt all motors immediately",
+        CommandType::OLED_PRINT_STR,
+        "OLED_PRINT_STR",
+        "Print string on OLED at specified position",
+        {
+            {"x", ValueType::UINT16, true, "X coordinate (pixels)", 0, ""},
+            {"y", ValueType::UINT16, true, "Y coordinate (pixels)", 0, ""},
+            {"text", ValueType::STRING, true, "Text to display", 0, ""},
+        }
+    });
+
+    // OLED_DRAW_FRAME
+    registerCommand({
+        CommandType::OLED_DRAW_FRAME,
+        "OLED_DRAW_FRAME",
+        "Draw a rectangular frame on OLED",
+        {
+            {"x", ValueType::UINT16, true, "X coordinate (pixels)", 0, ""},
+            {"y", ValueType::UINT16, true, "Y coordinate (pixels)", 0, ""},
+            {"width", ValueType::UINT16, true, "Frame width (pixels)", 0, ""},
+        }
+    });
+
+    // OLED_DRAW_BAR
+    registerCommand({
+        CommandType::OLED_DRAW_BAR,
+        "OLED_DRAW_BAR",
+        "Draw a progress bar on OLED",
+        {
+            {"x", ValueType::UINT16, true, "X coordinate (pixels)", 0, ""},
+            {"y", ValueType::UINT16, true, "Y coordinate (pixels)", 0, ""},
+            {"percent", ValueType::UINT8, true, "Fill percentage (0-100)", 0, ""},
+        }
+    });
+
+    // OLED_CLEAR
+    registerCommand({
+        CommandType::OLED_CLEAR,
+        "OLED_CLEAR",
+        "Clear the OLED display buffer",
         {
         }
     });
 
-    // MOVE
+    // OLED_REFRESH
     registerCommand({
-        CommandType::MOVE,
-        "MOVE",
-        "Move the robot by a given distance",
+        CommandType::OLED_REFRESH,
+        "OLED_REFRESH",
+        "Send buffer to OLED display (update screen)",
         {
-            {"distance", ValueType::FLOAT, true, "Distance to move in meters", 0, ""},
-            {"speed", ValueType::FLOAT, false, "Movement speed in m/s (default: 1.0)", 0, "1.0"},
         }
     });
 
-    // ROTATE
+    // OLED_SET_BRIGHTNESS
     registerCommand({
-        CommandType::ROTATE,
-        "ROTATE",
-        "Rotate the robot by a given angle",
+        CommandType::OLED_SET_BRIGHTNESS,
+        "OLED_SET_BRIGHTNESS",
+        "Set OLED display brightness",
         {
-            {"angle", ValueType::FLOAT, true, "Rotation angle in degrees", 0, ""},
+            {"brightness", ValueType::UINT8, true, "Brightness level (0-255)", 0, ""},
         }
     });
 
-    // SERVO_SET
+    // LED_SET_BLOCK
     registerCommand({
-        CommandType::SERVO_SET,
-        "SERVO_SET",
-        "Set servo position",
+        CommandType::LED_SET_BLOCK,
+        "LED_SET_BLOCK",
+        "Set all LEDs to the same color (RGB565 format)",
         {
-            {"servo_id", ValueType::UINT8, true, "Servo ID (0-15)", 0, ""},
-            {"angle", ValueType::UINT16, true, "Target angle in degrees (0-180)", 0, ""},
-            {"speed", ValueType::UINT8, false, "Movement speed (0-255, default: 100)", 0, "100"},
+            {"color", ValueType::UINT16, true, "RGB565 color value (5-bit R, 6-bit G, 5-bit B)", 0, ""},
         }
     });
 
-    // LOG_MESSAGE
+    // LED_SET_SINGLE
     registerCommand({
-        CommandType::LOG_MESSAGE,
-        "LOG_MESSAGE",
-        "Log a message to the robot console",
+        CommandType::LED_SET_SINGLE,
+        "LED_SET_SINGLE",
+        "Set a single LED to specified color (RGB565 format)",
         {
-            {"timestamp", ValueType::FLOAT, true, "Time in seconds", 0, ""},
-            {"message", ValueType::STRING, false, "Optional log message", 0, "default log"},
+            {"index", ValueType::UINT16, true, "LED index (0-based)", 0, ""},
+            {"color", ValueType::UINT16, true, "RGB565 color value", 0, ""},
         }
     });
 
-    // SET_LABEL
+    // BEEP
     registerCommand({
-        CommandType::SET_LABEL,
-        "SET_LABEL",
-        "Assign a label with an optional weight value",
+        CommandType::BEEP,
+        "BEEP",
+        "Sound the buzzer for specified duration",
         {
-            {"label", ValueType::STRING, true, "Label to assign", 0, ""},
-            {"weight", ValueType::FLOAT, false, "Optional weight value", 0, "0.0"},
+            {"duration", ValueType::UINT32, true, "Beep duration in milliseconds", 0, ""},
+        }
+    });
+
+    // GET_TEMP
+    registerCommand({
+        CommandType::GET_TEMP,
+        "GET_TEMP",
+        "Request temperature reading (sends response back)",
+        {
+            {"fahrenheit", ValueType::UINT8, false, "0 for Celsius, 1 for Fahrenheit (default: Celsius)", 0, "0"},
+        }
+    });
+
+    // RESET
+    registerCommand({
+        CommandType::RESET,
+        "RESET",
+        "Reset hardware subsystems",
+        {
+            {"mode", ValueType::UINT8, true, "Reset mode: 0=OLED, 1=LEDs, 2=Both", 0, ""},
+        }
+    });
+
+    // SEND_ACK
+    registerCommand({
+        CommandType::SEND_ACK,
+        "SEND_ACK",
+        "Acknowledge command received (internal use)",
+        {
+            {"original_cmd", ValueType::UINT16, true, "Command ID being acknowledged", 0, ""},
+        }
+    });
+
+    // SEND_NACK
+    registerCommand({
+        CommandType::SEND_NACK,
+        "SEND_NACK",
+        "Negative acknowledge with reason (internal use)",
+        {
+            {"original_cmd", ValueType::UINT16, true, "Command ID being rejected", 0, ""},
+            {"reason", ValueType::STRING, false, "Error reason", 0, "Error"},
+        }
+    });
+
+    // OLED_SET_FONT
+    registerCommand({
+        CommandType::OLED_SET_FONT,
+        "OLED_SET_FONT",
+        "Set OLED font from preset",
+        {
+            {"font_id", ValueType::UINT8, true, "Font preset: 0=small, 1=medium, 2=large", 0, ""},
+        }
+    });
+
+    // OLED_SET_CURSOR
+    registerCommand({
+        CommandType::OLED_SET_CURSOR,
+        "OLED_SET_CURSOR",
+        "Set cursor position for next print",
+        {
+            {"x", ValueType::UINT16, true, "X coordinate", 0, ""},
+            {"y", ValueType::UINT16, true, "Y coordinate", 0, ""},
         }
     });
 

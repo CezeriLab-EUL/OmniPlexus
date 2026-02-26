@@ -11,23 +11,50 @@
 
 namespace CommandType {
 
-    // Emergency stop - halt all motors immediately
-    constexpr uint16_t STOP = 0x0001;
+    // Print string on OLED at specified position
+    constexpr uint16_t OLED_PRINT_STR = 0x0001;
 
-    // Move the robot by a given distance
-    constexpr uint16_t MOVE = 0x0002;
+    // Draw a rectangular frame on OLED
+    constexpr uint16_t OLED_DRAW_FRAME = 0x0002;
 
-    // Rotate the robot by a given angle
-    constexpr uint16_t ROTATE = 0x0003;
+    // Draw a progress bar on OLED
+    constexpr uint16_t OLED_DRAW_BAR = 0x0003;
 
-    // Set servo position
-    constexpr uint16_t SERVO_SET = 0x0004;
+    // Clear the OLED display buffer
+    constexpr uint16_t OLED_CLEAR = 0x0004;
 
-    // Log a message to the robot console
-    constexpr uint16_t LOG_MESSAGE = 0x0005;
+    // Send buffer to OLED display (update screen)
+    constexpr uint16_t OLED_REFRESH = 0x0005;
 
-    // Assign a label with an optional weight value
-    constexpr uint16_t SET_LABEL = 0x0006;
+    // Set OLED display brightness
+    constexpr uint16_t OLED_SET_BRIGHTNESS = 0x0006;
+
+    // Set all LEDs to the same color (RGB565 format)
+    constexpr uint16_t LED_SET_BLOCK = 0x0007;
+
+    // Set a single LED to specified color (RGB565 format)
+    constexpr uint16_t LED_SET_SINGLE = 0x0008;
+
+    // Sound the buzzer for specified duration
+    constexpr uint16_t BEEP = 0x0009;
+
+    // Request temperature reading (sends response back)
+    constexpr uint16_t GET_TEMP = 0x000A;
+
+    // Reset hardware subsystems
+    constexpr uint16_t RESET = 0x000B;
+
+    // Acknowledge command received (internal use)
+    constexpr uint16_t SEND_ACK = 0x000C;
+
+    // Negative acknowledge with reason (internal use)
+    constexpr uint16_t SEND_NACK = 0x000D;
+
+    // Set OLED font from preset
+    constexpr uint16_t OLED_SET_FONT = 0x000E;
+
+    // Set cursor position for next print
+    constexpr uint16_t OLED_SET_CURSOR = 0x000F;
 
 } // namespace CommandType
 

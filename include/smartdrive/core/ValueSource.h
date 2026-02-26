@@ -154,26 +154,7 @@ public:
         return *this;
     }
 
-    ValueSource &operator=(float value) {#include "IndicatorBoard.h"
-
-IndicatorBoard::IndicatorBoard(U8G2 *u8g2, Encoder *encoder, CRGB *ledArray, uint8_t numLeds, uint8_t buzzerPin, uint8_t tempPin)
-{
-    _u8g2 = u8g2;
-    _encoder = encoder;
-    _leds = ledArray;
-    _numLeds = numLeds;
-    _buzzerPin = buzzerPin;
-    _tempPin = tempPin;
-…// This is a "Soft Reset" for most MCUs
-#ifdef ESP32
-        ESP.restart();
-#else
-        // Standard AVR/Arduino reset
-        void (*resetFunc)(void) = 0;
-        resetFunc();
-#endif
-    }
-}
+    ValueSource &operator=(float value) {
         pack(value);
         return *this;
     }

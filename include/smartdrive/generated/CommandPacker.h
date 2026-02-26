@@ -25,50 +25,116 @@ public:
 
         switch(cmd.commandType) {
 
-            case CommandType::STOP: {
+            case CommandType::OLED_PRINT_STR: {
+                // params[0]: x (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[1]: y (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[2]: text (STRING, required)
+                buffer[offset++] = cmd.params[2].getTypeAndSize();
+const size_t strDataSize2 = cmd.params[2].getDataSize();
+memcpy(&buffer[offset], cmd.params[2].getData(), strDataSize2);
+offset += strDataSize2;
+                return offset;
+            }
+
+            case CommandType::OLED_DRAW_FRAME: {
+                // params[0]: x (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[1]: y (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[2]: width (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case CommandType::OLED_DRAW_BAR: {
+                // params[0]: x (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[1]: y (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[2]: percent (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case CommandType::OLED_CLEAR: {
                 // No parameters
                 return offset;
             }
 
-            case CommandType::MOVE: {
-                // params[0]: distance (FLOAT, required)
-                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
-offset += sizeof(float);
-                // params[1]: speed (FLOAT, optional)
-                if (!cmd.params[1].isEmpty()) {
-                    memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(float));
-                    offset += sizeof(float);
-                }
+            case CommandType::OLED_REFRESH: {
+                // No parameters
                 return offset;
             }
 
-            case CommandType::ROTATE: {
-                // params[0]: angle (FLOAT, required)
-                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
-offset += sizeof(float);
-                return offset;
-            }
-
-            case CommandType::SERVO_SET: {
-                // params[0]: servo_id (UINT8, required)
+            case CommandType::OLED_SET_BRIGHTNESS: {
+                // params[0]: brightness (UINT8, required)
                 memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
 offset += sizeof(uint8_t);
-                // params[1]: angle (UINT16, required)
+                return offset;
+            }
+
+            case CommandType::LED_SET_BLOCK: {
+                // params[0]: color (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case CommandType::LED_SET_SINGLE: {
+                // params[0]: index (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[1]: color (UINT16, required)
                 memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint16_t));
 offset += sizeof(uint16_t);
-                // params[2]: speed (UINT8, optional)
-                if (!cmd.params[2].isEmpty()) {
-                    memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint8_t));
+                return offset;
+            }
+
+            case CommandType::BEEP: {
+                // params[0]: duration (UINT32, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint32_t));
+offset += sizeof(uint32_t);
+                return offset;
+            }
+
+            case CommandType::GET_TEMP: {
+                // params[0]: fahrenheit (UINT8, optional)
+                if (!cmd.params[0].isEmpty()) {
+                    memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
                     offset += sizeof(uint8_t);
                 }
                 return offset;
             }
 
-            case CommandType::LOG_MESSAGE: {
-                // params[0]: timestamp (FLOAT, required)
-                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(float));
-offset += sizeof(float);
-                // params[1]: message (STRING, optional)
+            case CommandType::RESET: {
+                // params[0]: mode (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case CommandType::SEND_ACK: {
+                // params[0]: original_cmd (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case CommandType::SEND_NACK: {
+                // params[0]: original_cmd (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[1]: reason (STRING, optional)
                 if (!cmd.params[1].isEmpty()) {
                     buffer[offset++] = cmd.params[1].getTypeAndSize();
                     const size_t strDataSize1 = cmd.params[1].getDataSize();
@@ -78,17 +144,20 @@ offset += sizeof(float);
                 return offset;
             }
 
-            case CommandType::SET_LABEL: {
-                // params[0]: label (STRING, required)
-                buffer[offset++] = cmd.params[0].getTypeAndSize();
-const size_t strDataSize0 = cmd.params[0].getDataSize();
-memcpy(&buffer[offset], cmd.params[0].getData(), strDataSize0);
-offset += strDataSize0;
-                // params[1]: weight (FLOAT, optional)
-                if (!cmd.params[1].isEmpty()) {
-                    memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(float));
-                    offset += sizeof(float);
-                }
+            case CommandType::OLED_SET_FONT: {
+                // params[0]: font_id (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case CommandType::OLED_SET_CURSOR: {
+                // params[0]: x (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                // params[1]: y (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
                 return offset;
             }
 
@@ -113,94 +182,231 @@ offset += strDataSize0;
 
         switch(cmdType) {
 
-            case CommandType::STOP: {
-                // No parameters
-                return true;
-            }
-
-            case CommandType::MOVE: {
-                if (bufferSize < 6) return false;
+            case CommandType::OLED_PRINT_STR: {
+                if (bufferSize < 8) return false;
                 size_t remainingBytes = bufferSize - offset;
 
-                // params[0]: distance (FLOAT, required)
-                cmdOut.params[0] = 0.0f;
-                if (remainingBytes < sizeof(float)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(float));
-                offset += sizeof(float);
-                remainingBytes -= sizeof(float);
+                // params[0]: x (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
 
-                // params[1]: speed (FLOAT, optional)
-                if (remainingBytes >= sizeof(float)) {
-                    cmdOut.params[1] = 0.0f;
-                    memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(float));
-                    offset += sizeof(float);
-                    remainingBytes -= sizeof(float);
-                } else {
-                    // Use default
-                    cmdOut.params[1] = 1.0f;
-                }
-
-                return true;
-            }
-
-            case CommandType::ROTATE: {
-                if (bufferSize < 6) return false;
-                size_t remainingBytes = bufferSize - offset;
-
-                // params[0]: angle (FLOAT, required)
-                cmdOut.params[0] = 0.0f;
-                if (remainingBytes < sizeof(float)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(float));
-                offset += sizeof(float);
-                remainingBytes -= sizeof(float);
-
-                return true;
-            }
-
-            case CommandType::SERVO_SET: {
-                if (bufferSize < 5) return false;
-                size_t remainingBytes = bufferSize - offset;
-
-                // params[0]: servo_id (UINT8, required)
-                cmdOut.params[0] = uint8_t(0);
-                if (remainingBytes < sizeof(uint8_t)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
-                offset += sizeof(uint8_t);
-                remainingBytes -= sizeof(uint8_t);
-
-                // params[1]: angle (UINT16, required)
+                // params[1]: y (UINT16, required)
                 cmdOut.params[1] = uint16_t(0);
                 if (remainingBytes < sizeof(uint16_t)) return false;
                 memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
                 offset += sizeof(uint16_t);
                 remainingBytes -= sizeof(uint16_t);
 
-                // params[2]: speed (UINT8, optional)
-                if (remainingBytes >= sizeof(uint8_t)) {
-                    cmdOut.params[2] = uint8_t(0);
-                    memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint8_t));
-                    offset += sizeof(uint8_t);
-                    remainingBytes -= sizeof(uint8_t);
-                } else {
-                    // Use default
-                    cmdOut.params[2] = uint8_t(100);
+                // params[2]: text (STRING, required)
+                cmdOut.params[2] = "";
+                {
+                    // Read typeAndSize byte first
+                    if (remainingBytes < 1) return false;
+                    const uint8_t typeAndSize2 = buffer[offset++];
+                    cmdOut.params[2].setTypeAndSizeRaw(typeAndSize2);
+                    remainingBytes--;
+                    
+                    // Now read string data
+                    const size_t strSize2 = cmdOut.params[2].getDataSize();
+                    if (remainingBytes < strSize2) return false;
+                    memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], strSize2);
+                    offset += strSize2;
+                    remainingBytes -= strSize2;
                 }
 
                 return true;
             }
 
-            case CommandType::LOG_MESSAGE: {
+            case CommandType::OLED_DRAW_FRAME: {
+                if (bufferSize < 8) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: x (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[1]: y (UINT16, required)
+                cmdOut.params[1] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[2]: width (UINT16, required)
+                cmdOut.params[2] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case CommandType::OLED_DRAW_BAR: {
+                if (bufferSize < 7) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: x (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[1]: y (UINT16, required)
+                cmdOut.params[1] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[2]: percent (UINT8, required)
+                cmdOut.params[2] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case CommandType::OLED_CLEAR: {
+                // No parameters
+                return true;
+            }
+
+            case CommandType::OLED_REFRESH: {
+                // No parameters
+                return true;
+            }
+
+            case CommandType::OLED_SET_BRIGHTNESS: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: brightness (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case CommandType::LED_SET_BLOCK: {
+                if (bufferSize < 4) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: color (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case CommandType::LED_SET_SINGLE: {
                 if (bufferSize < 6) return false;
                 size_t remainingBytes = bufferSize - offset;
 
-                // params[0]: timestamp (FLOAT, required)
-                cmdOut.params[0] = 0.0f;
-                if (remainingBytes < sizeof(float)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(float));
-                offset += sizeof(float);
-                remainingBytes -= sizeof(float);
+                // params[0]: index (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
 
-                // params[1]: message (STRING, optional)
+                // params[1]: color (UINT16, required)
+                cmdOut.params[1] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case CommandType::BEEP: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: duration (UINT32, required)
+                cmdOut.params[0] = uint32_t(0);
+                if (remainingBytes < sizeof(uint32_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint32_t));
+                offset += sizeof(uint32_t);
+                remainingBytes -= sizeof(uint32_t);
+
+                return true;
+            }
+
+            case CommandType::GET_TEMP: {
+                if (bufferSize < 2) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: fahrenheit (UINT8, optional)
+                if (remainingBytes >= sizeof(uint8_t)) {
+                    cmdOut.params[0] = uint8_t(0);
+                    memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                    offset += sizeof(uint8_t);
+                    remainingBytes -= sizeof(uint8_t);
+                } else {
+                    // Use default
+                    cmdOut.params[0] = uint8_t(0);
+                }
+
+                return true;
+            }
+
+            case CommandType::RESET: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: mode (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case CommandType::SEND_ACK: {
+                if (bufferSize < 4) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: original_cmd (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case CommandType::SEND_NACK: {
+                if (bufferSize < 4) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: original_cmd (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[1]: reason (STRING, optional)
                 if (remainingBytes > 0) {
                     // Read typeAndSize byte first
                     const uint8_t typeAndSize1 = buffer[offset++];
@@ -215,43 +421,43 @@ offset += strDataSize0;
                     remainingBytes -= strSize1;
                 } else {
                     // Use default
-                    cmdOut.params[1] = "default log";
+                    cmdOut.params[1] = "Error";
                 }
 
                 return true;
             }
 
-            case CommandType::SET_LABEL: {
-                if (bufferSize < 4) return false;
+            case CommandType::OLED_SET_FONT: {
+                if (bufferSize < 3) return false;
                 size_t remainingBytes = bufferSize - offset;
 
-                // params[0]: label (STRING, required)
-                cmdOut.params[0] = "";
-                {
-                    // Read typeAndSize byte first
-                    if (remainingBytes < 1) return false;
-                    const uint8_t typeAndSize0 = buffer[offset++];
-                    cmdOut.params[0].setTypeAndSizeRaw(typeAndSize0);
-                    remainingBytes--;
-                    
-                    // Now read string data
-                    const size_t strSize0 = cmdOut.params[0].getDataSize();
-                    if (remainingBytes < strSize0) return false;
-                    memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], strSize0);
-                    offset += strSize0;
-                    remainingBytes -= strSize0;
-                }
+                // params[0]: font_id (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
 
-                // params[1]: weight (FLOAT, optional)
-                if (remainingBytes >= sizeof(float)) {
-                    cmdOut.params[1] = 0.0f;
-                    memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(float));
-                    offset += sizeof(float);
-                    remainingBytes -= sizeof(float);
-                } else {
-                    // Use default
-                    cmdOut.params[1] = 0.0f;
-                }
+                return true;
+            }
+
+            case CommandType::OLED_SET_CURSOR: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: x (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                // params[1]: y (UINT16, required)
+                cmdOut.params[1] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
 
                 return true;
             }
