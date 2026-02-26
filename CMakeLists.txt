@@ -3,6 +3,7 @@ project(SmartDrive VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(ARDUINO_LIBRARY_PATH "$ENV{HOME}/Arduino/libraries/SmartDrive/src")
 
 find_package(Boost REQUIRED COMPONENTS system)
 
@@ -47,6 +48,15 @@ add_library(SmartDrive
         include/smartdrive/transport/ArduinoSerialTransport.h
         include/smartdrive/transport/PcSerialTransport.h
 )
+
+add_custom_target(SyncArduinoLibrary ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/include/smartdrive
+        ${ARDUINO_LIBRARY_PATH}/smartdrive
+        COMMENT "Syncing SmartDrive headers to Arduino library..."
+)
+
+add_dependencies(SyncArduinoLibrary SmartDrive GenerateCommands)
 
 target_include_directories(SmartDrive PUBLIC include)
 target_link_libraries(SmartDrive PUBLIC Boost::system)

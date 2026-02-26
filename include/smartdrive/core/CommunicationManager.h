@@ -29,7 +29,7 @@ public:
         callbackContext = context;
     }
 
-    bool dispatch(const Command* cmd) {
+    bool dispatch(const Command& cmd) {
         if (!encoder || !transport) {
             LOG(LogLevel::ERROR, "Communication manager not initialized");
             return false;
