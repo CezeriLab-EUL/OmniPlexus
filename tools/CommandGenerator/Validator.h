@@ -203,6 +203,22 @@ public:
             return result;
         }
 
+        if (!data.contains("device") || !data["device"].is_string() || data["device"].get<std::string>().empty()) {
+            result.addError("JSON is missing the top-level 'device' field");
+            return result;
+        }
+
+        const std::string deviceName = data["device"].get<std::string>();
+        if (!std::isupper(deviceName[0])) {
+            result.addError("Device name '" + deviceName + "' should start with an uppercase letter (PascalCase)");
+        }
+        for (const char c : deviceName) {
+            if (!std::isalnum(c)) {
+                result.addError("'device' field must contain only alphanumeric characters (no spaces or underscores)");
+                break;
+            }
+        }
+
         std::set<uint16_t> seenIDs;
         std::set<std::string> seenNames;
         uint16_t prevID = 0;

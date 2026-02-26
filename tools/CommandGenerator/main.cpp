@@ -29,9 +29,9 @@ void printUsage(const char* programName) {
               << " --validate-only <json_file>\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName
-              << " commands.json include/smartdrive/generated/ src/generated/\n";
+              << " devices/IndicatorBoard.json include/smartdrive/generated/ src/generated/\n";
     std::cout << "  " << programName
-              << " --validate-only commands.json\n\n";
+              << " --validate-only devices/IndicatorBoard.json\n\n";
 }
 
 // Print validation results

@@ -1,6 +1,7 @@
 {
   "version": "1.0",
   "description": "SmartDrive Commands for Indicator Board",
+  "device": "IndicatorBoard",
   "commands": [
     {
       "id": 1,

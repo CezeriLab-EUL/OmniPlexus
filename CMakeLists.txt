@@ -13,29 +13,42 @@ add_subdirectory(tools/CommandGenerator)
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/include/smartdrive/generated)
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 
-# Auto-run generator when commands.json changes
-add_custom_command(
-        OUTPUT
-        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
-        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
-        ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
-        COMMAND CommandGenerator
-        ${CMAKE_SOURCE_DIR}/commands.json
-        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/
-        ${CMAKE_SOURCE_DIR}/src/generated/
-        DEPENDS
-        ${CMAKE_SOURCE_DIR}/commands.json
-        CommandGenerator
-        COMMENT "Generating command files from commands.json..."
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-)
+# Discover all device JSON files in devices/
+file(GLOB DEVICE_JSON_FILES "${CMAKE_SOURCE_DIR}/devices/*.json")
 
-# Create a target for the generated files
+# For each device JSON, register a custom command to generate its files
+foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
+    # Extract device name from filename e.g. IndicatorBoard.json -> IndicatorBoard
+    get_filename_component(DEVICE_NAME ${DEVICE_JSON} NAME_WE)
+
+    add_custom_command(
+            OUTPUT
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/${DEVICE_NAME}Controller.h
+            ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
+            COMMAND CommandGenerator
+            ${DEVICE_JSON}
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/
+            ${CMAKE_SOURCE_DIR}/src/generated/
+            DEPENDS
+            ${DEVICE_JSON}
+            CommandGenerator
+            COMMENT "Generating files for device: ${DEVICE_NAME}..."
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+
+    list(APPEND ALL_GENERATED_HEADERS
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/${DEVICE_NAME}Controller.h
+    )
+endforeach()
+
 add_custom_target(GenerateCommands ALL
         DEPENDS
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
         ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
+        ${ALL_GENERATED_HEADERS}
 )
 
 add_library(SmartDrive
@@ -47,6 +60,7 @@ add_library(SmartDrive
         include/smartdrive/transport/AbstractTransport.h
         include/smartdrive/transport/ArduinoSerialTransport.h
         include/smartdrive/transport/PcSerialTransport.h
+        include/smartdrive/generated/IndicatorBoardController.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL
