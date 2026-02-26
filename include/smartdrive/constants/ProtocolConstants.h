@@ -14,7 +14,8 @@ namespace ProtocolConstants {
     constexpr uint8_t CRC_OFFSET = 1; //1 byte is used for CRC
     constexpr uint8_t TYPE_AND_SIZE_BYTE = 1; //1 byte for ValueSource type and size
 
-    constexpr uint16_t MAX_PAYLOAD_SIZE = 64;
+    // constexpr uint16_t MAX_PAYLOAD_SIZE = 64;
+    constexpr  uint16_t MAX_PAYLOAD_SIZE = 32;
 
     constexpr uint16_t PROTOCOL_OVERHEAD = 3; //STX+TYPE(1) + LENGTH(1) + CRC(1)
     constexpr uint16_t MAX_FRAME_SIZE = MAX_PAYLOAD_SIZE + PROTOCOL_OVERHEAD;
