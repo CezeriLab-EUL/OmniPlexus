@@ -4,6 +4,8 @@ project(SmartDrive VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(Boost REQUIRED COMPONENTS system)
+
 # Build the tool
 add_subdirectory(tools/CommandGenerator)
 
@@ -41,9 +43,13 @@ add_library(SmartDrive
         include/smartdrive/interfaces/ITransport.h
         include/smartdrive/utils/CommandQueue.h
         include/smartdrive/core/CommunicationManager.h
+        include/smartdrive/transport/AbstractTransport.h
+        include/smartdrive/transport/ArduinoSerialTransport.h
+        include/smartdrive/transport/PcSerialTransport.h
 )
 
 target_include_directories(SmartDrive PUBLIC include)
+target_link_libraries(SmartDrive PUBLIC Boost::system)
 
 # Library should wait for generator to finish first
 add_dependencies(SmartDrive GenerateCommands)
@@ -56,5 +62,10 @@ add_executable(SmartDrive_Test_Command
         tests/test_command_registry.cpp
 )
 
+add_executable(SmartDrive_Test_SerialTransport
+        tests/transport/test_serial_transport.cpp
+)
+
 target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
 target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
+target_link_libraries(SmartDrive_Test_SerialTransport PRIVATE SmartDrive)
