@@ -1,111 +1,243 @@
-
 {
   "version": "1.0",
+  "description": "SmartDrive Commands for Indicator Board",
   "commands": [
     {
       "id": 1,
-      "name": "STOP",
-      "description": "Emergency stop - halt all motors immediately",
-      "params": []
+      "name": "OLED_PRINT_STR",
+      "description": "Print string on OLED at specified position",
+      "params": [
+        {
+          "name": "x",
+          "type": "UINT16",
+          "required": true,
+          "description": "X coordinate (pixels)"
+        },
+        {
+          "name": "y",
+          "type": "UINT16",
+          "required": true,
+          "description": "Y coordinate (pixels)"
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "required": true,
+          "maxLength": 15,
+          "description": "Text to display"
+        }
+      ]
     },
     {
       "id": 2,
-      "name": "MOVE",
-      "description": "Move the robot by a given distance",
+      "name": "OLED_DRAW_FRAME",
+      "description": "Draw a rectangular frame on OLED",
       "params": [
         {
-          "name": "distance",
-          "type": "FLOAT",
+          "name": "x",
+          "type": "UINT16",
           "required": true,
-          "description": "Distance to move in meters"
+          "description": "X coordinate (pixels)"
         },
         {
-          "name": "speed",
-          "type": "FLOAT",
-          "required": false,
-          "default": "1.0",
-          "description": "Movement speed in m/s (default: 1.0)"
+          "name": "y",
+          "type": "UINT16",
+          "required": true,
+          "description": "Y coordinate (pixels)"
+        },
+        {
+          "name": "width",
+          "type": "UINT16",
+          "required": true,
+          "description": "Frame width (pixels)"
         }
       ]
     },
     {
       "id": 3,
-      "name": "ROTATE",
-      "description": "Rotate the robot by a given angle",
+      "name": "OLED_DRAW_BAR",
+      "description": "Draw a progress bar on OLED",
       "params": [
         {
-          "name": "angle",
-          "type": "FLOAT",
+          "name": "x",
+          "type": "UINT16",
           "required": true,
-          "description": "Rotation angle in degrees"
+          "description": "X coordinate (pixels)"
+        },
+        {
+          "name": "y",
+          "type": "UINT16",
+          "required": true,
+          "description": "Y coordinate (pixels)"
+        },
+        {
+          "name": "percent",
+          "type": "UINT8",
+          "required": true,
+          "description": "Fill percentage (0-100)"
         }
       ]
     },
     {
       "id": 4,
-      "name": "SERVO_SET",
-      "description": "Set servo position",
-      "params": [
-        {
-          "name": "servo_id",
-          "type": "UINT8",
-          "required": true,
-          "description": "Servo ID (0-15)"
-        },
-        {
-          "name": "angle",
-          "type": "UINT16",
-          "required": true,
-          "description": "Target angle in degrees (0-180)"
-        },
-        {
-          "name": "speed",
-          "type": "UINT8",
-          "required": false,
-          "default": "100",
-          "description": "Movement speed (0-255, default: 100)"
-        }
-      ]
+      "name": "OLED_CLEAR",
+      "description": "Clear the OLED display buffer",
+      "params": []
     },
     {
       "id": 5,
-      "name": "LOG_MESSAGE",
-      "description": "Log a message to the robot console",
+      "name": "OLED_REFRESH",
+      "description": "Send buffer to OLED display (update screen)",
+      "params": []
+    },
+    {
+      "id": 6,
+      "name": "OLED_SET_BRIGHTNESS",
+      "description": "Set OLED display brightness",
       "params": [
         {
-          "name": "timestamp",
-          "type": "FLOAT",
+          "name": "brightness",
+          "type": "UINT8",
           "required": true,
-          "description": "Time in seconds"
-        },
-        {
-          "name": "message",
-          "type": "STRING",
-          "required": false,
-          "default": "default log",
-          "maxLength": 15,
-          "description": "Optional log message"
+          "description": "Brightness level (0-255)"
         }
       ]
     },
     {
-      "id": 6,
-      "name": "SET_LABEL",
-      "description": "Assign a label with an optional weight value",
+      "id": 7,
+      "name": "LED_SET_BLOCK",
+      "description": "Set all LEDs to the same color (RGB565 format)",
       "params": [
         {
-          "name": "label",
-          "type": "STRING",
+          "name": "color",
+          "type": "UINT16",
           "required": true,
-          "maxLength": 20,
-          "description": "Label to assign"
+          "description": "RGB565 color value (5-bit R, 6-bit G, 5-bit B)"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "LED_SET_SINGLE",
+      "description": "Set a single LED to specified color (RGB565 format)",
+      "params": [
+        {
+          "name": "index",
+          "type": "UINT16",
+          "required": true,
+          "description": "LED index (0-based)"
         },
         {
-          "name": "weight",
-          "type": "FLOAT",
+          "name": "color",
+          "type": "UINT16",
+          "required": true,
+          "description": "RGB565 color value"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "BEEP",
+      "description": "Sound the buzzer for specified duration",
+      "params": [
+        {
+          "name": "duration",
+          "type": "UINT32",
+          "required": true,
+          "description": "Beep duration in milliseconds"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "GET_TEMP",
+      "description": "Request temperature reading (sends response back)",
+      "params": [
+        {
+          "name": "fahrenheit",
+          "type": "UINT8",
           "required": false,
-          "default": "0.0",
-          "description": "Optional weight value"
+          "default": "0",
+          "description": "0 for Celsius, 1 for Fahrenheit (default: Celsius)"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "RESET",
+      "description": "Reset hardware subsystems",
+      "params": [
+        {
+          "name": "mode",
+          "type": "UINT8",
+          "required": true,
+          "description": "Reset mode: 0=OLED, 1=LEDs, 2=Both"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "SEND_ACK",
+      "description": "Acknowledge command received (internal use)",
+      "params": [
+        {
+          "name": "original_cmd",
+          "type": "UINT16",
+          "required": true,
+          "description": "Command ID being acknowledged"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "SEND_NACK",
+      "description": "Negative acknowledge with reason (internal use)",
+      "params": [
+        {
+          "name": "original_cmd",
+          "type": "UINT16",
+          "required": true,
+          "description": "Command ID being rejected"
+        },
+        {
+          "name": "reason",
+          "type": "STRING",
+          "required": false,
+          "default": "Error",
+          "maxLength": 15,
+          "description": "Error reason"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "OLED_SET_FONT",
+      "description": "Set OLED font from preset",
+      "params": [
+        {
+          "name": "font_id",
+          "type": "UINT8",
+          "required": true,
+          "description": "Font preset: 0=small, 1=medium, 2=large"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "OLED_SET_CURSOR",
+      "description": "Set cursor position for next print",
+      "params": [
+        {
+          "name": "x",
+          "type": "UINT16",
+          "required": true,
+          "description": "X coordinate"
+        },
+        {
+          "name": "y",
+          "type": "UINT16",
+          "required": true,
+          "description": "Y coordinate"
         }
       ]
     }
