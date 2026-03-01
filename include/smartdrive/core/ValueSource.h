@@ -10,6 +10,7 @@
 #include <type_traits>
 #endif
 #include "../utils/Logger.h"
+#include "string.hpp"
 
 enum class ValueType : uint8_t {
     EMPTY = 0x0,
@@ -120,8 +121,12 @@ public:
         pack(value);
     }
 
+    ValueSource(const string_view &value) {
+        packString(value.data(), value.size());
+    }
+
     ValueSource(const char *value) {
-        packString(value);
+        packString(value, value ? strlen(value) : 0);
     }
 
     ValueSource &operator=(uint8_t value) {
@@ -160,7 +165,12 @@ public:
     }
 
     ValueSource &operator=(const char *value) {
-        packString(value);
+        packString(value, value ? strlen(value) : 0);
+        return *this;
+    }
+
+    ValueSource &operator=(const string_view& value) {
+        packString(value.data(), value.size());
         return *this;
     }
 
@@ -193,7 +203,11 @@ public:
     }
 
     operator const char *() const {
-        return unpackString();
+        return unpackString().data();
+    }
+
+    operator string_view() const {
+        return string_view(reinterpret_cast<const char *>(data), getDataSize());
     }
 
     void setTypeAndSize(ValueType type, uint8_t sizeValue) {
@@ -243,13 +257,12 @@ public:
     }
 
     // String pack
-    void packString(const char *src) {
+    void packString(const char *src, size_t len) {
         if (!src) {
             clear();
             return;
         }
 
-        size_t len = strlen(src);
         if (len >= 16) {
             LOG(LogLevel::WARNING, "String truncated to 15 chars + null");
             len = 15;
@@ -273,7 +286,7 @@ public:
         return result;
     }
 
-    const char *unpackString() const { return reinterpret_cast<const char *>(data); }
+    string_view unpackString() const { return string_view(reinterpret_cast<const char *>(data), getDataSize()); }
 
     void clear() {
         typeAndSize = 0x00;

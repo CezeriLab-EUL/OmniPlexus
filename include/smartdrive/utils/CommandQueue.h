@@ -11,7 +11,7 @@
 
 class CommandQueue {
 public:
-    static constexpr uint8_t CAPACITY = 2;
+    static constexpr uint8_t CAPACITY = 8;
 
 private:
     Command buffer[CAPACITY];

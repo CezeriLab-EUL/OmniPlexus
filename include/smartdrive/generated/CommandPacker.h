@@ -101,9 +101,9 @@ offset += sizeof(uint16_t);
             }
 
             case CommandType::BEEP: {
-                // params[0]: duration (UINT32, required)
-                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint32_t));
-offset += sizeof(uint32_t);
+                // params[0]: duration (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
                 return offset;
             }
 
@@ -336,15 +336,15 @@ offset += sizeof(uint16_t);
             }
 
             case CommandType::BEEP: {
-                if (bufferSize < 6) return false;
+                if (bufferSize < 4) return false;
                 size_t remainingBytes = bufferSize - offset;
 
-                // params[0]: duration (UINT32, required)
-                cmdOut.params[0] = uint32_t(0);
-                if (remainingBytes < sizeof(uint32_t)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint32_t));
-                offset += sizeof(uint32_t);
-                remainingBytes -= sizeof(uint32_t);
+                // params[0]: duration (UINT16, required)
+                cmdOut.params[0] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
 
                 return true;
             }

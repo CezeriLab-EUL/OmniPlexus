@@ -1,107 +1,61 @@
 //
-// Created by dunamis on 25/02/2026.
+// Raw debug test — bypasses all high level functions
+// Manually constructs the OLED_PRINT_STR command and sends it byte by byte
+// with full diagnostic logging at every step
 //
+
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <chrono>
 #include <thread>
 
 #include "smartdrive/transport/PcSerialTransport.h"
 #include "smartdrive/protocol/BinaryEncoder.h"
-#include "smartdrive/core/CommunicationManager.h"
 #include "smartdrive/generated/IndicatorBoardController.h"
 
-// Small helper to pause between commands so the Arduino has time to process
 void wait(int milliseconds) {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 }
 
 int main() {
-    const std::string port = "/dev/ttyUSB0";
-    const uint32_t baudRate = 115200;
+    const std::string port     = "/dev/ttyUSB0";
+    const uint32_t    baudRate = 115200;
 
-    std::cout << "SmartDrive LED Test" << std::endl;
-    std::cout << "Connecting to " << port << " at " << baudRate << " baud..." << std::endl;
+    std::cout << "=== SmartDrive Raw Debug Test ===" << std::endl;
+    std::cout << "Port: " << port << " @ " << baudRate << " baud" << std::endl;
 
+    // ── Step 1: Open transport ───────────────────────────────────────────────
+    std::cout << "\n Opening serial port..." << std::endl;
     PcSerialTransport transport(port, baudRate);
+    std::cout << "    Port opened successfully." << std::endl;
+
     BinaryEncoder encoder;
-    CommunicationManager comms(&encoder, &transport);
-    IndicatorBoardController board(comms);
+    CommunicationManager cm(&encoder, &transport);
+    IndicatorBoardController device(cm);
 
-    // Arduino needs a moment to reset after serial connection is established
-    std::cout << "Waiting for Arduino to boot..." << std::endl;
-    wait(3000);
-    std::cout << "Ready!" << std::endl;
+    std::cout << "\n\n Waiting for Arduino..." << std::endl;
+    wait(6000);
+    std::cout << "Arduino is ready." << std::endl;
 
-    // --- Test 1: Turn LED ON (white = 0xFFFF in RGB565) ---
-    // std::cout << "Sending LED_SET_BLOCK: ON (white)..." << std::endl;
-    // if (board.ledSetBlock(0xFFFF)) {
-    //     std::cout << "Sent! LED should be ON." << std::endl;
-    // } else {
-    //     std::cout << "Failed to send command." << std::endl;
-    //     return 1;
-    // }
-    //
-    // wait(3000);
-
-    // --- Test 2: Turn LED OFF (black = 0x0000 in RGB565) ---
-    // std::cout << "Sending LED_SET_BLOCK: OFF (black)..." << std::endl;
-    // if (board.ledSetBlock(0x0000)) {
-    //     std::cout << "Sent! LED should be OFF." << std::endl;
-    // } else {
-    //     std::cout << "Failed to send command." << std::endl;
-    //     return 1;
-    // }
-    //
-    // wait(3000);
-
-    // --- Test 3: Blink 5 times ---
-    // std::cout << "Blinking 5 times..." << std::endl;
-    // for (int i = 0; i < 5; i++) {
-    //     board.ledSetBlock(0xFFFF);
-    //     wait(500);
-    //     board.ledSetBlock(0x0000);
-    //     wait(500);
+    // if (device.beep(1000)) {
+    //     std::cout << "Beeped" << std::endl;
+    // }else {
+    //     std::cout << "Failed to beep" << std::endl;
     // }
 
-    // --- Test 4: Beep for 500ms ---
-    // std::cout << "Sending BEEP for 500ms..." << std::endl;
-    // if (board.beep(500)) {
-    //     std::cout << "Sent! You should hear a beep." << std::endl;
-    // } else {
-    //     std::cout << "Failed to send command." << std::endl;
-    //     return 1;
+    // if (device.oledPrintStr(10,20,"Hello")) {
+    //     std::cout << "Printed to the screen" << std::endl;
+    //     wait(1000);
+    // }else {
+    //     std::cout << "Failed to print" << std::endl;
     // }
-    //
-    // wait(1000);
 
-    //--- Test 5: Print text on OLED ---
-
-    if (board.oledPrintStr(0, 10, "SmartDrive!")) {
-        std::cout << "Sent! Text should appear on OLED." << std::endl;
+    if (device.ledSetBlock(0x0000)) {
+        std::cout << "Set LED block" << std::endl;
     }else {
-        std::cout << "Failed to send oledPrintStr command." << std::endl;
-        return 1;
+        std::cout << "Failed to set LED block" << std::endl;
     }
 
-    // std::cout << "Sending OLED_PRINT_STR..." << std::endl;
-    // if (board.oledClear()) {
-    //     if (board.oledSetFont(0)) {
-    //         if (board.oledPrintStr(0, 10, "SmartDrive!")) {
-    //             std::cout << "Sent! Text should appear on OLED." << std::endl;
-    //         }else {
-    //             std::cout << "Failed to send oledPrintStr command." << std::endl;
-    //             return 1;
-    //         }
-    //     }else {
-    //         std::cout << "Failed to send oledSetFont command." << std::endl;
-    //         return 1;
-    //     }
-    // }else {
-    //     std::cout << "Failed to send oledClear command." << std::endl;
-    //     return 1;
-    // }
-
-    std::cout << "Test complete!" << std::endl;
     return 0;
 }

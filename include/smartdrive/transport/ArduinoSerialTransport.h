@@ -27,11 +27,13 @@ public:
     }
 protected:
     uint16_t bytesAvailable() override {
-        return static_cast<uint16_t>(serial.available());
+        const int available = serial.available();
+        return (available > 0) ? static_cast<uint16_t>(available) : 0;
     }
 
     uint8_t readByte() override {
-        return static_cast<uint8_t>(serial.read());
+        const int byte = serial.read();
+        return (byte >= 0) ? static_cast<uint8_t>(byte) : 0;
     }
 };
 #endif

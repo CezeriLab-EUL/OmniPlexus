@@ -89,7 +89,7 @@ public:
     }
 
     // Sound the buzzer for specified duration
-    bool beep(uint32_t duration) {
+    bool beep(uint16_t duration) {
         Command cmd;
         cmd.commandType = CommandType::BEEP;
         cmd.params[0] = duration;

@@ -102,7 +102,7 @@ void CommandRegistry::initialize() {
         "BEEP",
         "Sound the buzzer for specified duration",
         {
-            {"duration", ValueType::UINT32, true, "Beep duration in milliseconds", 0, ""},
+            {"duration", ValueType::UINT16, true, "Beep duration in milliseconds", 0, ""},
         }
     });
 
