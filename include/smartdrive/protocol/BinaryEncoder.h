@@ -151,7 +151,7 @@ private:
 
         const uint8_t crc = calculateCRC8(rawData);
         BUFFER_ACCESS(frameBuffer, offset) = crc;
-        offset += ProtocolConstants::CRC_OFFSET;
+        offset += ProtocolConstants::CRC_SIZE;
 
         return offset;
     }
@@ -192,7 +192,7 @@ public:
        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::COMMAND);
         if (!frameInfo.valid){return false;}
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -231,7 +231,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -282,7 +282,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -348,7 +348,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
@@ -422,7 +422,7 @@ public:
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_OFFSET) {
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
             LOG(LogLevel::ERROR, "Invalid frame size");
             return false;
         }
