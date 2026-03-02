@@ -7,7 +7,8 @@
 
 #include "../core/platform.h"
 
-namespace ProtocolConstants {
+namespace ProtocolConstants
+{
     constexpr uint8_t STX_PATTERN = 0x02;
     constexpr uint8_t STX_MASK = 0x1F; //Lower 5 bits
     constexpr uint8_t TYPE_SHIFT = 5; //Upper 3 bits for type
@@ -16,10 +17,13 @@ namespace ProtocolConstants {
 
     constexpr uint16_t MAX_PAYLOAD_SIZE = 64;
 
-    constexpr uint16_t PROTOCOL_OVERHEAD = 3; //STX+TYPE(1) + LENGTH(1) + CRC(1)
+    constexpr uint8_t NOP_BYTE = 0x00; // Sent when clocking in data with nothing to transmit
+
+    constexpr uint16_t PROTOCOL_OVERHEAD = 3; // STX+TYPE(1) + LENGTH(1) + CRC(1)
     constexpr uint16_t MAX_FRAME_SIZE = MAX_PAYLOAD_SIZE + PROTOCOL_OVERHEAD;
 
-    enum class FrameType : uint8_t {
+    enum class FrameType : uint8_t
+    {
         COMMAND = 0x00,
         DISCOVERY = 0x01,
         TELEMETRY = 0x02,
@@ -27,17 +31,20 @@ namespace ProtocolConstants {
         VALUE_SOURCE = 0x04
     };
 
-    constexpr uint8_t encodeHeader(FrameType type) {
+    constexpr uint8_t encodeHeader(FrameType type)
+    {
         return (static_cast<uint8_t>(type) << TYPE_SHIFT) | STX_PATTERN;
     }
 
-    constexpr FrameType decodeType(const uint8_t header) {
+    constexpr FrameType decodeType(const uint8_t header)
+    {
         return static_cast<FrameType>(header >> TYPE_SHIFT);
     }
 
-    constexpr bool isValidHeader(const uint8_t header) {
+    constexpr bool isValidHeader(const uint8_t header)
+    {
         return (header & STX_MASK) == STX_PATTERN;
     }
 }
 
-#endif //SMARTDRIVE_PROTOCOLCONSTANTS_H
+#endif // SMARTDRIVE_PROTOCOLCONSTANTS_H
