@@ -67,7 +67,7 @@ public:
         drainQueue();
     }
 
-    uint8_t pendinfCount() const {
+    uint8_t pendingCount() const {
         return queue.size();
     }
 
@@ -79,7 +79,7 @@ private:
     void drainQueue() {
         if (!callback) {
             if (!queue.isEmpty()) {
-                LOG(LogLevel::WARNING, "Commands queued but no callnback registered");
+                LOG(LogLevel::WARNING, "Commands queued but no callback registered");
             }
             return;
         }

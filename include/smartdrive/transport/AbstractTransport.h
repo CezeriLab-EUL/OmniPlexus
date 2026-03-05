@@ -6,6 +6,7 @@
 #define SMARTDRIVE_ABSTRACTTRANSPORT_H
 
 #include "smartdrive/interfaces/ITransport.h"
+#include "smartdrive/utils/CRC8.h"
 
 class AbstractTransport : public ITransport {
 private:
@@ -96,7 +97,7 @@ private:
                 frameBuffer[bytesCollected++] = byte;
 
                 RawData toCheck {frameBuffer, static_cast<size_t>(bytesCollected - 1)};
-                const uint8_t calculatedCRC = computeCRC8(toCheck);
+                const uint8_t calculatedCRC = CRC8::compute(toCheck);
 
                 if (receivedCRC != calculatedCRC) {
                     LOG(LogLevel::ERROR, "CRC mismatch, resetting");
@@ -117,21 +118,6 @@ private:
         bytesCollected = 0;
         payloadLength = 0;
         state = AccumulatorState::WAITING_FOR_HEADER;
-    }
-
-    static uint8_t computeCRC8(const RawData& rawData) {
-        uint8_t crc = 0x00;
-        for (size_t i = 0; i < rawData.size; ++i) {
-            crc ^= rawData.data[i];
-            for (uint8_t bit = 0; bit < 8; ++bit) {
-                if (crc & 0x80) {
-                    crc = (crc << 1) ^ 0x07;
-                } else {
-                    crc <<= 1;
-                }
-            }
-        }
-        return crc;
     }
 };
 

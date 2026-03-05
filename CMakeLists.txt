@@ -62,6 +62,7 @@ add_library(SmartDrive
         include/smartdrive/transport/PcSerialTransport.h
         include/smartdrive/generated/IndicatorBoardController.h
         include/smartdrive/core/string.hpp
+        include/smartdrive/utils/CRC8.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL

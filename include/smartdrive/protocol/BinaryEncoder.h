@@ -14,6 +14,7 @@
 #include "../utils/Logger.h"
 #include "../core/Config.h"
 #include "../generated/CommandPacker.h"
+#include "smartdrive/utils/CRC8.h"
 
 #if DEBUG_ENABLED
 #define BUFFER_ACCESS(buf, idx) (buf).at(idx)
@@ -70,29 +71,12 @@ private:
         return result;
     };
 
-    static uint8_t calculateCRC8(const RawData &rawData) {
-        uint8_t crc = 0x00;
-
-        for (size_t i = 0; i < rawData.size; ++i) {
-            crc ^= rawData.data[i];
-
-            for (uint8_t bit = 0; bit < 8; ++bit) {
-                if (crc & 0x80) {
-                    crc = (crc << 1) ^ 0x07;  // CRC8-CCITT polynomial
-                } else {
-                    crc <<= 1;
-                }
-            }
-        }
-        return crc;
-    }
-
     bool verifyCRC(const RawData &rawData, size_t crcOffset) const {
         const uint8_t receivedCrc = rawData.data[crcOffset];
 
         const RawData crcData = {rawData.data, crcOffset};
 
-        if (const uint8_t calculatedCRC = calculateCRC8(crcData);
+        if (const uint8_t calculatedCRC = CRC8::compute(crcData);
             receivedCrc != calculatedCRC) {
             LOG(LogLevel::ERROR, "CRC mismatch");
             return false;
@@ -149,7 +133,7 @@ private:
 
         rawData.size = offset;
 
-        const uint8_t crc = calculateCRC8(rawData);
+        const uint8_t crc = CRC8::compute(rawData);
         BUFFER_ACCESS(frameBuffer, offset) = crc;
         offset += ProtocolConstants::CRC_SIZE;
 
@@ -456,7 +440,7 @@ public:
     }
 
     uint8_t computeIntegrityCode(const RawData &rawData) override {
-        return calculateCRC8(rawData);
+        return CRC8::compute(rawData);
     }
 };
 
