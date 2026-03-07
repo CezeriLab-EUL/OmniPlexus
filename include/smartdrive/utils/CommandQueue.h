@@ -9,7 +9,9 @@
 #include "../types/ProtocolTypes.h"
 #include "Logger.h"
 
-static constexpr uint8_t CAPACITY = COMMAND_QUEUE_CAPACITY;
+#if !defined(ARDUINO) && !defined(ESP_PLATFORM)
+#include <mutex>
+#endif
 
 struct PackedCommand {
     uint8_t paramBytes[MAX_PACKED_PARAM_SIZE];;
@@ -17,16 +19,42 @@ struct PackedCommand {
 };
 
 class CommandQueue {
+public:
+    static constexpr uint8_t CAPACITY = COMMAND_QUEUE_CAPACITY;
+
 private:
     PackedCommand buffer[CAPACITY];
     uint8_t head = 0;
     uint8_t tail = 0;
     uint8_t count = 0;
 
+#if defined(ARDUINO)
+#if defined(ESP32) || defined(ESP8266)
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    void lock() {taskENTER_CRITICAL(&mux);}
+    void unlock() {taskEXIT_CRITICAL(&mux);}
+#elif defined(__AVR__)
+    uint8_t savedSREG = 0;
+    void lock() {
+        savedSREG = SREG;
+        cli();
+    }
+    void unlock() {SREG = savedSREG;}
+#else
+    void lock() {nointerrupts();}
+    void unlock(){interrupts();}
+#endif
+#else
+    std::mutex mtx;
+    void lock() {mtx.lock();}
+    void unlock() {mtx.unlock();}
+#endif
+
 public:
     CommandQueue() = default;
 
     void push(const PackedCommand& cmd) {
+        lock();
         if (count == CAPACITY) {
             LOG(LogLevel::WARNING, "CommandQueue is full, dropping oldest command.");
             head = (head + 1) % CAPACITY;
@@ -35,14 +63,20 @@ public:
         buffer[tail] = cmd;
         tail = (tail + 1) % CAPACITY;
         count++;
+        unlock();
     }
 
     bool pop(PackedCommand& cmdOut) {
-        if (count == 0) return false;
+        lock();
+        if (count == 0) {
+            unlock();
+            return false;
+        }
 
         cmdOut = buffer[head];
         head = (head + 1) % CAPACITY;
         count--;
+        unlock();
         return true;
     }
 
@@ -52,7 +86,11 @@ public:
 
     uint8_t size() const { return count; }
 
-    void clear() { head = tail = count = 0; }
+    void clear() {
+        lock();
+        head = tail = count = 0;
+        unlock();
+    }
 };
 
 #endif //SMARTDRIVE_COMMANDQUEUE_H

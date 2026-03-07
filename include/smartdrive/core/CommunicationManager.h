@@ -63,20 +63,9 @@ public:
             }
             transport->releaseFrame();
         }
-
-        drainQueue();
     }
 
-    uint8_t pendingCount() const {
-        return queue.size();
-    }
-
-    void flushQueue() {
-        queue.clear();
-    }
-
-private:
-    void drainQueue() {
+    void processCommands() {
         if (!callback) {
             if (!queue.isEmpty()) {
                 LOG(LogLevel::WARNING, "Commands queued but no callback registered");
@@ -93,6 +82,14 @@ private:
             }
             callback(cmd, callbackContext);
         }
+    }
+
+    uint8_t pendingCount() const {
+        return queue.size();
+    }
+
+    void flushQueue() {
+        queue.clear();
     }
 };
 
