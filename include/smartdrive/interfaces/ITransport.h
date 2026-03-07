@@ -14,6 +14,7 @@ public:
     virtual void accumulate() = 0;
     virtual bool hasCompleteFrame() const =0;
     virtual RawData getFrame() = 0;
+    virtual void releaseFrame() = 0;
 };
 
 #endif //SMARTDRIVE_ITRANSPORT_H

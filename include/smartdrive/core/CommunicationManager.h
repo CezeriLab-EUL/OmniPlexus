@@ -55,13 +55,13 @@ public:
 
         if (transport->hasCompleteFrame()) {
             RawData frame = transport->getFrame();
-
-            Command cmd;
-            if (encoder->deserializeCommand(frame, cmd)) {
-                queue.push(cmd);
-            }else {
-                LOG(LogLevel::ERROR, "Failed to deserialize command");
+            PackedCommand packed;
+            if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize)) {
+                queue.push(packed);
+            } else {
+                LOG(LogLevel::ERROR, "Failed to extract command payload from frame");
             }
+            transport->releaseFrame();
         }
 
         drainQueue();
@@ -84,8 +84,13 @@ private:
             return;
         }
 
-        Command cmd;
-        while (queue.pop(cmd)) {
+        PackedCommand packed;
+        while (queue.pop(packed)) {
+            Command cmd;
+            if (!CommandPacker::unpack(packed.paramBytes, packed.paramSize, cmd)) {
+                LOG(LogLevel::ERROR, "Failed to unpack command from queue");
+                continue;
+            }
             callback(cmd, callbackContext);
         }
     }

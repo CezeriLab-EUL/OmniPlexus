@@ -18,7 +18,9 @@ private:
         FRAME_READY
     };
 
-    uint8_t frameBuffer[ProtocolConstants::MAX_FRAME_SIZE];
+    uint8_t accumulateBuffer[ProtocolConstants::MAX_FRAME_SIZE];
+    uint8_t readyBuffer[ProtocolConstants::MAX_FRAME_SIZE];
+    bool frameConsumed = true;
     uint8_t bytesCollected = 0;
     uint8_t payloadLength = 0;
     AccumulatorState state = AccumulatorState::WAITING_FOR_HEADER;
@@ -47,13 +49,14 @@ public:
 
     RawData getFrame() override {
         RawData result;
-        result.data = frameBuffer;
+        result.data = readyBuffer;
         result.size = bytesCollected;
-
-        reset();
-        // The caller must consume  result.data before the next call to accumulate(),
-        // as accumulate() will overwrite the buffer.
         return result;
+    }
+
+    void releaseFrame() override {
+        frameConsumed = true;
+        reset();
     }
 
 private:
@@ -62,7 +65,7 @@ private:
             case AccumulatorState::WAITING_FOR_HEADER: {
                 if (ProtocolConstants::isValidHeader(byte)) {
                     bytesCollected = 0;
-                    frameBuffer[bytesCollected++] = byte;
+                    accumulateBuffer[bytesCollected++] = byte;
                     state = AccumulatorState::WAITING_FOR_LENGTH;
                 }else {
                     LOG(LogLevel::WARNING, "Discarding invalid header byte");
@@ -78,13 +81,13 @@ private:
                 }
 
                 payloadLength = byte;
-                frameBuffer[bytesCollected++] = byte;
+                accumulateBuffer[bytesCollected++] = byte;
                 state = AccumulatorState::READING_PAYLOAD;
                 break;
             }
 
             case AccumulatorState::READING_PAYLOAD: {
-                frameBuffer[bytesCollected++] = byte;
+                accumulateBuffer[bytesCollected++] = byte;
 
                 if (bytesCollected == 2 + payloadLength) {
                     state = AccumulatorState::VALIDATING_CRC;
@@ -94,16 +97,23 @@ private:
 
             case AccumulatorState::VALIDATING_CRC: {
                 const uint8_t receivedCRC = byte;
-                frameBuffer[bytesCollected++] = byte;
+                accumulateBuffer[bytesCollected++] = byte;
 
-                RawData toCheck {frameBuffer, static_cast<size_t>(bytesCollected - 1)};
+                RawData toCheck {accumulateBuffer, static_cast<size_t>(bytesCollected - 1)};
                 const uint8_t calculatedCRC = CRC8::compute(toCheck);
 
                 if (receivedCRC != calculatedCRC) {
                     LOG(LogLevel::ERROR, "CRC mismatch, resetting");
                     reset();
                 }else {
-                    state = AccumulatorState::FRAME_READY;
+                    if (!frameConsumed) {
+                        LOG(LogLevel::WARNING, "Previous frame not released, dropping new frame");
+                        reset();
+                    }else {
+                        memcpy(readyBuffer, accumulateBuffer, bytesCollected);
+                        frameConsumed = false;
+                        state = AccumulatorState::FRAME_READY;
+                    }
                 }
                 break;
             }

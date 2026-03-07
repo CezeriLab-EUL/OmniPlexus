@@ -5,16 +5,20 @@
 #ifndef SMARTDRIVE_COMMANDQUEUE_H
 #define SMARTDRIVE_COMMANDQUEUE_H
 
-#include "../core/platform.h"
+#include "../generated/GeneratedConfig.h"
 #include "../types/ProtocolTypes.h"
 #include "Logger.h"
 
-class CommandQueue {
-public:
-    static constexpr uint8_t CAPACITY = 8;
+static constexpr uint8_t CAPACITY = COMMAND_QUEUE_CAPACITY;
 
+struct PackedCommand {
+    uint8_t paramBytes[MAX_PACKED_PARAM_SIZE];;
+    uint8_t paramSize;
+};
+
+class CommandQueue {
 private:
-    Command buffer[CAPACITY];
+    PackedCommand buffer[CAPACITY];
     uint8_t head = 0;
     uint8_t tail = 0;
     uint8_t count = 0;
@@ -22,7 +26,7 @@ private:
 public:
     CommandQueue() = default;
 
-    void push(const Command& cmd) {
+    void push(const PackedCommand& cmd) {
         if (count == CAPACITY) {
             LOG(LogLevel::WARNING, "CommandQueue is full, dropping oldest command.");
             head = (head + 1) % CAPACITY;
@@ -33,7 +37,7 @@ public:
         count++;
     }
 
-    bool pop(Command& cmdOut) {
+    bool pop(PackedCommand& cmdOut) {
         if (count == 0) return false;
 
         cmdOut = buffer[head];

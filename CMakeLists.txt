@@ -4,6 +4,7 @@ project(SmartDrive VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(ARDUINO_LIBRARY_PATH "$ENV{HOME}/Arduino/libraries/SmartDrive/src")
+set(PREVIOUS_GENERATED_CONFIG "")
 
 find_package(Boost REQUIRED COMPONENTS system)
 
@@ -27,6 +28,7 @@ foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
             ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
             ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/${DEVICE_NAME}Controller.h
             ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
             COMMAND CommandGenerator
             ${DEVICE_JSON}
             ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/
@@ -34,8 +36,14 @@ foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
             DEPENDS
             ${DEVICE_JSON}
             CommandGenerator
+            ${PREVIOUS_GENERATED_CONFIG}
             COMMENT "Generating files for device: ${DEVICE_NAME}..."
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+
+    # Each iteration depends on the previous one's GeneratedConfig output
+    set(PREVIOUS_GENERATED_CONFIG
+            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
     )
 
     list(APPEND ALL_GENERATED_HEADERS
@@ -47,6 +55,7 @@ add_custom_target(GenerateCommands ALL
         DEPENDS
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
         ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
         ${ALL_GENERATED_HEADERS}
 )
@@ -63,6 +72,8 @@ add_library(SmartDrive
         include/smartdrive/generated/IndicatorBoardController.h
         include/smartdrive/core/string.hpp
         include/smartdrive/utils/CRC8.h
+        include/smartdrive/interfaces/IEncoder.h
+        include/smartdrive/protocol/BinaryEncoder.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL

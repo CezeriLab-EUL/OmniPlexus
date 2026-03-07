@@ -7,6 +7,12 @@
 
 #ifndef ARDUINO
 
+#ifndef _WIN32
+#include <sys/ioctl.h>
+#else
+#include <windows.h>
+#endif
+
 #include "smartdrive/transport/AbstractTransport.h"
 #include <boost/asio.hpp>
 
@@ -15,9 +21,9 @@ private:
     boost::asio::io_context ioContext;
     boost::asio::serial_port serialPort;
 
-    uint8_t incomingByte = 0;
-    bool byteReady = false;
-    bool readInProgress = false;
+    uint8_t stagingBuffer[ProtocolConstants::MAX_FRAME_SIZE];
+    uint16_t stagingHead = 0;
+    uint16_t stagingTail = 0;
 public:
     PcSerialTransport(const std::string& portName, uint32_t baudRate) : serialPort(ioContext) {
         serialPort.open(portName);
@@ -53,30 +59,47 @@ public:
 
 protected:
     uint16_t bytesAvailable() override {
-        if (byteReady) {
-            return 1;
+        if (stagingHead < stagingTail) {
+            return stagingTail - stagingHead;
         }
 
-        if (!readInProgress) {
-            readInProgress = true;
-            serialPort.async_read_some(
-                boost::asio::buffer(&incomingByte, 1),
-                [this](const boost::system::error_code& asyncEc, size_t bytesRead) {
-                    readInProgress = false;
-                    if (!asyncEc && bytesRead > 0) {
-                        byteReady = true;
-                    }
-                });
-        }
+        stagingHead = 0;
+        stagingTail = 0;
 
-        ioContext.poll();
-        ioContext.restart();
-        return byteReady ? 1 : 0;
+        boost::asio::serial_port::native_handle_type handle = serialPort.native_handle();
+        int bytesReady = 0;
+
+#ifdef _WIN32
+        COMSTAT comStat;
+        DWORD errors;
+        if (clearCommError(handle, &errors, &comStat)) {
+            bytesReady = static_cast<int>(comStat.cbInQue);
+        }
+#else
+        if (ioctl(handle, FIONREAD, &bytesReady) < 0) {
+            bytesReady = 0;
+        }
+#endif
+        if (bytesReady <= 0) return 0;
+
+        const size_t toRead = std::min(
+            static_cast<size_t>(bytesReady),
+            sizeof(stagingBuffer)
+            );
+
+        boost::system::error_code ec;
+        const size_t bytesRead = serialPort.read_some(
+            boost::asio::buffer(stagingBuffer, toRead),
+            ec);
+
+        if (ec || bytesRead == 0) return 0;
+
+        stagingTail = static_cast<uint16_t>(bytesRead);
+        return stagingTail;
     }
 
     uint8_t readByte() override {
-        byteReady = false;
-        return incomingByte;
+       return stagingBuffer[stagingHead++];
     }
 };
 #endif

@@ -38,23 +38,18 @@ int main() {
     wait(6000);
     std::cout << "Arduino is ready." << std::endl;
 
-    // if (device.beep(1000)) {
-    //     std::cout << "Beeped" << std::endl;
-    // }else {
-    //     std::cout << "Failed to beep" << std::endl;
-    // }
-
-    // if (device.oledPrintStr(10,20,"Hello")) {
-    //     std::cout << "Printed to the screen" << std::endl;
-    //     wait(1000);
-    // }else {
-    //     std::cout << "Failed to print" << std::endl;
-    // }
-
-    if (device.ledSetBlock(0x0000)) {
+    if (device.ledSetBlock(10)) {
         std::cout << "Set LED block" << std::endl;
+        wait(3000);
     }else {
         std::cout << "Failed to set LED block" << std::endl;
+    }
+
+    if (device.ledSetBlock(0)) {
+        std::cout << "Reset LED block" << std::endl;
+        wait(3000);
+    }else {
+        std::cout << "Failed to reset LED block" << std::endl;
     }
 
     return 0;

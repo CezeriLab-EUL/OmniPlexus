@@ -5,9 +5,6 @@
 #ifndef SMARTDRIVE_BINARYENCODER_H
 #define SMARTDRIVE_BINARYENCODER_H
 
-#ifndef __AVR__
-#include <array>
-#endif
 #include "../interfaces/IEncoder.h"
 #include "../types/ProtocolTypes.h"
 #include "../types/RobotData.h"
@@ -16,25 +13,8 @@
 #include "../generated/CommandPacker.h"
 #include "smartdrive/utils/CRC8.h"
 
-#if DEBUG_ENABLED
-#define BUFFER_ACCESS(buf, idx) (buf).at(idx)
-#else
-#define BUFFER_ACCESS(buf, idx) (buf)[idx]
-#endif
-#ifdef __AVR__
-#define BUFFER_ACCESS(buf, idx) buf[idx]
-#endif
-
-
 class BinaryEncoder : public IEncoder {
 private:
-#ifndef __AVR__
-    std::array<uint8_t, ProtocolConstants::MAX_FRAME_SIZE> frameBuffer;
-#endif
-#ifdef __AVR__
-    uint8_t frameBuffer[ProtocolConstants::MAX_FRAME_SIZE];
-#endif
-
     struct FrameParseResult {
         bool valid;
         size_t payloadStart;
@@ -109,47 +89,34 @@ private:
                (static_cast<uint32_t>(src[3]) << 24);
     }
 
-    size_t buildFrame(const ProtocolConstants::FrameType type,
+    bool buildFrame(const ProtocolConstants::FrameType type,
                       const void *payload,
-                      const size_t payloadSize
+                      const size_t payloadSize,
+                      SerializedData& out
     ) {
+        if (payloadSize + ProtocolConstants::PROTOCOL_OVERHEAD > ProtocolConstants::MAX_FRAME_SIZE) {
+            LOG(LogLevel::ERROR, "Payload too large for frame");
+            return false;
+        }
+
         size_t offset = 0;
 
-        BUFFER_ACCESS(frameBuffer, offset) = ProtocolConstants::encodeHeader(type);
-        offset++;
+        out.data[offset++] = ProtocolConstants::encodeHeader(type);
+        out.data[offset++] = static_cast<uint8_t>(payloadSize);
 
-        BUFFER_ACCESS(frameBuffer, offset) = static_cast<uint8_t>(payloadSize);
-        offset++;
-
-        memcpy(&BUFFER_ACCESS(frameBuffer, offset), payload, payloadSize);
+        memcpy(&out.data[offset], payload, payloadSize);
         offset += payloadSize;
 
-        RawData rawData{};
-#ifdef __AVR__
-        rawData.data = frameBuffer;
-#else
-        rawData.data = frameBuffer.data();
-#endif
+        RawData rawData{out.data, offset};
+        out.data[offset] = CRC8::compute(rawData);
 
-        rawData.size = offset;
-
-        const uint8_t crc = CRC8::compute(rawData);
-        BUFFER_ACCESS(frameBuffer, offset) = crc;
         offset += ProtocolConstants::CRC_SIZE;
+        out.size = offset;
 
-        return offset;
+        return true;
     }
 
 public:
-    BinaryEncoder() {
-#ifdef __AVR__
-        memset(frameBuffer, 0, sizeof(frameBuffer));
-#else
-         frameBuffer.fill(0);
-#endif
-
-    }
-
     SerializedData serializeCommand(const Command &cmd) override {
         uint8_t payload[ProtocolConstants::MAX_FRAME_SIZE];
         size_t payloadSize = CommandPacker::pack(cmd, payload);
@@ -159,17 +126,11 @@ public:
             return SerializedData{};
         }
 
-        SerializedData result;
-        result.size = buildFrame(ProtocolConstants::FrameType::COMMAND,
-                                 payload, payloadSize);
-        if (result.size > 0) {
-#ifdef __AVR__
-            memcpy(result.data, frameBuffer, result.size);
-#else
-            memcpy(result.data, frameBuffer.data(), result.size);
-#endif
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::COMMAND, payload, payloadSize, result)) {
+            return result;
         }
-        return result;
+
+        return SerializedData{};
     }
 
     bool deserializeCommand(const RawData &rawData, Command &cmdOut) override {
@@ -181,10 +142,24 @@ public:
             return false;
         }
 
-        size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
-        if (!verifyCRC(rawData, crcOffset)) {return false;}
-
         return CommandPacker::unpack(&rawData.data[frameInfo.payloadStart], frameInfo.payloadLength, cmdOut);
+    }
+
+    bool extractCommandPayload(const RawData &frame, uint8_t *payloadOut, uint8_t &payloadSizeOut) override {
+        auto frameInfo = validateFrameHeader(frame, ProtocolConstants::FrameType::COMMAND);
+        if (!frameInfo.valid) return false;
+
+        if (frame.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
+            LOG(LogLevel::ERROR, "Invalid frame size");
+            return false;
+        }
+
+        const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
+        if (!verifyCRC(frame, crcOffset)) return false;
+
+        payloadSizeOut = frameInfo.payloadLength;
+        memcpy(payloadOut, &frame.data[frameInfo.payloadStart], payloadSizeOut);
+        return true;
     }
 
     SerializedData serializeDiscovery(const DiscoveryResponse &resp) override {
@@ -194,16 +169,11 @@ public:
         payload[0] = resp.moduleCount;
         memcpy(&payload[1], resp.modules, resp.moduleCount * sizeof(ModuleInfo));
 
-        SerializedData result;
-        result.size = buildFrame(ProtocolConstants::FrameType::DISCOVERY, payload, actualSize);
-        if (result.size > 0) {
-#ifdef __AVR__
-            memcpy(result.data, frameBuffer, result.size);
-#else
-            memcpy(result.data, frameBuffer.data(), result.size);
-#endif
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::DISCOVERY, payload, actualSize, result)) {
+            return result;
         }
-        return result;
+
+        return SerializedData{};
     }
 
     bool deserializeDiscovery(const RawData &rawData, DiscoveryResponse &respOut) override {
@@ -245,16 +215,11 @@ public:
         compactPayload[0] = value.getTypeAndSize();
         memcpy(&compactPayload[1], value.getData(), value.getDataSize());
 
-        SerializedData result;
-        result.size = buildFrame(ProtocolConstants::FrameType::VALUE_SOURCE, compactPayload, actualSize);
-        if (result.size > 0) {
-#ifdef __AVR__
-            memcpy(result.data, frameBuffer, result.size);
-#else
-            memcpy(result.data, frameBuffer.data(), result.size);
-#endif
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::VALUE_SOURCE, compactPayload, actualSize, result)) {
+            return result;
         }
-        return result;
+
+        return SerializedData{};
     }
 
     bool deserializeValue(const RawData &rawData, ValueSource &valueOut) override {
@@ -309,18 +274,11 @@ public:
         payload[offset++] = telemetry.getTypeAndSize();
         memcpy(&payload[offset], telemetry.getData(), telemetry.getDataSize());
 
-        SerializedData result;
-        result.size = buildFrame(ProtocolConstants::FrameType::TELEMETRY, payload, totalSize);
-
-        if (result.size > 0) {
-#ifdef __AVR__
-            memcpy(result.data, frameBuffer, result.size);
-#else
-            memcpy(result.data, frameBuffer.data(), result.size);
-#endif
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::TELEMETRY, payload, totalSize, result)) {
+            return result;
         }
 
-        return result;
+        return SerializedData{};
     }
 
     bool deserializeTelemetry(const RawData &rawData, TelemetryData &telemetryOut) override {
@@ -383,18 +341,9 @@ public:
         payload[offset++] = settings.getTypeAndSize();
         memcpy(&payload[offset], settings.getData(), settings.getDataSize());
 
-        SerializedData result;
-        result.size = buildFrame(ProtocolConstants::FrameType::SETTINGS, payload, totalSize);
-
-        if (result.size > 0) {
-#ifdef __AVR__
-            memcpy(result.data, frameBuffer, result.size);
-#else
-            memcpy(result.data, frameBuffer.data(), result.size);
-#endif
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::SETTINGS, payload, totalSize, result)) {
+            return result;
         }
-
-        return result;
     }
 
     bool deserializeSettings(const RawData &rawData, SettingsData &settingsOut) override {

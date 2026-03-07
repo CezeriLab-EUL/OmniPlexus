@@ -15,6 +15,7 @@ public:
     //Command Serialization & Deserialization
     virtual SerializedData serializeCommand(const Command& cmd) = 0;
     virtual bool deserializeCommand(const RawData& rawData, Command& cmdOut) = 0;
+    virtual bool extractCommandPayload(const RawData& frame, uint8_t* payloadOut, uint8_t& payloadSizeOut) = 0;
 
     //Discovery Serialization & Deserialization
     virtual SerializedData serializeDiscovery(const DiscoveryResponse& resp) = 0;
