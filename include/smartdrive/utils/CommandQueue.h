@@ -41,7 +41,7 @@ private:
     }
     void unlock() {SREG = savedSREG;}
 #else
-    void lock() {nointerrupts();}
+    void lock() {noInterrupts();}
     void unlock(){interrupts();}
 #endif
 #else
