@@ -12,32 +12,39 @@
 #include "../utils/CommandQueue.h"
 #include "../utils/Logger.h"
 
-class CommunicationManager {
+class CommunicationManager
+{
 public:
-    using CommandCallback = void (*)(const Command& cmd, void* context);
+    using CommandCallback = void (*)(const Command &cmd, void *context);
+
 private:
-    IEncoder* encoder;
-    ITransport* transport;
+    IEncoder *encoder;
+    ITransport *transport;
     CommandQueue queue;
     CommandCallback callback = nullptr;
-    void* callbackContext = nullptr;
-public:
-    CommunicationManager(IEncoder* encoder, ITransport* transport): encoder(encoder), transport(transport) {}
+    void *callbackContext = nullptr;
 
-    void onCommandReceived(CommandCallback cb, void* context = nullptr) {
+public:
+    CommunicationManager(IEncoder *encoder, ITransport *transport) : encoder(encoder), transport(transport) {}
+
+    void onCommandReceived(CommandCallback cb, void *context = nullptr)
+    {
         callback = cb;
         callbackContext = context;
     }
 
-    bool dispatch(const Command& cmd) {
-        if (!encoder || !transport) {
+    bool dispatch(const Command &cmd)
+    {
+        if (!encoder || !transport)
+        {
             LOG(LogLevel::ERROR, "Communication manager not initialized");
             return false;
         }
 
         const SerializedData frame = encoder->serializeCommand(cmd);
 
-        if (frame.size == 0) {
+        if (frame.size == 0)
+        {
             LOG(LogLevel::ERROR, "Failed to serialize command");
             return false;
         }
@@ -45,38 +52,49 @@ public:
         return transport->send(frame);
     }
 
-    void listen() {
-        if (!encoder || !transport) {
+    void listen()
+    {
+        if (!encoder || !transport)
+        {
             LOG(LogLevel::ERROR, "Communication manager not initialized");
             return;
         }
 
         transport->accumulate();
 
-        if (transport->hasCompleteFrame()) {
+        if (transport->hasCompleteFrame())
+        {
             RawData frame = transport->getFrame();
             PackedCommand packed;
-            if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize)) {
+            if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize))
+            {
                 queue.push(packed);
-            } else {
+            }
+            else
+            {
                 LOG(LogLevel::ERROR, "Failed to extract command payload from frame");
             }
             transport->releaseFrame();
         }
     }
 
-    void processCommands() {
-        if (!callback) {
-            if (!queue.isEmpty()) {
+    void processCommands()
+    {
+        if (!callback)
+        {
+            if (!queue.isEmpty())
+            {
                 LOG(LogLevel::WARNING, "Commands queued but no callback registered");
             }
             return;
         }
 
         PackedCommand packed;
-        while (queue.pop(packed)) {
+        while (queue.pop(packed))
+        {
             Command cmd;
-            if (!CommandPacker::unpack(packed.paramBytes, packed.paramSize, cmd)) {
+            if (!CommandPacker::unpack(packed.paramBytes, packed.paramSize, cmd))
+            {
                 LOG(LogLevel::ERROR, "Failed to unpack command from queue");
                 continue;
             }
@@ -84,13 +102,15 @@ public:
         }
     }
 
-    uint8_t pendingCount() const {
+    uint8_t pendingCount() const
+    {
         return queue.size();
     }
 
-    void flushQueue() {
+    void flushQueue()
+    {
         queue.clear();
     }
 };
 
-#endif //SMARTDRIVE_COMMUNICATIONMANAGER_H
+#endif // SMARTDRIVE_COMMUNICATIONMANAGER_H

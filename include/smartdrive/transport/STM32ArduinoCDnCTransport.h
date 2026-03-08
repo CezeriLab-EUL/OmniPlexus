@@ -50,8 +50,8 @@ public:
     STM32ArduinoCDnCTransport(uint32_t dataPin,
                               uint32_t clkPin,
                               uint32_t csPin,
-                              uint32_t clkHalfPeriodUs = 200,
-                              uint32_t turnaroundMs = 100)
+                              uint32_t clkHalfPeriodUs = 14,
+                              uint32_t turnaroundMs = 7)
         : pinData(dataPin),
           pinClk(clkPin),
           pinCS(csPin),
