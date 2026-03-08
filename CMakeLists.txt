@@ -74,6 +74,8 @@ add_library(SmartDrive
         include/smartdrive/utils/CRC8.h
         include/smartdrive/interfaces/IEncoder.h
         include/smartdrive/protocol/BinaryEncoder.h
+        tests/transport/serial_receive_single.cpp
+        tests/transport/serial_receive_multithreaded.cpp
 )
 
 add_custom_target(SyncArduinoLibrary ALL
@@ -100,7 +102,10 @@ add_executable(SmartDrive_Test_Command
 )
 
 add_executable(SmartDrive_Test_SerialTransport
-        tests/transport/test_serial_transport.cpp
+#        tests/transport/test_serial_transport.cpp
+        tests/transport/serial_round_trip.cpp
+#        tests/transport/serial_receive_single.cpp
+#        tests/transport/serial_receive_multithreaded.cpp
 )
 
 target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
