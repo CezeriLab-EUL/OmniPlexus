@@ -22,13 +22,27 @@ namespace ProtocolConstants
     constexpr uint16_t PROTOCOL_OVERHEAD = 3; // STX+TYPE(1) + LENGTH(1) + CRC(1)
     constexpr uint16_t MAX_FRAME_SIZE = MAX_PAYLOAD_SIZE + PROTOCOL_OVERHEAD;
 
+    constexpr uint8_t SEQ_NUM_FIRE_AND_FORGET = 0x00;
+    constexpr uint8_t SEQ_NUM_MIN = 0x01;
+    constexpr uint8_t SEQ_NUM_MAX = 0xFf;
+
     enum class FrameType : uint8_t
     {
         COMMAND = 0x00,
         DISCOVERY = 0x01,
         TELEMETRY = 0x02,
         SETTINGS = 0x03,
-        VALUE_SOURCE = 0x04
+        VALUE_SOURCE = 0x04,
+        RESPONSE = 0x05
+    };
+
+    enum class ResponseStatus : uint8_t {
+        OK = 0x00,
+        UNKNOWN_COMMAND_TYPE = 0X01,
+        INVALID_PARAMS = 0X02,
+        HARDWARE_BUSY = 0X03,
+        HARDWARE_FAULT = 0X04,
+        NOT_SUPPORTED = 0X05,
     };
 
     constexpr uint8_t encodeHeader(FrameType type)

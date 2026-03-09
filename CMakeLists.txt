@@ -76,6 +76,7 @@ add_library(SmartDrive
         include/smartdrive/protocol/BinaryEncoder.h
         tests/transport/serial_receive_single.cpp
         tests/transport/serial_receive_multithreaded.cpp
+        include/smartdrive/utils/PendingAckQueue.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL

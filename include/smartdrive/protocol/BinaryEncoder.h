@@ -162,6 +162,43 @@ public:
         return true;
     }
 
+    SerializedData serializeResponse(const CommandResponse &response) override {
+        uint8_t payload[sizeof(CommandResponse)];
+        payload[0] = response.seqNum;
+        writeUint16LE(&payload[1], response.commandType);
+        payload[3] = static_cast<uint8_t>(response.status);
+
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::RESPONSE, payload, sizeof(CommandResponse), result)) {
+            return result;
+        }
+        return SerializedData{};
+    }
+
+    bool deserializeResponse(const RawData &rawData, CommandResponse &responseOut) override {
+        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::RESPONSE);
+        if (!frameInfo.valid){return false;}
+
+        if (frameInfo.payloadLength != sizeof(CommandResponse)) {
+            LOG(LogLevel::ERROR, "Invalid response payload size");
+            return false;
+        }
+
+        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
+            LOG(LogLevel::ERROR, "Invalid frame size");
+            return false;
+        }
+
+        const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
+        if (!verifyCRC(rawData, crcOffset)) {return false;}
+
+        const uint8_t* p = &rawData.data[frameInfo.payloadStart];
+        responseOut.seqNum = p[0];
+        responseOut.commandType = readUint16LE(&p[1]);
+        responseOut.status = static_cast<ProtocolConstants::ResponseStatus>(p[3]);
+
+        return true;
+    }
+
     SerializedData serializeDiscovery(const DiscoveryResponse &resp) override {
         const size_t actualSize = 1 + (resp.moduleCount * sizeof(ModuleInfo));
 
@@ -344,6 +381,8 @@ public:
         if (SerializedData result; buildFrame(ProtocolConstants::FrameType::SETTINGS, payload, totalSize, result)) {
             return result;
         }
+
+        return  SerializedData{};
     }
 
     bool deserializeSettings(const RawData &rawData, SettingsData &settingsOut) override {

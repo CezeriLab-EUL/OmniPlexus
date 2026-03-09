@@ -22,5 +22,13 @@
 #endif
 #endif
 
+#ifndef PENDING_ACK_CAPACITY
+#ifdef __AVR__
+#define PENDING_ACK_CAPACITY 2
+#else
+#define PENDING_ACK_CAPACITY 8
+#endif
+#endif
+
 
 #endif //SMARTDRIVE_CONFIG_H

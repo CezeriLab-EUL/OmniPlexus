@@ -43,10 +43,17 @@ struct DiscoveryResponse
     ModuleInfo modules[MAX_NUM_MODULES];
 };
 
+struct CommandResponse {
+    uint8_t seqNum;
+    uint16_t commandType;
+    ProtocolConstants::ResponseStatus status;
+};
+
 #pragma pack(pop)
 
 static_assert(sizeof(Command) == 53, "Command must be exactly 53 bytes");
 static_assert(sizeof(ModuleInfo) == 8, "ModuleInfo must be exactly 8 bytes");
 static_assert(sizeof(DiscoveryResponse) == ((8 * MAX_NUM_MODULES) + 1), "DiscoveryResponse has invalid size");
+static_assert(sizeof(CommandResponse) == 4, "CommandResponse must be exactly 4 bytes");
 
 #endif // SMARTDRIVE_PROTOCOLTYPES_H

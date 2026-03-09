@@ -17,6 +17,10 @@ public:
     virtual bool deserializeCommand(const RawData& rawData, Command& cmdOut) = 0;
     virtual bool extractCommandPayload(const RawData& frame, uint8_t* payloadOut, uint8_t& payloadSizeOut) = 0;
 
+    //CommandResponse Serialization & Deserialization
+    virtual SerializedData serializeResponse(const CommandResponse& response) = 0;
+    virtual bool deserializeResponse(const RawData& rawData, CommandResponse& responseOut) = 0;
+
     //Discovery Serialization & Deserialization
     virtual SerializedData serializeDiscovery(const DiscoveryResponse& resp) = 0;
     virtual bool deserializeDiscovery(const RawData& rawData, DiscoveryResponse& respOut) = 0;
