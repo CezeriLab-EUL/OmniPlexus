@@ -106,16 +106,6 @@ void CommandRegistry::initialize() {
         }
     });
 
-    // GET_TEMP
-    registerCommand({
-        CommandType::GET_TEMP,
-        "GET_TEMP",
-        "Request temperature reading (sends response back)",
-        {
-            {"fahrenheit", ValueType::UINT8, false, "0 for Celsius, 1 for Fahrenheit (default: Celsius)", 0, "0"},
-        }
-    });
-
     // RESET
     registerCommand({
         CommandType::RESET,
@@ -123,27 +113,6 @@ void CommandRegistry::initialize() {
         "Reset hardware subsystems",
         {
             {"mode", ValueType::UINT8, true, "Reset mode: 0=OLED, 1=LEDs, 2=Both", 0, ""},
-        }
-    });
-
-    // SEND_ACK
-    registerCommand({
-        CommandType::SEND_ACK,
-        "SEND_ACK",
-        "Acknowledge command received (internal use)",
-        {
-            {"original_cmd", ValueType::UINT16, true, "Command ID being acknowledged", 0, ""},
-        }
-    });
-
-    // SEND_NACK
-    registerCommand({
-        CommandType::SEND_NACK,
-        "SEND_NACK",
-        "Negative acknowledge with reason (internal use)",
-        {
-            {"original_cmd", ValueType::UINT16, true, "Command ID being rejected", 0, ""},
-            {"reason", ValueType::STRING, false, "Error reason", 0, "Error"},
         }
     });
 

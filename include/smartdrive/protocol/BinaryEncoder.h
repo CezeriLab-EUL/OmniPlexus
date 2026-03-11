@@ -117,16 +117,20 @@ private:
     }
 
 public:
-    SerializedData serializeCommand(const Command &cmd) override {
+    SerializedData serializeCommand(const Command &cmd, uint8_t seqNum) override {
         uint8_t payload[ProtocolConstants::MAX_FRAME_SIZE];
-        size_t payloadSize = CommandPacker::pack(cmd, payload);
+        size_t offset = 0;
 
+        payload[offset++] = seqNum;
+
+        size_t payloadSize = CommandPacker::pack(cmd, &payload[offset]);
         if (payloadSize == 0) {
             LOG(LogLevel::ERROR, "Failed to pack command");
             return SerializedData{};
         }
+        offset += payloadSize;
 
-        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::COMMAND, payload, payloadSize, result)) {
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::COMMAND, payload, offset, result)) {
             return result;
         }
 
@@ -142,10 +146,11 @@ public:
             return false;
         }
 
-        return CommandPacker::unpack(&rawData.data[frameInfo.payloadStart], frameInfo.payloadLength, cmdOut);
+        return CommandPacker::unpack(&rawData.data[frameInfo.payloadStart + 1],
+            frameInfo.payloadLength - 1, cmdOut);
     }
 
-    bool extractCommandPayload(const RawData &frame, uint8_t *payloadOut, uint8_t &payloadSizeOut) override {
+    bool extractCommandPayload(const RawData &frame, uint8_t *payloadOut, uint8_t &payloadSizeOut, uint8_t &seqNumOut) override {
         auto frameInfo = validateFrameHeader(frame, ProtocolConstants::FrameType::COMMAND);
         if (!frameInfo.valid) return false;
 
@@ -157,8 +162,9 @@ public:
         const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
         if (!verifyCRC(frame, crcOffset)) return false;
 
-        payloadSizeOut = frameInfo.payloadLength;
-        memcpy(payloadOut, &frame.data[frameInfo.payloadStart], payloadSizeOut);
+        seqNumOut = frame.data[frameInfo.payloadStart];
+        payloadSizeOut = frameInfo.payloadLength - 1; //-1 because we are not storing seqNum
+        memcpy(payloadOut, &frame.data[frameInfo.payloadStart + 1], payloadSizeOut); //+1 becuase we dont want to copy tje seqNum
         return true;
     }
 

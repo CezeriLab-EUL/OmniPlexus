@@ -107,40 +107,10 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
-            case CommandType::GET_TEMP: {
-                // params[0]: fahrenheit (UINT8, optional)
-                if (!cmd.params[0].isEmpty()) {
-                    memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
-                    offset += sizeof(uint8_t);
-                }
-                return offset;
-            }
-
             case CommandType::RESET: {
                 // params[0]: mode (UINT8, required)
                 memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
 offset += sizeof(uint8_t);
-                return offset;
-            }
-
-            case CommandType::SEND_ACK: {
-                // params[0]: original_cmd (UINT16, required)
-                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
-offset += sizeof(uint16_t);
-                return offset;
-            }
-
-            case CommandType::SEND_NACK: {
-                // params[0]: original_cmd (UINT16, required)
-                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
-offset += sizeof(uint16_t);
-                // params[1]: reason (STRING, optional)
-                if (!cmd.params[1].isEmpty()) {
-                    buffer[offset++] = cmd.params[1].getTypeAndSize();
-                    const size_t strDataSize1 = cmd.params[1].getDataSize();
-                    memcpy(&buffer[offset], cmd.params[1].getData(), strDataSize1);
-                    offset += strDataSize1;
-                }
                 return offset;
             }
 
@@ -349,24 +319,6 @@ offset += sizeof(uint16_t);
                 return true;
             }
 
-            case CommandType::GET_TEMP: {
-                if (bufferSize < 2) return false;
-                size_t remainingBytes = bufferSize - offset;
-
-                // params[0]: fahrenheit (UINT8, optional)
-                if (remainingBytes >= sizeof(uint8_t)) {
-                    cmdOut.params[0] = uint8_t(0);
-                    memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
-                    offset += sizeof(uint8_t);
-                    remainingBytes -= sizeof(uint8_t);
-                } else {
-                    // Use default
-                    cmdOut.params[0] = uint8_t(0);
-                }
-
-                return true;
-            }
-
             case CommandType::RESET: {
                 if (bufferSize < 3) return false;
                 size_t remainingBytes = bufferSize - offset;
@@ -377,52 +329,6 @@ offset += sizeof(uint16_t);
                 memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
                 offset += sizeof(uint8_t);
                 remainingBytes -= sizeof(uint8_t);
-
-                return true;
-            }
-
-            case CommandType::SEND_ACK: {
-                if (bufferSize < 4) return false;
-                size_t remainingBytes = bufferSize - offset;
-
-                // params[0]: original_cmd (UINT16, required)
-                cmdOut.params[0] = uint16_t(0);
-                if (remainingBytes < sizeof(uint16_t)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
-                offset += sizeof(uint16_t);
-                remainingBytes -= sizeof(uint16_t);
-
-                return true;
-            }
-
-            case CommandType::SEND_NACK: {
-                if (bufferSize < 4) return false;
-                size_t remainingBytes = bufferSize - offset;
-
-                // params[0]: original_cmd (UINT16, required)
-                cmdOut.params[0] = uint16_t(0);
-                if (remainingBytes < sizeof(uint16_t)) return false;
-                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
-                offset += sizeof(uint16_t);
-                remainingBytes -= sizeof(uint16_t);
-
-                // params[1]: reason (STRING, optional)
-                if (remainingBytes > 0) {
-                    // Read typeAndSize byte first
-                    const uint8_t typeAndSize1 = buffer[offset++];
-                    cmdOut.params[1].setTypeAndSizeRaw(typeAndSize1);
-                    remainingBytes--;
-                    
-                    // Now read string data
-                    const size_t strSize1 = cmdOut.params[1].getDataSize();
-                    if (remainingBytes < strSize1) return false;
-                    memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], strSize1);
-                    offset += strSize1;
-                    remainingBytes -= strSize1;
-                } else {
-                    // Use default
-                    cmdOut.params[1] = "Error";
-                }
 
                 return true;
             }

@@ -19,7 +19,7 @@ void wait(int milliseconds) {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 }
 
-void onCommandReceived(const Command& cmd, void* context) {
+void onCommandReceived(const Command& cmd, const uint8_t& seqNum,  void* context) {
     switch (cmd.commandType) {
         case CommandType::LED_SET_BLOCK: {
             uint16_t color = (uint16_t)cmd.params[0];

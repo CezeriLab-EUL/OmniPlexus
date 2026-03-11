@@ -233,6 +233,11 @@ public:
                 continue;
             }
 
+            if (!cmd.contains("acknowledges") || !cmd["acknowledges"].is_boolean()) {
+                result.addError(cmdLabel + " is missing a valid 'acknowledges' field");
+                continue;
+            }
+
             const std::string name = cmd["name"].get<std::string>();
 
             if (!isValidCommandName(name)) {

@@ -38,23 +38,14 @@ namespace CommandType {
     // Sound the buzzer for specified duration
     constexpr uint16_t BEEP = 0x0009;
 
-    // Request temperature reading (sends response back)
-    constexpr uint16_t GET_TEMP = 0x000A;
-
     // Reset hardware subsystems
-    constexpr uint16_t RESET = 0x000B;
-
-    // Acknowledge command received (internal use)
-    constexpr uint16_t SEND_ACK = 0x000C;
-
-    // Negative acknowledge with reason (internal use)
-    constexpr uint16_t SEND_NACK = 0x000D;
+    constexpr uint16_t RESET = 0x000A;
 
     // Set OLED font from preset
-    constexpr uint16_t OLED_SET_FONT = 0x000E;
+    constexpr uint16_t OLED_SET_FONT = 0x000B;
 
     // Set cursor position for next print
-    constexpr uint16_t OLED_SET_CURSOR = 0x000F;
+    constexpr uint16_t OLED_SET_CURSOR = 0x000C;
 
 } // namespace CommandType
 

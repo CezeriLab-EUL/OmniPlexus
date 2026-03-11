@@ -77,6 +77,7 @@ add_library(SmartDrive
         tests/transport/serial_receive_single.cpp
         tests/transport/serial_receive_multithreaded.cpp
         include/smartdrive/utils/PendingAckQueue.h
+        include/smartdrive/utils/ResponseQueue.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL
@@ -104,9 +105,10 @@ add_executable(SmartDrive_Test_Command
 
 add_executable(SmartDrive_Test_SerialTransport
 #        tests/transport/test_serial_transport.cpp
-        tests/transport/serial_round_trip.cpp
+#        tests/transport/serial_round_trip.cpp
 #        tests/transport/serial_receive_single.cpp
 #        tests/transport/serial_receive_multithreaded.cpp
+        tests/transport/serial_command_response.cpp
 )
 
 target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)

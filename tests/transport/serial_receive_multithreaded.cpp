@@ -15,7 +15,7 @@ void signalHandler(int) {
     running = false;
 }
 
-void doSomething(const Command& cmd, void* context) {
+void doSomething(const Command& cmd, const uint8_t& seqNum, void* context) {
     switch (cmd.commandType) {
         case CommandType::LED_SET_BLOCK:
             std::cout << "Received command: " << std::endl;

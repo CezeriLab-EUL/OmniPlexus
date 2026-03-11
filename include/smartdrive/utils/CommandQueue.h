@@ -16,6 +16,7 @@
 struct PackedCommand {
     uint8_t paramBytes[MAX_PACKED_PARAM_SIZE];;
     uint8_t paramSize;
+    uint8_t seqNum;
 };
 
 class CommandQueue {

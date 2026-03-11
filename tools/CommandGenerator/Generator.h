@@ -640,7 +640,10 @@ private:
                 }
             }
 
-            out << "        return comms.dispatch(cmd);\n";
+            const bool requiresAck = cmd["acknowledges"].get<bool>();
+            const std::string ackStr = requiresAck ? "true" : "false";
+
+            out << "        return comms.dispatch(cmd, " << ackStr << ");\n";
             out << "    }\n\n";
         }
 

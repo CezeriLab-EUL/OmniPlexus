@@ -13,9 +13,9 @@ public:
     virtual ~IEncoder() = default;
 
     //Command Serialization & Deserialization
-    virtual SerializedData serializeCommand(const Command& cmd) = 0;
+    virtual SerializedData serializeCommand(const Command& cmd, uint8_t seqNum) = 0;
     virtual bool deserializeCommand(const RawData& rawData, Command& cmdOut) = 0;
-    virtual bool extractCommandPayload(const RawData& frame, uint8_t* payloadOut, uint8_t& payloadSizeOut) = 0;
+    virtual bool extractCommandPayload(const RawData& frame, uint8_t* payloadOut, uint8_t& payloadSizeOut, uint8_t &seqNUm) = 0;
 
     //CommandResponse Serialization & Deserialization
     virtual SerializedData serializeResponse(const CommandResponse& response) = 0;

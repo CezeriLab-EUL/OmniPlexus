@@ -26,7 +26,7 @@ public:
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = text;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Draw a rectangular frame on OLED
@@ -36,7 +36,7 @@ public:
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = width;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Draw a progress bar on OLED
@@ -46,21 +46,21 @@ public:
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = percent;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Clear the OLED display buffer
     bool oledClear() {
         Command cmd;
         cmd.commandType = CommandType::OLED_CLEAR;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Send buffer to OLED display (update screen)
     bool oledRefresh() {
         Command cmd;
         cmd.commandType = CommandType::OLED_REFRESH;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Set OLED display brightness
@@ -68,7 +68,7 @@ public:
         Command cmd;
         cmd.commandType = CommandType::OLED_SET_BRIGHTNESS;
         cmd.params[0] = brightness;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, true);
     }
 
     // Set all LEDs to the same color (RGB565 format)
@@ -76,7 +76,7 @@ public:
         Command cmd;
         cmd.commandType = CommandType::LED_SET_BLOCK;
         cmd.params[0] = color;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Set a single LED to specified color (RGB565 format)
@@ -85,7 +85,7 @@ public:
         cmd.commandType = CommandType::LED_SET_SINGLE;
         cmd.params[0] = index;
         cmd.params[1] = color;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Sound the buzzer for specified duration
@@ -93,15 +93,7 @@ public:
         Command cmd;
         cmd.commandType = CommandType::BEEP;
         cmd.params[0] = duration;
-        return comms.dispatch(cmd);
-    }
-
-    // Request temperature reading (sends response back)
-    bool getTemp(uint8_t fahrenheit = uint8_t(0)) {
-        Command cmd;
-        cmd.commandType = CommandType::GET_TEMP;
-        cmd.params[0] = fahrenheit;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
     // Reset hardware subsystems
@@ -109,24 +101,7 @@ public:
         Command cmd;
         cmd.commandType = CommandType::RESET;
         cmd.params[0] = mode;
-        return comms.dispatch(cmd);
-    }
-
-    // Acknowledge command received (internal use)
-    bool sendAck(uint16_t original_cmd) {
-        Command cmd;
-        cmd.commandType = CommandType::SEND_ACK;
-        cmd.params[0] = original_cmd;
-        return comms.dispatch(cmd);
-    }
-
-    // Negative acknowledge with reason (internal use)
-    bool sendNack(uint16_t original_cmd, const char* reason = "Error") {
-        Command cmd;
-        cmd.commandType = CommandType::SEND_NACK;
-        cmd.params[0] = original_cmd;
-        cmd.params[1] = reason;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, true);
     }
 
     // Set OLED font from preset
@@ -134,7 +109,7 @@ public:
         Command cmd;
         cmd.commandType = CommandType::OLED_SET_FONT;
         cmd.params[0] = font_id;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, true);
     }
 
     // Set cursor position for next print
@@ -143,7 +118,7 @@ public:
         cmd.commandType = CommandType::OLED_SET_CURSOR;
         cmd.params[0] = x;
         cmd.params[1] = y;
-        return comms.dispatch(cmd);
+        return comms.dispatch(cmd, false);
     }
 
 }; // class IndicatorBoardController
