@@ -43,7 +43,8 @@ struct DiscoveryResponse
     ModuleInfo modules[MAX_NUM_MODULES];
 };
 
-struct CommandResponse {
+struct CommandResponse
+{
     uint8_t seqNum;
     uint16_t commandType;
     ProtocolConstants::ResponseStatus status;
