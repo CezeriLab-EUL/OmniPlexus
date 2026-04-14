@@ -24,16 +24,13 @@ namespace ProtocolConstants
 
     constexpr uint8_t SEQ_NUM_FIRE_AND_FORGET = 0x00;
     constexpr uint8_t SEQ_NUM_MIN = 0x01;
-    constexpr uint8_t SEQ_NUM_MAX = 0xFf;
+    constexpr uint8_t SEQ_NUM_MAX = 0xFF;
 
     enum class FrameType : uint8_t
     {
         COMMAND = 0x00,
-        DISCOVERY = 0x01,
-        TELEMETRY = 0x02,
-        SETTINGS = 0x03,
-        VALUE_SOURCE = 0x04,
-        RESPONSE = 0x05
+        RESPONSE = 0x01,
+        TELEMETRY = 0x02
     };
 
     enum class ResponseStatus : uint8_t {
@@ -58,6 +55,11 @@ namespace ProtocolConstants
     constexpr bool isValidHeader(const uint8_t header)
     {
         return (header & STX_MASK) == STX_PATTERN;
+    }
+
+    constexpr bool isValidFrameType(const uint8_t header)
+    {
+        return (header >> TYPE_SHIFT) <= static_cast<uint8_t>(FrameType::TELEMETRY);
     }
 }
 

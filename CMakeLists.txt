@@ -78,6 +78,11 @@ add_library(SmartDrive
         tests/transport/serial_receive_multithreaded.cpp
         include/smartdrive/utils/PendingAckQueue.h
         include/smartdrive/utils/ResponseQueue.h
+        include/smartdrive/interfaces/IPlatformClock.h
+        include/smartdrive/core/PlatformClock.h
+        include/smartdrive/core/TriggerConfig.h
+        include/smartdrive/core/TelemetryManager.h
+        tests/transport/serial_telemetry_receive.cpp
 )
 
 add_custom_target(SyncArduinoLibrary ALL
@@ -108,7 +113,8 @@ add_executable(SmartDrive_Test_SerialTransport
 #        tests/transport/serial_round_trip.cpp
 #        tests/transport/serial_receive_single.cpp
 #        tests/transport/serial_receive_multithreaded.cpp
-        tests/transport/serial_command_response.cpp
+#        tests/transport/serial_command_response.cpp
+        tests/transport/serial_telemetry_receive.cpp
 )
 
 target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)

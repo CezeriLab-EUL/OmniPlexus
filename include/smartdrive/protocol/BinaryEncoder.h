@@ -205,131 +205,32 @@ public:
         return true;
     }
 
-    SerializedData serializeDiscovery(const DiscoveryResponse &resp) override {
-        const size_t actualSize = 1 + (resp.moduleCount * sizeof(ModuleInfo));
-
-        uint8_t payload[actualSize];
-        payload[0] = resp.moduleCount;
-        memcpy(&payload[1], resp.modules, resp.moduleCount * sizeof(ModuleInfo));
-
-        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::DISCOVERY, payload, actualSize, result)) {
-            return result;
-        }
-
-        return SerializedData{};
-    }
-
-    bool deserializeDiscovery(const RawData &rawData, DiscoveryResponse &respOut) override {
-        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::DISCOVERY);
-        if (!frameInfo.valid){return false;}
-
-        if (frameInfo.payloadLength < 1) {
-            LOG(LogLevel::ERROR, "Discovery payload too small");
-            return false;
-        }
-
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
-            return false;
-        }
-
-        size_t offset = frameInfo.payloadStart;
-
-        const uint8_t moduleCount = rawData.data[offset++];
-        if (frameInfo.payloadLength != 1 + (moduleCount * sizeof(ModuleInfo))) {
-            LOG(LogLevel::ERROR, "Payload size mismatch");
-            return false;
-        }
-        const size_t crcOffset = offset + moduleCount * sizeof(ModuleInfo);
-        if (!verifyCRC(rawData, crcOffset)) {return false;}
-
-        DiscoveryResponse temp;
-        temp.moduleCount = moduleCount;
-        memcpy(temp.modules, &rawData.data[offset], moduleCount * sizeof(ModuleInfo));
-        respOut = temp;
-
-        return true;
-    }
-
-    SerializedData serializeValue(const ValueSource &value) override {
-        const size_t actualSize = ProtocolConstants::TYPE_AND_SIZE_BYTE + value.getDataSize();
-
-        uint8_t compactPayload[actualSize];
-        compactPayload[0] = value.getTypeAndSize();
-        memcpy(&compactPayload[1], value.getData(), value.getDataSize());
-
-        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::VALUE_SOURCE, compactPayload, actualSize, result)) {
-            return result;
-        }
-
-        return SerializedData{};
-    }
-
-    bool deserializeValue(const RawData &rawData, ValueSource &valueOut) override {
-        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::VALUE_SOURCE);
-        if (!frameInfo.valid){ return false;}
-
-        if (frameInfo.payloadLength < ProtocolConstants::TYPE_AND_SIZE_BYTE) {
-            LOG(LogLevel::ERROR, "ValueSource payload too small");
-            return false;
-        }
-
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
-            return false;
-        }
-
-        size_t offset = frameInfo.payloadStart;
-
-        const uint8_t typeAndSize = rawData.data[offset++];
-
-        ValueSource temp;
-        temp.setTypeAndSizeRaw(typeAndSize);
-        const size_t expectedSize = temp.getDataSize();
-
-        if (frameInfo.payloadLength != ProtocolConstants::TYPE_AND_SIZE_BYTE + expectedSize) {
-            LOG(LogLevel::ERROR, "Payload size mismatch");
-            return false;
-        }
-
-        const size_t crcOffset = offset + expectedSize;
-        if (!verifyCRC(rawData, crcOffset)) {return false;}
-
-        memcpy(temp.getDataMutable(), &rawData.data[offset], expectedSize);
-        valueOut = temp;
-
-        return true;
-    }
-
-    SerializedData serializeTelemetry(const TelemetryData &telemetry) override {
-        const size_t valueSize = ProtocolConstants::TYPE_AND_SIZE_BYTE + telemetry.getDataSize();
-        const size_t totalSize = sizeof(uint16_t) + sizeof(uint32_t) + valueSize;
-
-        uint8_t payload[totalSize];
+    SerializedData serializeTelemetry(const Telemetry &telemetry) override {
+        uint8_t payload[ProtocolConstants::MAX_PAYLOAD_SIZE];
         size_t offset = 0;
 
         writeUint16LE(&payload[offset], telemetry.sourceID);
-        offset += sizeof(uint16_t);
-
-        writeUint32LE(&payload[offset], telemetry.timestamp);
-        offset += sizeof(uint32_t);
+        offset += 2;
 
         payload[offset++] = telemetry.getTypeAndSize();
-        memcpy(&payload[offset], telemetry.getData(), telemetry.getDataSize());
 
-        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::TELEMETRY, payload, totalSize, result)) {
+        const size_t dataSize = telemetry.getDataSize();
+        memcpy(&payload[offset], telemetry.getData(), dataSize);
+        offset += dataSize;
+
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::TELEMETRY, payload, offset, result)) {
             return result;
         }
 
         return SerializedData{};
     }
 
-    bool deserializeTelemetry(const RawData &rawData, TelemetryData &telemetryOut) override {
+    bool deserializeTelemetry(const RawData &rawData, Telemetry &telemetryOut) override {
         auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::TELEMETRY);
-        if (!frameInfo.valid){return false;}
+        if (!frameInfo.valid) { return false; }
 
-        if (frameInfo.payloadLength < sizeof(uint16_t) + sizeof(uint32_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE) {
-            LOG(LogLevel::ERROR, "Telemetry payload too small");
+        if (frameInfo.payloadLength < 3) { // Minimum size: 2 bytes for sourceID + 1 byte for typeAndSize
+            LOG(LogLevel::ERROR, "Invalid telemetry payload size");
             return false;
         }
 
@@ -338,98 +239,22 @@ public:
             return false;
         }
 
-        size_t offset = frameInfo.payloadStart;
+        const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
+        if (!verifyCRC(rawData, crcOffset)) { return false; }
 
-        const uint16_t sourceID = readUint16LE(&rawData.data[offset]);
-        offset += sizeof(uint16_t);
+        const uint8_t* p = &rawData.data[frameInfo.payloadStart];
 
-        const uint32_t timestamp = readUint32LE(&rawData.data[offset]);
-        offset += sizeof(uint32_t);
+        telemetryOut.sourceID = readUint16LE(p);
+        telemetryOut.setTypeAndSizeRaw(p[2]);
 
-        const uint8_t typeAndSize = rawData.data[offset++];
-
-        ValueSource temp;
-        temp.setTypeAndSizeRaw(typeAndSize);
-        const size_t expectedSize = temp.getDataSize();
-
-        if (frameInfo.payloadLength != sizeof(uint16_t) + sizeof(uint32_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE + expectedSize) {
-            LOG(LogLevel::ERROR, "Payload size mismatch");
+        const size_t dataSize = telemetryOut.getDataSize();
+        if (dataSize + 3 > frameInfo.payloadLength) {
+            LOG(LogLevel::ERROR, "Invalid telemetry data size");
             return false;
         }
 
-        const size_t crcOffset = offset + expectedSize;
-        if (!verifyCRC(rawData, crcOffset)) {return false;}
+        memcpy(telemetryOut.getDataMutable(), &p[3], dataSize);
 
-        TelemetryData result;
-        result.sourceID = sourceID;
-        result.timestamp = timestamp;
-        result.setTypeAndSizeRaw(typeAndSize);
-        memcpy(result.getDataMutable(), &rawData.data[offset], expectedSize);
-        telemetryOut = result;
-
-        return true;
-
-    }
-
-    SerializedData serializeSettings(const SettingsData &settings) override {
-        const size_t valueSize = ProtocolConstants::TYPE_AND_SIZE_BYTE + settings.getDataSize();
-        const size_t totalSize = sizeof(uint16_t) + valueSize;
-
-        uint8_t payload[totalSize];
-        size_t offset = 0;
-
-        writeUint16LE(&payload[offset], settings.settingsID);
-        offset += sizeof(uint16_t);
-
-        payload[offset++] = settings.getTypeAndSize();
-        memcpy(&payload[offset], settings.getData(), settings.getDataSize());
-
-        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::SETTINGS, payload, totalSize, result)) {
-            return result;
-        }
-
-        return  SerializedData{};
-    }
-
-    bool deserializeSettings(const RawData &rawData, SettingsData &settingsOut) override {
-        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::SETTINGS);
-        if (!frameInfo.valid){return false;}
-
-        if (frameInfo.payloadLength < sizeof(uint16_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE) {
-            LOG(LogLevel::ERROR, "Settings payload too small");
-            return false;
-        }
-
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
-            return false;
-        }
-
-        size_t offset = frameInfo.payloadStart;
-
-        const uint16_t settingsID = readUint16LE(&rawData.data[offset]);
-        offset += sizeof(uint16_t);
-
-       const uint8_t typeAndSize = rawData.data[offset++];
-
-        ValueSource temp;
-        temp.setTypeAndSizeRaw(typeAndSize);
-        const size_t expectedSize = temp.getDataSize();
-
-        if (frameInfo.payloadLength != sizeof(uint16_t) + ProtocolConstants::TYPE_AND_SIZE_BYTE + expectedSize) {
-            LOG(LogLevel::ERROR, "Payload size mismatch");
-            return false;
-        }
-
-        const size_t crcOffset = offset + expectedSize;
-        if (!verifyCRC(rawData, crcOffset)) {return false;}
-
-        SettingsData result;
-        result.settingsID = settingsID;
-        result.setTypeAndSizeRaw(typeAndSize);
-        memcpy(result.getDataMutable(), &rawData.data[offset], expectedSize);
-
-        settingsOut = result;
         return true;
     }
 

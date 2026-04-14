@@ -14,12 +14,11 @@ struct SettingsData : public ValueSource
     uint16_t settingsID;
 };
 
-struct TelemetryData : public ValueSource
+struct Telemetry : public ValueSource
 {
     uint16_t sourceID;
-    uint32_t timestamp;
 };
 #pragma pack(pop)
 
-static_assert(sizeof(TelemetryData) == 23, "TelemetryData must be exactly 23 bytes");
+static_assert(sizeof(Telemetry) == 19, "TelemetryData must be exactly 23 bytes");
 #endif // SMARTDRIVE_ROBOTDATA_H

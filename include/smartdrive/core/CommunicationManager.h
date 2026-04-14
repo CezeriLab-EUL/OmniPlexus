@@ -7,6 +7,7 @@
 
 #include "platform.h"
 #include "../interfaces/IEncoder.h"
+#include "../generated/CommandPacker.h"
 #include "../interfaces/ITransport.h"
 #include "../types/ProtocolTypes.h"
 #include "../utils/CommandQueue.h"
@@ -19,6 +20,7 @@ class CommunicationManager
 public:
     using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, void *context);
     using CommandResponseCallback = void (*)(const CommandResponse &response, void *context);
+    using TelemetryCallback = void (*)(const Telemetry &telemetry, void *context);
 
 private:
     IEncoder *encoder;
@@ -29,9 +31,10 @@ private:
     uint8_t nextSeqNum = ProtocolConstants::SEQ_NUM_MIN;
     CommandCallback callback = nullptr;
     CommandResponseCallback responseCallback = nullptr;
+    TelemetryCallback telemetryCallback = nullptr;
     void *callbackContext = nullptr;
     void *responseCallbackContext = nullptr;
-
+    void *telemetryCallbackContext = nullptr;
 
 public:
     CommunicationManager(IEncoder *encoder, ITransport *transport) : encoder(encoder), transport(transport) {}
@@ -44,6 +47,11 @@ public:
     void onResponseReceived(CommandResponseCallback cb, void *context = nullptr){
         responseCallback = cb;
         responseCallbackContext = context;
+    }
+
+    void onTelemetryReceived(TelemetryCallback cb, void *context = nullptr){
+        telemetryCallback = cb;
+        telemetryCallbackContext = context;
     }
 
     bool dispatch(const Command &cmd, bool requiresAck = false){
@@ -72,6 +80,21 @@ public:
         if (frame.size == 0)
         {
             LOG(LogLevel::ERROR, "Failed to serialize command");
+            return false;
+        }
+
+        return transport->send(frame);
+    }
+
+    bool dispatchTelemetry(const Telemetry &value) {
+        if (!encoder || !transport) {
+            LOG(LogLevel::ERROR, "Communication manager not initialized");
+            return false;
+        }
+
+        const SerializedData frame = encoder->serializeTelemetry(value);
+        if (frame.size == 0) {
+            LOG(LogLevel::ERROR, "Failed to serialize telemetry");
             return false;
         }
 
@@ -115,6 +138,12 @@ public:
         {
             RawData frame = transport->getFrame();
 
+            if (!ProtocolConstants::isValidFrameType(frame.data[0])) {
+                LOG(LogLevel::WARNING, "Received frame with invalid type, discarding");
+                transport->releaseFrame();
+                return;
+            }
+
             const ProtocolConstants::FrameType frameType =
                 ProtocolConstants::decodeType(frame.data[0]);
 
@@ -136,6 +165,19 @@ public:
                 }else {
                     LOG(LogLevel::ERROR, "Failed to deserialize response");
                 }
+            }else if (frameType == ProtocolConstants::FrameType::TELEMETRY) {
+                Telemetry telemetry;
+                if (encoder->deserializeTelemetry(frame, telemetry)) {
+                    if (telemetryCallback) {
+                        telemetryCallback(telemetry, telemetryCallbackContext);
+                    }else {
+                        LOG(LogLevel::WARNING, "Telemetry received but no callback registered");
+                    }
+                }else {
+                    LOG(LogLevel::ERROR, "Failed to deserialize telemetry");
+                }
+            }else {
+                LOG(LogLevel::WARNING, "Received frame with invalid type, discarding");
             }
             transport->releaseFrame();
         }

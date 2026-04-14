@@ -12,7 +12,14 @@
     #define LOGGING_ENABLED 1
     #define DEBUG_ENABLED 1
 #endif
-#define MAX_NUM_MODULES 8
+
+#ifndef MAX_TELEMETRY_SOURCES
+#ifdef __AVR__
+#define MAX_TELEMETRY_SOURCES 8
+#else
+#define MAX_TELEMETRY_SOURCES 16
+#endif
+#endif
 
 #ifndef COMMAND_QUEUE_CAPACITY
 #ifdef __AVR__

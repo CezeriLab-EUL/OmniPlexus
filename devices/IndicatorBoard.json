@@ -206,5 +206,25 @@
         }
       ]
     }
+  ],
+  "telemetry": [
+    {
+      "id": 1,
+      "name": "DISPLAY_BRIGHTNESS",
+      "description": "Current OLED brightness level (0-255)",
+      "type": "UINT8"
+    },
+    {
+      "id": 2,
+      "name": "BOARD_TEMPERATURE",
+      "description": "Indicator board temperature in celsius",
+      "type": "FLOAT"
+    },
+    {
+      "id": 3,
+      "name": "LED_COUNT",
+      "description": "Number of active LEDs currently lit",
+      "type": "UINT16"
+    }
   ]
 }

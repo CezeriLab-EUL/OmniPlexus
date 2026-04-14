@@ -59,7 +59,7 @@ private:
                 "Command '" + cmdName + "' param[" + std::to_string(paramIndex) +
                 "] is missing a valid 'name' field"
             );
-        }
+            }
 
         const std::string paramName = param.contains("name") && param["name"].is_string()
                                           ? param["name"].get<std::string>()
@@ -95,7 +95,7 @@ private:
                 "Command '" + cmdName + "' param '" + paramName +
                 "' is missing the 'description' field"
             );
-        }
+            }
 
         if (param.contains("type") && param["type"].is_string() && param["type"].get<std::string>() == "STRING") {
             if (!param.contains("maxLength") || !param["maxLength"].is_number_unsigned()) {
@@ -116,7 +116,7 @@ private:
                         std::to_string(maxLen) + ")"
                     );
                 }
-            }
+                }
         }
     }
 
@@ -154,7 +154,7 @@ private:
                         "Command '" + cmdName + "' has optional parameter '" + paramName +
                         "' without a 'default' value. All optional parameters must have defaults."
                     );
-                }
+                    }
             } else {
                 // Required parameter
                 if (foundOptional) {
@@ -182,6 +182,103 @@ private:
         }
 
         return true;
+    }
+
+    static void validateTelemetrySource(const json& source, int index, ValidationResult& result) {
+        const std::string label = "telemetry[" + std::to_string(index) + "]";
+        if (!source.contains("name") || !source["name"].is_string() || source["name"].get<std::string>().empty()) {
+            result.addError(label + " is missing a valid 'name' field");
+        }else {
+            const std::string name = source["name"].get<std::string>();
+            if (!isValidCommandName(name)) {
+                result.addError(
+                    "Telemetry source '" + name + "' has invalid name format. "
+                    "Names must start with a letter or underscore, and contain only "
+                    "alphanumeric characters and underscores (no spaces or special characters)"
+                );
+            }
+        }
+
+        if (!source.contains("id") || !source["id"].is_number_unsigned()) {
+            result.addError(label + " is missing a valid 'id' field");
+        } else {
+            const uint16_t id = source["id"].get<uint16_t>();
+            if (id < MIN_ID) {
+                result.addError(
+                    label + " has an invalid 'id' value (" + toHex(id) + "). Must be >= " + toHex(MIN_ID));
+            }
+        }
+
+        if (!source.contains("type") || !source["type"].is_string()) {
+            result.addError(label + " is missing the 'type' field");
+        } else {
+            const std::string type = source["type"].get<std::string>();
+            if (!VALID_TYPES.count(type)) {
+                result.addError(
+                    label + " has unsupported type '" + type +
+                    "'. Valid types are: UINT8, INT8, FLOAT, UINT16, INT16, UINT32, INT32, STRING"
+                );
+            }
+        }
+
+        if (!source.contains("description") || !source["description"].is_string() || source["description"].get<std::string>().empty()) {
+            result.addWarning(label + " is missing a 'description' field");
+        }
+    }
+
+    static void validateTelemetry(const json& data, ValidationResult& result) {
+        if (!data.contains("telemetry")) return; // telemetry is optional
+
+        if (!data["telemetry"].is_array()) {
+            result.addError("'telemetry' field must be an array");
+            return;
+        }
+
+        if (data["telemetry"].empty()) {
+            result.addWarning("'telemetry' array is empty — nothing to generate");
+            return;
+        }
+
+        std::set<uint16_t> seenIDs;
+        std::set<std::string> seenNames;
+        uint16_t prevID = 0;
+
+        for (size_t i = 0; i < data["telemetry"].size(); ++i) {
+            const auto& source = data["telemetry"][i];
+
+            validateTelemetrySource(source, static_cast<int>(i), result);
+
+            // Duplicate ID check
+            if (source.contains("id") && source["id"].is_number_unsigned()) {
+                const uint16_t id = source["id"].get<uint16_t>();
+                if (seenIDs.count(id)) {
+                    result.addError(
+                        "telemetry[" + std::to_string(i) + "] has duplicate 'id' value ("
+                        + toHex(id) + ")"
+                    );
+                }
+                seenIDs.insert(id);
+
+                if (prevID > 0 && id != prevID + 1) {
+                    result.addWarning(
+                        "Telemetry ID gap detected between " + toHex(prevID) +
+                        " and " + toHex(id) + " (this may be intentional)"
+                    );
+                }
+                prevID = id;
+            }
+
+            if (source.contains("name") && source["name"].is_string()) {
+                const std::string name = source["name"].get<std::string>();
+                if (seenNames.count(name)) {
+                    result.addError(
+                        "telemetry[" + std::to_string(i) + "] has duplicate 'name' value ("
+                        + name + ")"
+                    );
+                }
+                seenNames.insert(name);
+            }
+        }
     }
 
 public:
@@ -298,6 +395,8 @@ public:
                 result.addWarning(cmdLabel + " is missing a 'description' field");
             }
         }
+
+        validateTelemetry(data, result);
 
         return result;
     }
