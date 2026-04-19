@@ -103,4 +103,172 @@ public:
     bool hasFrame() const { return state == SlaveAccumulator::State::FRAME_READY; }
 
     RawData getFrame() { return RawData{ready, collected}; }
-}
+
+    void releaseFrame()
+    {
+        frameConsumed = true;
+        reset();
+    }
+
+    // queue serialized frame for delivery to one slave next cycle
+    bool queueFrame(uint8_t slaveIdx, const SerializedData &data)
+    {
+        if (slaveIdx >= ParallelCDnCTransport::MAX_SLAVES)
+        {
+            LOG(LogLevel::ERROR, "ParallelCDnC: slaveIdx out of range");
+            return false;
+        }
+        if (data.size == 0 || data.size > ParallelCDnCTransport::BUF_SIZE)
+        {
+            LOG(LogLevel::ERROR, "ParallelCDnC: invalid frame size");
+            return false;
+        }
+        if (txCount[slaveIdx] + data.size > ParallelCDnCTransport::BUF_SIZE)
+        {
+            LOG(LogLevel::WARNING, "ParallelCDnC: TX buffer full for slave");
+            return false;
+        }
+
+        for (size_t i = 0; i < data.size; ++i)
+        {
+            slaveTxBuffer[slaveIdx][txWritePtr[slaveIdx]] = data.data[i];
+            txWritePtr[slaveIdx] = (txWritePtr[slaveIdx] + 1) % ParallelCDnCTransport::BUF_SIZE;
+        }
+        txCount[slaveIdx] += static_cast<uint8_t>(data.size);
+        return true;
+    }
+
+    // Run one full TX→turnaround→RX cycle across all 16 slaves.
+    void cycle()
+    {
+        const uint8_t cycleBytes = computeCycleLength();
+
+        if (cycleBytes == 0)
+        {
+            runCycle(1);
+        }
+        else
+        {
+            runCycle(cycleBytes);
+        }
+    }
+
+    // per-slave frame access — called after cycle() returns.
+    bool hasFrame(uint8_t slaveIdx) const { return accumulators[slaveIdx].hasFrame(); }
+    RawData getFrame(uint8_t slaveIdx) { return accumulators[slaveIdx].getFrame(); }
+    void releaseFrame(uint8_t slaveIdx) { accumulators[slaveIdx].releaseFrame(); }
+
+    // Presence map — set during discovery, bit N = slave N present.
+    void markPresent(uint8_t slaveIdx) { present |= (1u << slaveIdx); }
+    void markAbsent(uint8_t slaveIdx) { present &= ~(1u << slaveIdx); }
+    bool isPresent(uint8_t slaveIdx) const { return (present >> slaveIdx) & 0x01; }
+    uint16_t presenceMap() const { return present; }
+
+protected:
+    virtual void setDataPortOutput() = 0;
+    virtual void setDataPortInput() = 0;
+    virtual void writeDataPort(uint16_t v) = 0;
+    virtual uint16_t readDataPort() = 0;
+    virtual void setClk(bool high) = 0;
+    virtual void waitHalfPeriod() = 0; // one CLK half-period delay
+    virtual void waitTurnaround() = 0; // slave pin-switch settling time
+
+private:
+    // tx buffers
+    uint8_t slaveTxBuffer[MAX_SLAVES][BUF_SIZE] = {};
+    uint8_t txWritePtr[MAX_SLAVES] = {};
+    uint8_t txReadPtr[MAX_SLAVES] = {};
+    uint8_t txCount[MAX_SLAVES] = {};
+
+    // rx buffers
+    uint16_t recvBits[BUF_SIZE * 8] = {};
+    SlaveAccumulator accumulators[MAX_SLAVES] = {};
+
+    // presence map
+    uint16_t present = 0x0000; // all absent until discovery
+
+    // internal helpers
+    uint8_t computeCycleLength() const
+    {
+        uint8_t maxLen = 0;
+        for (uint8_t s = 0; s < MAX_SLAVES; ++s)
+        {
+            if (txCount[s] > maxLen)
+            {
+                maxLen = txCount[s];
+            }
+        }
+        return maxLen;
+    }
+
+    void runCycle(uint8_t cycleBytes)
+    {
+        uint16_t sendbuffer[BUF_SIZE * 8] = {};
+
+        for (uint8_t s = 0; s < MAX_SLAVES; ++s)
+        {
+            for (uint8_t byteIdx = 0; byteIdx < cycleBytes; ++byteIdx)
+            {
+                uint8_t txByte = 0x00; // default: NOP / padding
+
+                if (txCount[s] > 0)
+                {
+                    txByte = slaveTxBuffer[s][txReadPtr[s]];
+                    txReadPtr[s] = (txReadPtr[s] + 1) % BUF_SIZE;
+                    txCount[s]--;
+                }
+
+                // Pack each bit of txByte into the corresponding sendbuffer slot.
+                // MSB first: bit 7 goes into sendbuffer[byteIdx*8 + 0], etc.
+                for (uint8_t bit = 0; bit < 8; ++bit)
+                {
+                    const uint8_t bitPos = byteIdx * 8 + bit;
+                    const uint8_t bitVal = (txByte >> (7 - bit)) & 0x01;
+                    sendbuffer[bitPos] |= (static_cast<uint16_t>(bitVal) << s);
+                }
+            }
+        }
+
+        setDataPortOutput();
+
+        for (uint8_t i = 0; i < totalBits; ++i)
+        {
+            writeDataPort(sendbuffer[i]);
+            waitHalfPeriod(); // data setup time
+            setClk(true);
+            waitHalfPeriod(); // hold high — slaves sample here
+            setClk(false);
+            waitHalfPeriod(); // hold low before next bit
+        }
+
+        setDataPortInput();
+        waitTurnaround();
+
+        for (uint8_t i = 0; i < totalBits; ++i)
+        {
+            waitHalfPeriod();
+            setClk(true);
+            waitHalfPeriod();
+            recvBits[i] = readDataPort(); // sample on rising edge
+            setClk(false);
+            waitHalfPeriod();
+        }
+
+        for (uint8_t s = 0; s < MAX_SLAVES; ++s)
+        {
+            for (uint8_t byteIdx = 0; byteIdx < cycleBytes; ++byteIdx)
+            {
+                uint8_t rxByte = 0;
+                for (uint8_t bit = 0; bit < 8; ++bit)
+                {
+                    const uint8_t bitPos = byteIdx * 8 + bit;
+                    const uint8_t bitVal = (recvBits[bitPos] >> s) & 0x01;
+                    rxByte |= (bitVal << (7 - bit)); // MSB first
+                }
+                accumulators[s].processByte(rxByte);
+            }
+        }
+    }
+};
+
+#endif // SMARTDRIVE_PARALLELCDNCTRANSPORT_H
