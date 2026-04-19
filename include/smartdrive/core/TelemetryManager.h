@@ -208,6 +208,21 @@ public:
         return true;
     }
 
+    bool unregisterSource(uint16_t sourceID) {
+        const int16_t idx = findIndex(sourceID);
+        if (idx < 0) {
+            LOG(LogLevel::WARNING, "unregisterSource: unregistered telemetry source");
+            return false;
+        }
+        entries[idx].active = false;
+        entries[idx].dirty = false;
+        entries[idx].lastSentTimeMs = 0;
+        entries[idx].current.clear();
+        entries[idx].lastSent.clear();
+        count--;
+        return true;
+    }
+
     bool disable(uint16_t sourceID) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
