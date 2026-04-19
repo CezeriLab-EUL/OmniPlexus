@@ -248,8 +248,8 @@ public:
     template<typename T>
     void pack(T value) {
 #ifndef __AVR__
-        static_assert(std::is_arithmetic_v<T>, "Value must be arithmetic. Use packString() for strings");
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
+        static_assert(std::is_arithmetic<T>::value, "Value must be arithmetic. Use packString() for strings");
+        static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
         static_assert(sizeof(T) <= 16, "Value too big for 16-byte buffer");
 #endif
         setTypeAndSize(TypeTraits<T>::type, 0);
@@ -276,7 +276,7 @@ public:
     template<typename T>
     T unpack() const {
 #ifndef __AVR__
-        static_assert(std::is_arithmetic_v<T>, "Use unpackString() for strings");
+        static_assert(std::is_arithmetic<T>::value, "Use unpackString() for strings");
 #endif
         T result;
         if (getType() != TypeTraits<T>::type) {
