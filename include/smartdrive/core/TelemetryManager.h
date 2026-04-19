@@ -197,6 +197,17 @@ public:
         return true;
     }
 
+    bool setTrigger(uint16_t sourceID, TriggerConfig trigger) {
+        const int16_t idx = findIndex(sourceID);
+        if (idx < 0) {
+            LOG(LogLevel::WARNING, "setTrigger: unregistered telemetry source");
+            return false;
+        }
+        entries[idx].trigger = trigger;
+        entries[idx].lastSentTimeMs = 0; // reset timer to apply new trigger immediately
+        return true;
+    }
+
     bool disable(uint16_t sourceID) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
