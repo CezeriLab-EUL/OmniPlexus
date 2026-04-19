@@ -68,14 +68,14 @@ private:
                     accumulateBuffer[bytesCollected++] = byte;
                     state = AccumulatorState::WAITING_FOR_LENGTH;
                 }else {
-                    LOG(LogLevel::WARNING, "Discarding invalid header byte");
+                    LOG(LogLevel::OP_WARNING, "Discarding invalid header byte");
                 }
                 break;
             }
 
             case AccumulatorState::WAITING_FOR_LENGTH: {
                 if (byte == 0 || byte > ProtocolConstants::MAX_PAYLOAD_SIZE) {
-                    LOG(LogLevel::ERROR, "Invalid payload length, resetting");
+                    LOG(LogLevel::OP_ERROR, "Invalid payload length, resetting");
                     reset();
                     break;
                 }
@@ -103,11 +103,11 @@ private:
                 const uint8_t calculatedCRC = CRC8::compute(toCheck);
 
                 if (receivedCRC != calculatedCRC) {
-                    LOG(LogLevel::ERROR, "CRC mismatch, resetting");
+                    LOG(LogLevel::OP_ERROR, "CRC mismatch, resetting");
                     reset();
                 }else {
                     if (!frameConsumed) {
-                        LOG(LogLevel::WARNING, "Previous frame not released, dropping new frame");
+                        LOG(LogLevel::OP_WARNING, "Previous frame not released, dropping new frame");
                         reset();
                     }else {
                         memcpy(readyBuffer, accumulateBuffer, bytesCollected);

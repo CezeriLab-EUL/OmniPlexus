@@ -57,7 +57,7 @@ public:
     void push(const PackedCommand& cmd) {
         lock();
         if (count == CAPACITY) {
-            LOG(LogLevel::WARNING, "CommandQueue is full, dropping oldest command.");
+            LOG(LogLevel::OP_WARNING, "CommandQueue is full, dropping oldest command.");
             head = (head + 1) % CAPACITY;
             count--;
         }

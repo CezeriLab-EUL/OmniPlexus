@@ -26,7 +26,7 @@ private:
         FrameParseResult result{false, 0, 0};
 
         if (rawData.size < ProtocolConstants::PROTOCOL_OVERHEAD) {
-            LOG(LogLevel::ERROR, "Frame too small");
+            LOG(LogLevel::OP_ERROR, "Frame too small");
             return result;
         }
 
@@ -34,13 +34,13 @@ private:
 
         const uint8_t header = rawData.data[offset++];
         if (!ProtocolConstants::isValidHeader(header)) {
-            LOG(LogLevel::ERROR, "Invalid header");
+            LOG(LogLevel::OP_ERROR, "Invalid header");
             return result;
         }
 
         if (const ProtocolConstants::FrameType frameType = ProtocolConstants::decodeType(header);
             frameType != expectedType) {
-            LOG(LogLevel::ERROR, "Frame type mismatch");
+            LOG(LogLevel::OP_ERROR, "Frame type mismatch");
             return result;
         }
 
@@ -58,7 +58,7 @@ private:
 
         if (const uint8_t calculatedCRC = CRC8::compute(crcData);
             receivedCrc != calculatedCRC) {
-            LOG(LogLevel::ERROR, "CRC mismatch");
+            LOG(LogLevel::OP_ERROR, "CRC mismatch");
             return false;
             }
 
@@ -95,7 +95,7 @@ private:
                       SerializedData& out
     ) {
         if (payloadSize + ProtocolConstants::PROTOCOL_OVERHEAD > ProtocolConstants::MAX_FRAME_SIZE) {
-            LOG(LogLevel::ERROR, "Payload too large for frame");
+            LOG(LogLevel::OP_ERROR, "Payload too large for frame");
             return false;
         }
 
@@ -125,7 +125,7 @@ public:
 
         size_t payloadSize = CommandPacker::pack(cmd, &payload[offset]);
         if (payloadSize == 0) {
-            LOG(LogLevel::ERROR, "Failed to pack command");
+            LOG(LogLevel::OP_ERROR, "Failed to pack command");
             return SerializedData{};
         }
         offset += payloadSize;
@@ -142,7 +142,7 @@ public:
         if (!frameInfo.valid){return false;}
 
         if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
+            LOG(LogLevel::OP_ERROR, "Invalid frame size");
             return false;
         }
 
@@ -155,7 +155,7 @@ public:
         if (!frameInfo.valid) return false;
 
         if (frame.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
+            LOG(LogLevel::OP_ERROR, "Invalid frame size");
             return false;
         }
 
@@ -185,12 +185,12 @@ public:
         if (!frameInfo.valid){return false;}
 
         if (frameInfo.payloadLength != sizeof(CommandResponse)) {
-            LOG(LogLevel::ERROR, "Invalid response payload size");
+            LOG(LogLevel::OP_ERROR, "Invalid response payload size");
             return false;
         }
 
         if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
+            LOG(LogLevel::OP_ERROR, "Invalid frame size");
             return false;
         }
 
@@ -230,12 +230,12 @@ public:
         if (!frameInfo.valid) { return false; }
 
         if (frameInfo.payloadLength < 3) { // Minimum size: 2 bytes for sourceID + 1 byte for typeAndSize
-            LOG(LogLevel::ERROR, "Invalid telemetry payload size");
+            LOG(LogLevel::OP_ERROR, "Invalid telemetry payload size");
             return false;
         }
 
         if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::ERROR, "Invalid frame size");
+            LOG(LogLevel::OP_ERROR, "Invalid frame size");
             return false;
         }
 
@@ -249,7 +249,7 @@ public:
 
         const size_t dataSize = telemetryOut.getDataSize();
         if (dataSize + 3 > frameInfo.payloadLength) {
-            LOG(LogLevel::ERROR, "Invalid telemetry data size");
+            LOG(LogLevel::OP_ERROR, "Invalid telemetry data size");
             return false;
         }
 

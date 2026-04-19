@@ -264,7 +264,7 @@ public:
         }
 
         if (len >= 16) {
-            LOG(LogLevel::WARNING, "String truncated to 15 chars + null");
+            LOG(LogLevel::OP_WARNING, "String truncated to 15 chars + null");
             len = 15;
         }
 

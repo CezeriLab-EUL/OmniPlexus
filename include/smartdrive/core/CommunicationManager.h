@@ -57,7 +57,7 @@ public:
     bool dispatch(const Command &cmd, bool requiresAck = false){
         if (!encoder || !transport)
         {
-            LOG(LogLevel::ERROR, "Communication manager not initialized");
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
 
@@ -65,7 +65,7 @@ public:
 
         if (requiresAck) {
             if (pendingAcks.isFull()) {
-                LOG(LogLevel::WARNING, "Pending ACK queue full, can't dispatch acknowledgeable command");
+                LOG(LogLevel::OP_WARNING, "Pending ACK queue full, can't dispatch acknowledgeable command");
                 return false;
             }
             seqNum = nextSeqNum;
@@ -79,7 +79,7 @@ public:
 
         if (frame.size == 0)
         {
-            LOG(LogLevel::ERROR, "Failed to serialize command");
+            LOG(LogLevel::OP_ERROR, "Failed to serialize command");
             return false;
         }
 
@@ -88,13 +88,13 @@ public:
 
     bool dispatchTelemetry(const Telemetry &value) {
         if (!encoder || !transport) {
-            LOG(LogLevel::ERROR, "Communication manager not initialized");
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
 
         const SerializedData frame = encoder->serializeTelemetry(value);
         if (frame.size == 0) {
-            LOG(LogLevel::ERROR, "Failed to serialize telemetry");
+            LOG(LogLevel::OP_ERROR, "Failed to serialize telemetry");
             return false;
         }
 
@@ -111,14 +111,14 @@ public:
 
     bool sendResponse(const CommandResponse& response) {
         if (!encoder || !transport) {
-            LOG(LogLevel::ERROR, "Communication manager not initialized");
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
 
         const SerializedData frame = encoder->serializeResponse(response);
 
         if (frame.size == 0) {
-            LOG(LogLevel::ERROR, "Failed to serialize response");
+            LOG(LogLevel::OP_ERROR, "Failed to serialize response");
             return false;
         }
 
@@ -128,7 +128,7 @@ public:
     void listen(){
         if (!encoder || !transport)
         {
-            LOG(LogLevel::ERROR, "Communication manager not initialized");
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return;
         }
 
@@ -139,7 +139,7 @@ public:
             RawData frame = transport->getFrame();
 
             if (!ProtocolConstants::isValidFrameType(frame.data[0])) {
-                LOG(LogLevel::WARNING, "Received frame with invalid type, discarding");
+                LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
                 transport->releaseFrame();
                 return;
             }
@@ -153,7 +153,7 @@ public:
                     queue.push(packed);
                 }
                 else{
-                    LOG(LogLevel::ERROR, "Failed to extract command payload from frame");
+                    LOG(LogLevel::OP_ERROR, "Failed to extract command payload from frame");
                 }
             }else if (frameType == ProtocolConstants::FrameType::RESPONSE) {
                 CommandResponse response;
@@ -163,7 +163,7 @@ public:
                     }
                     responseQueue.push(response);
                 }else {
-                    LOG(LogLevel::ERROR, "Failed to deserialize response");
+                    LOG(LogLevel::OP_ERROR, "Failed to deserialize response");
                 }
             }else if (frameType == ProtocolConstants::FrameType::TELEMETRY) {
                 Telemetry telemetry;
@@ -171,13 +171,13 @@ public:
                     if (telemetryCallback) {
                         telemetryCallback(telemetry, telemetryCallbackContext);
                     }else {
-                        LOG(LogLevel::WARNING, "Telemetry received but no callback registered");
+                        LOG(LogLevel::OP_WARNING, "Telemetry received but no callback registered");
                     }
                 }else {
-                    LOG(LogLevel::ERROR, "Failed to deserialize telemetry");
+                    LOG(LogLevel::OP_ERROR, "Failed to deserialize telemetry");
                 }
             }else {
-                LOG(LogLevel::WARNING, "Received frame with invalid type, discarding");
+                LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
             }
             transport->releaseFrame();
         }
@@ -187,7 +187,7 @@ public:
         if (!callback)
         {
             if (!queue.isEmpty()){
-                LOG(LogLevel::WARNING, "Commands queued but no callback registered");
+                LOG(LogLevel::OP_WARNING, "Commands queued but no callback registered");
             }
             return;
         }
@@ -198,7 +198,7 @@ public:
             Command cmd;
             if (!CommandPacker::unpack(packed.paramBytes, packed.paramSize, cmd))
             {
-                LOG(LogLevel::ERROR, "Failed to unpack command from queue");
+                LOG(LogLevel::OP_ERROR, "Failed to unpack command from queue");
                 continue;
             }
             callback(cmd, packed.seqNum, callbackContext);
@@ -208,7 +208,7 @@ public:
     void processResponses() {
         if (!responseCallback) {
             if (!responseQueue.isEmpty()) {
-                LOG(LogLevel::WARNING, "Responses queued but no callback registered");
+                LOG(LogLevel::OP_WARNING, "Responses queued but no callback registered");
             }
             return;
         }

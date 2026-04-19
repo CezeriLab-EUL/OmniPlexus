@@ -120,12 +120,12 @@ public:
 
     bool registerSource(uint16_t sourceID, TriggerConfig trigger) {
         if (count >= MAX_TELEMETRY_SOURCES) {
-            LOG(LogLevel::ERROR, "Max telemetry sources reached");
+            LOG(LogLevel::OP_ERROR, "Max telemetry sources reached");
             return false;
         }
 
         if (findIndex(sourceID) >= 0) {
-            LOG(LogLevel::WARNING, "Source ID already registered");
+            LOG(LogLevel::OP_WARNING, "Source ID already registered");
             return false;
         }
 
@@ -146,7 +146,7 @@ public:
     void update(uint16_t sourceID, const ValueSource &value) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
-            LOG(LogLevel::WARNING, "Update for unregistered telemetry source");
+            LOG(LogLevel::OP_WARNING, "Update for unregistered telemetry source");
             return;
         }
         static_cast<ValueSource &>(entries[idx].current) = value;
@@ -172,7 +172,7 @@ public:
     bool sendOne(uint16_t sourceID) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
-            LOG(LogLevel::WARNING, "sendOne: unregistered telemetry source");
+            LOG(LogLevel::OP_WARNING, "sendOne: unregistered telemetry source");
             return false;
         }
         doSend(entries[idx]);
@@ -190,7 +190,7 @@ public:
     bool enable(uint16_t sourceID) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
-            LOG(LogLevel::WARNING, "enable: unregistered telemetry source");
+            LOG(LogLevel::OP_WARNING, "enable: unregistered telemetry source");
             return false;
         }
         entries[idx].enabled = true;
@@ -200,7 +200,7 @@ public:
     bool setTrigger(uint16_t sourceID, TriggerConfig trigger) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
-            LOG(LogLevel::WARNING, "setTrigger: unregistered telemetry source");
+            LOG(LogLevel::OP_WARNING, "setTrigger: unregistered telemetry source");
             return false;
         }
         entries[idx].trigger = trigger;
@@ -211,7 +211,7 @@ public:
     bool unregisterSource(uint16_t sourceID) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
-            LOG(LogLevel::WARNING, "unregisterSource: unregistered telemetry source");
+            LOG(LogLevel::OP_WARNING, "unregisterSource: unregistered telemetry source");
             return false;
         }
         entries[idx].active = false;
@@ -226,7 +226,7 @@ public:
     bool disable(uint16_t sourceID) {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) {
-            LOG(LogLevel::WARNING, "disable: unregistered telemetry source");
+            LOG(LogLevel::OP_WARNING, "disable: unregistered telemetry source");
             return false;
         }
         entries[idx].enabled = false;

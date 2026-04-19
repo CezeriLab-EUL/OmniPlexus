@@ -52,7 +52,7 @@ public:
     bool push(const PendingAckEntry& entry) {
         lock();
         if (count == CAPACITY) {
-            LOG(LogLevel::WARNING, "PendingAckQueue is full, cannot track command");
+            LOG(LogLevel::OP_WARNING, "PendingAckQueue is full, cannot track command");
             unlock();
             return false;
         }

@@ -7,10 +7,10 @@
 void consoleLogger(LogLevel level, const char* message) {
     const char* levelStr;
     switch (level) {
-        case LogLevel::DEBUG: levelStr = "DEBUG"; break;
-        case LogLevel::INFO: levelStr = "INFO"; break;
-        case LogLevel::WARNING: levelStr = "WARN"; break;
-        case LogLevel::ERROR: levelStr = "ERROR"; break;
+        case LogLevel::OP_DEBUG: levelStr = "DEBUG"; break;
+        case LogLevel::OP_INFO: levelStr = "INFO"; break;
+        case LogLevel::OP_WARNING: levelStr = "WARN"; break;
+        case LogLevel::OP_ERROR: levelStr = "ERROR"; break;
         default: levelStr = "UNKNOWN";
     }
     std::cout << "[" << levelStr << "] " << message << std::endl;

@@ -8,10 +8,10 @@
 #include "../core/Config.h"
 
 enum class LogLevel {
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR
+    OP_DEBUG,
+    OP_INFO,
+    OP_WARNING,
+    OP_ERROR
 };
 
 class Logger {

@@ -48,7 +48,7 @@ public:
     bool push(const CommandResponse& response) {
         lock();
         if (count == CAPACITY) {
-            LOG(LogLevel::WARNING, "ResponseQueue is full, cannot track response");
+            LOG(LogLevel::OP_WARNING, "ResponseQueue is full, cannot track response");
             unlock();
             return false;
         }
