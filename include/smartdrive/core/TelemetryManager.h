@@ -42,7 +42,12 @@ private:
         switch (entry.trigger.type) {
             case TriggerType::ON_CHANGE: {
                 if (!entry.dirty) return false;
-                if (entry.current.getType() == ValueType::STRING) return true;
+
+                if (entry.current.getType() == ValueType::STRING) {
+                    return memcmp(entry.current.getData(),
+                                  entry.lastSent.getData(),
+                                  entry.current.getDataSize()) != 0;
+                }
 
                 float current = 0.0f;
                 float last = 0.0f;
@@ -158,7 +163,7 @@ public:
         }
     }
 
-    const Telemetry* get(uint16_t sourceID) const {
+    const Telemetry *get(uint16_t sourceID) const {
         const int16_t idx = findIndex(sourceID);
         if (idx < 0) return nullptr;
         return &entries[idx].current;
