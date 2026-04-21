@@ -20,112 +20,112 @@ public:
             READING_PAYLOAD,
             VALIDATING_CRC,
             FRAME_READY
-        }
-    };
+        };
 
-    uint8_t buf[BUF_SIZE] = {};
-    uint8_t ready[BUF_SIZE] = {};
-    uint8_t collected = 0;
-    uint8_t payloadLen = 0;
-    bool frameConsumed = true;
-    SlaveAccumulator::State state = SlaveAccumulator::State::WAITING_FOR_HEADER;
+        uint8_t buf[BUF_SIZE] = {};
+        uint8_t ready[BUF_SIZE] = {};
+        uint8_t collected = 0;
+        uint8_t payloadLen = 0;
+        bool frameConsumed = true;
+        SlaveAccumulator::State state = SlaveAccumulator::State::WAITING_FOR_HEADER;
 
-    void reset()
-    {
-        collected = 0;
-        payloadLen = 0;
-        state = SlaveAccumulator::State::WAITING_FOR_HEADER;
-    }
-
-    void processByte(uint8_t byte)
-    {
-        switch (state)
+        void reset()
         {
-        case SlaveAccumulator::State::WAITING_FOR_HEADER:
-            if (ProtocolConstants::isValidHeader(byte))
-            {
-                collected = 0;
-                buf[collected++] = byte;
-                state = SlaveAccumulator::State::WAITING_FOR_LENGTH;
-            }
-            // NOP bytes silently discarded
-            break;
+            collected = 0;
+            payloadLen = 0;
+            state = SlaveAccumulator::State::WAITING_FOR_HEADER;
+        }
 
-        case SlaveAccumulator::State::WAITING_FOR_LENGTH:
-            if (byte == 0 || byte > ProtocolConstants::MAX_PAYLOAD_SIZE)
+        void processByte(uint8_t byte)
+        {
+            switch (state)
             {
-                LOG(LogLevel::ERROR, "ParallelCDnC: Invalid length, resseting accumulator");
-                reset();
+            case SlaveAccumulator::State::WAITING_FOR_HEADER:
+                if (ProtocolConstants::isValidHeader(byte))
+                {
+                    collected = 0;
+                    buf[collected++] = byte;
+                    state = SlaveAccumulator::State::WAITING_FOR_LENGTH;
+                }
+                // NOP bytes silently discarded
+                break;
+
+            case SlaveAccumulator::State::WAITING_FOR_LENGTH:
+                if (byte == 0 || byte > ProtocolConstants::MAX_PAYLOAD_SIZE)
+                {
+                    LOG(LogLevel::OP_ERROR, "ParallelCDnC: Invalid length, resseting accumulator");
+                    reset();
+                    break;
+                }
+                payloadLen = byte;
+                buf[collected++] = byte;
+                state = SlaveAccumulator::State::READING_PAYLOAD;
+                break;
+
+            case SlaveAccumulator::State::READING_PAYLOAD:
+                buf[collected++] = byte;
+                if (collected == payloadLen + 2)
+                { // +2 for header and length bytes
+                    state = SlaveAccumulator::State::VALIDATING_CRC;
+                }
+                break;
+
+            case SlaveAccumulator::State::VALIDATING_CRC:
+            {
+                buf[collected++] = byte;
+                RawData toCheck{buf, static_cast<size_t>(collected - 1)}; // Exclude CRC byte
+                const uint8_t calc = CRC8::compute(toCheck);
+                if (calc != byte)
+                {
+                    LOG(LogLevel::OP_ERROR, "ParallelCDnC: CRC mismatch, resseting accumulator");
+                    reset();
+                }
+                else if (!frameConsumed)
+                {
+                    LOG(LogLevel::OP_WARNING, "ParallelCDnC: Frame not consumed, dropping");
+                    reset();
+                }
+                else
+                {
+                    memccpy(ready, buf, 0, collected); // CHECK
+                    frameConsumed = false;
+                    state = SlaveAccumulator::State::FRAME_READY;
+                }
                 break;
             }
-            payloadLen = byte;
-            buf[collected++] = byte;
-            state = SlaveAccumulator::State::READING_PAYLOAD;
-            break;
 
-        case SlaveAccumulator::State::READING_PAYLOAD:
-            buf[collected++] = byte;
-            if (collected == payloadLen + 2)
-            { // +2 for header and length bytes
-                state = SlaveAccumulator::State::VALIDATING_CRC;
+            case SlaveAccumulator::State::FRAME_READY:
+                break; // stall until caller calls releaseFrame()
             }
-            break;
+        }
 
-        case SlaveAccumulator::State::VALIDATING_CRC:
+        bool hasFrame() const { return state == SlaveAccumulator::State::FRAME_READY; }
+
+        RawData getFrame() { return RawData{ready, collected}; }
+
+        void releaseFrame()
         {
-            buf[collected++] = byte;
-            RawData toCheck{buf, static_cast<size_t>(collected - 1)}; // Exclude CRC byte
-            const uint8_t calc = CRC8::compute(toCheck);
-            if (calc != byte)
-            {
-                LOG(LogLevel::ERROR, "ParallelCDnC: CRC mismatch, resseting accumulator");
-                reset();
-            }
-            else if (!frameConsumed)
-            {
-                LOG(LogLevel::WARNING, "ParallelCDnC: Frame not consumed, dropping");
-                reset();
-            }
-            else
-            {
-                memccpy(ready, buf, collected);
-                frameConsumed = false;
-                state = SlaveAccumulator::State::FRAME_READY;
-            }
-            break;
+            frameConsumed = true;
+            reset();
         }
-
-        case SlaveAccumulator::State::FRAME_READY:
-            break; // stall until caller calls releaseFrame()
-        }
-    }
-
-    bool hasFrame() const { return state == SlaveAccumulator::State::FRAME_READY; }
-
-    RawData getFrame() { return RawData{ready, collected}; }
-
-    void releaseFrame()
-    {
-        frameConsumed = true;
-        reset();
-    }
+    };
 
     // queue serialized frame for delivery to one slave next cycle
     bool queueFrame(uint8_t slaveIdx, const SerializedData &data)
     {
         if (slaveIdx >= ParallelCDnCTransport::MAX_SLAVES)
         {
-            LOG(LogLevel::ERROR, "ParallelCDnC: slaveIdx out of range");
+            LOG(LogLevel::OP_ERROR, "ParallelCDnC: slaveIdx out of range");
             return false;
         }
         if (data.size == 0 || data.size > ParallelCDnCTransport::BUF_SIZE)
         {
-            LOG(LogLevel::ERROR, "ParallelCDnC: invalid frame size");
+            LOG(LogLevel::OP_ERROR, "ParallelCDnC: invalid frame size");
             return false;
         }
         if (txCount[slaveIdx] + data.size > ParallelCDnCTransport::BUF_SIZE)
         {
-            LOG(LogLevel::WARNING, "ParallelCDnC: TX buffer full for slave");
+            LOG(LogLevel::OP_WARNING, "ParallelCDnC: TX buffer full for slave");
             return false;
         }
 
@@ -203,6 +203,8 @@ private:
 
     void runCycle(uint8_t cycleBytes)
     {
+        const uint8_t totalBits = cycleBytes * 8;
+
         uint16_t sendbuffer[BUF_SIZE * 8] = {};
 
         for (uint8_t s = 0; s < MAX_SLAVES; ++s)
