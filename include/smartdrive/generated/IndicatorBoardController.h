@@ -121,6 +121,16 @@ public:
         return comms.dispatch(cmd, false);
     }
 
+    // Send ID with protocol revision and slave capabilities to STM32
+    bool sendId(uint8_t id, uint8_t protocol_revision, uint16_t slave_capabilities) {
+        Command cmd;
+        cmd.commandType = CommandType::SEND_ID;
+        cmd.params[0] = id;
+        cmd.params[1] = protocol_revision;
+        cmd.params[2] = slave_capabilities;
+        return comms.dispatch(cmd, true);
+    }
+
 }; // class IndicatorBoardController
 
 #endif // SMARTDRIVE_INDICATORBOARDCONTROLLER_H

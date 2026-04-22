@@ -205,6 +205,32 @@
           "description": "Y coordinate"
         }
       ]
+    },
+    {
+      "id": 13,
+      "name": "SEND_ID",
+      "description": "Send ID with protocol revision and slave capabilities to STM32",
+      "acknowledges": true,
+      "params": [
+        {
+          "name": "id",
+          "type": "UINT8",
+          "required": true,
+          "description": "ID to send"
+        },
+        {
+          "name": "protocol_revision",
+          "type": "UINT8",
+          "required": true,
+          "description": "Protocol Revision"
+        },
+        {
+          "name": "slave_capabilities",
+          "type": "UINT16",
+          "required": true,
+          "description": "Slave capabilities"
+        }
+      ]
     }
   ],
   "telemetry": [

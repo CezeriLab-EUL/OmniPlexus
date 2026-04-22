@@ -137,6 +137,18 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // SEND_ID
+    registerCommand({
+        CommandType::SEND_ID,
+        "SEND_ID",
+        "Send ID with protocol revision and slave capabilities to STM32",
+        {
+            {"id", ValueType::UINT8, true, "ID to send", 0, ""},
+            {"protocol_revision", ValueType::UINT8, true, "Protocol Revision", 0, ""},
+            {"slave_capabilities", ValueType::UINT16, true, "Slave capabilities", 0, ""},
+        }
+    });
+
 } // CommandRegistry::initialize()
 
 #endif // EMBEDDED_BUILD

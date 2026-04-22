@@ -131,6 +131,19 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case CommandType::SEND_ID: {
+                // params[0]: id (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[1]: protocol_revision (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[2]: slave_capabilities (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -362,6 +375,34 @@ offset += sizeof(uint16_t);
                 cmdOut.params[1] = uint16_t(0);
                 if (remainingBytes < sizeof(uint16_t)) return false;
                 memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case CommandType::SEND_ID: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: id (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[1]: protocol_revision (UINT8, required)
+                cmdOut.params[1] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[2]: slave_capabilities (UINT16, required)
+                cmdOut.params[2] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint16_t));
                 offset += sizeof(uint16_t);
                 remainingBytes -= sizeof(uint16_t);
 
