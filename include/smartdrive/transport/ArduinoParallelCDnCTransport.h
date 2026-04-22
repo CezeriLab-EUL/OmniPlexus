@@ -128,46 +128,46 @@ public:
             LOG(LogLevel::OP_ERROR, "ArduinoParallelCDnC: send() bad size");
             return false;
         }
-    }
 
-    waitForClkLow(); // should already be LOW, returns immediately if so
-    delayMicroseconds(turnaroundUs / 2);
+        waitForClkLow(); // should already be LOW, returns immediately if so
+        delayMicroseconds(turnaroundUs / 2);
 
-    pinMode(pinData, OUTPUT);
-    const uint8_t firstBit = (data.data[0] >> 7) & 0x01;
-    digitalWrite(pinData, firstBit ? HIGH : LOW);
+        pinMode(pinData, OUTPUT);
+        const uint8_t firstBit = (data.data[0] >> 7) & 0x01;
+        digitalWrite(pinData, firstBit ? HIGH : LOW);
 
-    // clock out remaining bytes
-    for (size_t byteIdx = 0; byteIdx < data.size; ++byteIdx)
-    {
-        const uint8_t b = data.data[byteIdx];
-        for (int8_t bit = 7; bit >= 0; --bit)
+        // clock out remaining bytes
+        for (size_t byteIdx = 0; byteIdx < data.size; ++byteIdx)
         {
-            // DATA is pre-set. Wait for master's rising edge.
-            waitForClkHigh(0); // 0 = no timeout, master WILL clock
-
-            waitForClkLow();
-
-            // Pre-set next bit so it's stable before the next rising edge.
-            uint8_t nextBit = 0;
-            if (bit > 0)
+            const uint8_t b = data.data[byteIdx];
+            for (int8_t bit = 7; bit >= 0; --bit)
             {
-                // Next bit is within the same byte
-                nextBit = (b >> (bit - 1)) & 0x01;
+                // DATA is pre-set. Wait for master's rising edge.
+                waitForClkHigh(0); // 0 = no timeout, master WILL clock
+
+                waitForClkLow();
+
+                // Pre-set next bit so it's stable before the next rising edge.
+                uint8_t nextBit = 0;
+                if (bit > 0)
+                {
+                    // Next bit is within the same byte
+                    nextBit = (b >> (bit - 1)) & 0x01;
+                }
+                else if (byteIdx + 1 < data.size)
+                {
+                    // Next bit is bit 7 of the next byte
+                    nextBit = (data.data[byteIdx + 1] >> 7) & 0x01;
+                }
+                // else: last bit of last byte — nextBit stays 0 (don't care)
+                digitalWrite(pinData, nextBit ? HIGH : LOW);
             }
-            else if (byteIdx + 1 < data.size)
-            {
-                // Next bit is bit 7 of the next byte
-                nextBit = (data.data[byteIdx + 1] >> 7) & 0x01;
-            }
-            // else: last bit of last byte — nextBit stays 0 (don't care)
-            digitalWrite(pinData, nextBit ? HIGH : LOW);
         }
-    }
 
-    // release data line
-    pinMode(pinData, INPUT);
-    return true;
+        // release data line
+        pinMode(pinData, 0x00); // INPUT
+        return true;
+    }
 
 protected:
     uint16_t bytesAvailable() override
