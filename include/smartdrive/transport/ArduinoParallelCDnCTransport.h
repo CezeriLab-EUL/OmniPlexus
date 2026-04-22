@@ -66,7 +66,7 @@ public:
 
         if (!ProtocolConstants::isValidHeader(header))
         {
-            LOG(LogLevel::WARNING, "ArduinoParallelCDnC: invalid header, ignoring");
+            LOG(LogLevel::OP_WARNING, "ArduinoParallelCDnC: invalid header, ignoring");
             return false;
         }
         bufferRxByte(header);
@@ -78,7 +78,7 @@ public:
             waitForClkLow();
             if (!waitForClkHigh(clkIdleTimeoutUs / 4))
             {
-                LOG(LogLevel::ERROR, "ArduinoParallelCDnC: CLK stall after header");
+                LOG(LogLevel::OP_ERROR, "ArduinoParallelCDnC: CLK stall after header");
                 return false;
             }
             if (digitalRead(pinData))
@@ -87,7 +87,7 @@ public:
 
         if (length == 0 || length > ProtocolConstants::MAX_PAYLOAD_SIZE)
         {
-            LOG(LogLevel::ERROR, "ArduinoParallelCDnC: invalid length byte");
+            LOG(LogLevel::OP_ERROR, "ArduinoParallelCDnC: invalid length byte");
             return false;
         }
         bufferRxByte(length);
@@ -102,7 +102,7 @@ public:
                 waitForClkLow();
                 if (!waitForClkHigh(clkIdleTimeoutUs / 4))
                 {
-                    LOG(LogLevel::ERROR, "ArduinoParallelCDnC: CLK stall mid-payload");
+                    LOG(LogLevel::OP_ERROR, "ArduinoParallelCDnC: CLK stall mid-payload");
                     return false;
                 }
                 if (digitalRead(pinData))
@@ -125,7 +125,7 @@ public:
     {
         if (data.size == 0 || data.size > ProtocolConstants::MAX_FRAME_SIZE)
         {
-            LOG(LogLevel::ERROR, "ArduinoParallelCDnC: send() bad size");
+            LOG(LogLevel::OP_ERROR, "ArduinoParallelCDnC: send() bad size");
             return false;
         }
     }
@@ -179,7 +179,7 @@ protected:
     {
         if (rxCount == 0)
         {
-            LOG(LogLevel::WARNING, "ArduinoParallelCDnC: readByte() on empty buffer");
+            LOG(LogLevel::OP_WARNING, "ArduinoParallelCDnC: readByte() on empty buffer");
             return ProtocolConstants::NOP_BYTE;
         }
         const uint8_t b = rxBuffer[rxHead];
@@ -215,7 +215,7 @@ private:
     {
         if (rxCount >= ProtocolConstants::MAX_FRAME_SIZE)
         {
-            LOG(LogLevel::WARNING, "ArduinoParallelCDnC: RX buffer overrun");
+            LOG(LogLevel::OP_WARNING, "ArduinoParallelCDnC: RX buffer overrun");
             rxHead = (rxHead + 1) % ProtocolConstants::MAX_FRAME_SIZE;
             rxCount--;
         }
