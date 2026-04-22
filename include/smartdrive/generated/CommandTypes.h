@@ -47,6 +47,9 @@ namespace CommandType {
     // Set cursor position for next print
     constexpr uint16_t OLED_SET_CURSOR = 0x000C;
 
+    // Send ID with protocol revision and slave capabilities to STM32
+    constexpr uint16_t SEND_ID = 0x000D;
+
 } // namespace CommandType
 
 #endif // SMARTDRIVE_COMMANDTYPES_H

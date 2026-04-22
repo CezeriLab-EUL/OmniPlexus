@@ -17,8 +17,6 @@ namespace TelemetrySource {
     // Indicator board temperature in celsius
     constexpr uint16_t BOARD_TEMPERATURE = 0x0002;
 
-    constexpr uint16_t BOARD_VOLTAGE = 0x0004;
-
     // Number of active LEDs currently lit
     constexpr uint16_t LED_COUNT = 0x0003;
 
