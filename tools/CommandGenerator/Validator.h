@@ -316,6 +316,15 @@ public:
             }
         }
 
+        if (!data.contains("typeShift") || !data["typeShift"].is_number_unsigned()) {
+            result.addWarning("'typeShift' field is missing. 'typeShift' field must be an unsigned integer");
+        }else {
+            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+            if (typeShift > 0xFFFF) {
+                result.addError("'typeShift' field must be a value between 0 and 65535");
+            }
+        }
+
         std::set<uint16_t> seenIDs;
         std::set<std::string> seenNames;
         uint16_t prevID = 0;
