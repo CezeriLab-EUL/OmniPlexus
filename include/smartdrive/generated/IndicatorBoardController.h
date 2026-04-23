@@ -131,6 +131,13 @@ public:
         return comms.dispatch(cmd, true);
     }
 
+    // Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.
+    bool discovery() {
+        Command cmd;
+        cmd.commandType = CommandType::DISCOVERY;
+        return comms.dispatch(cmd, false);
+    }
+
 }; // class IndicatorBoardController
 
 #endif // SMARTDRIVE_INDICATORBOARDCONTROLLER_H

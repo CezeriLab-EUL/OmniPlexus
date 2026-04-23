@@ -149,6 +149,15 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // DISCOVERY
+    registerCommand({
+        CommandType::DISCOVERY,
+        "DISCOVERY",
+        "Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.",
+        {
+        }
+    });
+
 } // CommandRegistry::initialize()
 
 #endif // EMBEDDED_BUILD

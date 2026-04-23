@@ -15,11 +15,7 @@
 #include <mutex>
 #include <atomic>
 #include <cstring>
-
-enum class HttpRole : uint8_t {
-    CLIENT,
-    SERVER
-};
+#include "types.h"
 
 class PcHttpTransport : public ITransport {
     struct FrameSlot {

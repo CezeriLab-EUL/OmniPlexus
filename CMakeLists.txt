@@ -15,7 +15,8 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/include/smartdrive/generated)
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 
 # Discover all device JSON files in devices/
-file(GLOB DEVICE_JSON_FILES "${CMAKE_SOURCE_DIR}/devices/*.json")
+file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/devices/*.json")
 
 # For each device JSON, register a custom command to generate its files
 foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
@@ -84,6 +85,8 @@ add_library(SmartDrive
         include/smartdrive/core/TelemetryManager.h
         tests/transport/serial_telemetry_receive.cpp
         include/smartdrive/transport/http/PcHttpTransport.h
+        include/smartdrive/transport/http/EspHttpTransport.h
+        include/smartdrive/transport/http/types.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL

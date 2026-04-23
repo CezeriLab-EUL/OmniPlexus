@@ -144,6 +144,11 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case CommandType::DISCOVERY: {
+                // No parameters
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -406,6 +411,11 @@ offset += sizeof(uint16_t);
                 offset += sizeof(uint16_t);
                 remainingBytes -= sizeof(uint16_t);
 
+                return true;
+            }
+
+            case CommandType::DISCOVERY: {
+                // No parameters
                 return true;
             }
 

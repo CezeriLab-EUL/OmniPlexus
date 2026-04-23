@@ -50,6 +50,9 @@ namespace CommandType {
     // Send ID with protocol revision and slave capabilities to STM32
     constexpr uint16_t SEND_ID = 0x000D;
 
+    // Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.
+    constexpr uint16_t DISCOVERY = 0x000E;
+
 } // namespace CommandType
 
 #endif // SMARTDRIVE_COMMANDTYPES_H
