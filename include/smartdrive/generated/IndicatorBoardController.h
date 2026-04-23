@@ -22,7 +22,7 @@ public:
     // Print string on OLED at specified position
     bool oledPrintStr(uint16_t x, uint16_t y, const char* text) {
         Command cmd;
-        cmd.commandType = CommandType::OLED_PRINT_STR;
+        cmd.commandType = IndicatorBoardCommandType::OLED_PRINT_STR;
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = text;
@@ -32,7 +32,7 @@ public:
     // Draw a rectangular frame on OLED
     bool oledDrawFrame(uint16_t x, uint16_t y, uint16_t width) {
         Command cmd;
-        cmd.commandType = CommandType::OLED_DRAW_FRAME;
+        cmd.commandType = IndicatorBoardCommandType::OLED_DRAW_FRAME;
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = width;
@@ -42,7 +42,7 @@ public:
     // Draw a progress bar on OLED
     bool oledDrawBar(uint16_t x, uint16_t y, uint8_t percent) {
         Command cmd;
-        cmd.commandType = CommandType::OLED_DRAW_BAR;
+        cmd.commandType = IndicatorBoardCommandType::OLED_DRAW_BAR;
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = percent;
@@ -52,21 +52,21 @@ public:
     // Clear the OLED display buffer
     bool oledClear() {
         Command cmd;
-        cmd.commandType = CommandType::OLED_CLEAR;
+        cmd.commandType = IndicatorBoardCommandType::OLED_CLEAR;
         return comms.dispatch(cmd, false);
     }
 
     // Send buffer to OLED display (update screen)
     bool oledRefresh() {
         Command cmd;
-        cmd.commandType = CommandType::OLED_REFRESH;
+        cmd.commandType = IndicatorBoardCommandType::OLED_REFRESH;
         return comms.dispatch(cmd, false);
     }
 
     // Set OLED display brightness
     bool oledSetBrightness(uint8_t brightness) {
         Command cmd;
-        cmd.commandType = CommandType::OLED_SET_BRIGHTNESS;
+        cmd.commandType = IndicatorBoardCommandType::OLED_SET_BRIGHTNESS;
         cmd.params[0] = brightness;
         return comms.dispatch(cmd, true);
     }
@@ -74,7 +74,7 @@ public:
     // Set all LEDs to the same color (RGB565 format)
     bool ledSetBlock(uint16_t color) {
         Command cmd;
-        cmd.commandType = CommandType::LED_SET_BLOCK;
+        cmd.commandType = IndicatorBoardCommandType::LED_SET_BLOCK;
         cmd.params[0] = color;
         return comms.dispatch(cmd, false);
     }
@@ -82,7 +82,7 @@ public:
     // Set a single LED to specified color (RGB565 format)
     bool ledSetSingle(uint16_t index, uint16_t color) {
         Command cmd;
-        cmd.commandType = CommandType::LED_SET_SINGLE;
+        cmd.commandType = IndicatorBoardCommandType::LED_SET_SINGLE;
         cmd.params[0] = index;
         cmd.params[1] = color;
         return comms.dispatch(cmd, false);
@@ -91,7 +91,7 @@ public:
     // Sound the buzzer for specified duration
     bool beep(uint16_t duration) {
         Command cmd;
-        cmd.commandType = CommandType::BEEP;
+        cmd.commandType = IndicatorBoardCommandType::BEEP;
         cmd.params[0] = duration;
         return comms.dispatch(cmd, false);
     }
@@ -99,7 +99,7 @@ public:
     // Reset hardware subsystems
     bool reset(uint8_t mode) {
         Command cmd;
-        cmd.commandType = CommandType::RESET;
+        cmd.commandType = IndicatorBoardCommandType::RESET;
         cmd.params[0] = mode;
         return comms.dispatch(cmd, true);
     }
@@ -107,7 +107,7 @@ public:
     // Set OLED font from preset
     bool oledSetFont(uint8_t font_id) {
         Command cmd;
-        cmd.commandType = CommandType::OLED_SET_FONT;
+        cmd.commandType = IndicatorBoardCommandType::OLED_SET_FONT;
         cmd.params[0] = font_id;
         return comms.dispatch(cmd, true);
     }
@@ -115,7 +115,7 @@ public:
     // Set cursor position for next print
     bool oledSetCursor(uint16_t x, uint16_t y) {
         Command cmd;
-        cmd.commandType = CommandType::OLED_SET_CURSOR;
+        cmd.commandType = IndicatorBoardCommandType::OLED_SET_CURSOR;
         cmd.params[0] = x;
         cmd.params[1] = y;
         return comms.dispatch(cmd, false);
@@ -124,7 +124,7 @@ public:
     // Send ID with protocol revision and slave capabilities to STM32
     bool sendId(uint8_t id, uint8_t protocol_revision, uint16_t slave_capabilities) {
         Command cmd;
-        cmd.commandType = CommandType::SEND_ID;
+        cmd.commandType = IndicatorBoardCommandType::SEND_ID;
         cmd.params[0] = id;
         cmd.params[1] = protocol_revision;
         cmd.params[2] = slave_capabilities;
@@ -134,7 +134,7 @@ public:
     // Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.
     bool discovery() {
         Command cmd;
-        cmd.commandType = CommandType::DISCOVERY;
+        cmd.commandType = IndicatorBoardCommandType::DISCOVERY;
         return comms.dispatch(cmd, false);
     }
 

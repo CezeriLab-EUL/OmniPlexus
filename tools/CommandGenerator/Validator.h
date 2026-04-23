@@ -59,7 +59,7 @@ private:
                 "Command '" + cmdName + "' param[" + std::to_string(paramIndex) +
                 "] is missing a valid 'name' field"
             );
-            }
+        }
 
         const std::string paramName = param.contains("name") && param["name"].is_string()
                                           ? param["name"].get<std::string>()
@@ -95,7 +95,7 @@ private:
                 "Command '" + cmdName + "' param '" + paramName +
                 "' is missing the 'description' field"
             );
-            }
+        }
 
         if (param.contains("type") && param["type"].is_string() && param["type"].get<std::string>() == "STRING") {
             if (!param.contains("maxLength") || !param["maxLength"].is_number_unsigned()) {
@@ -116,7 +116,7 @@ private:
                         std::to_string(maxLen) + ")"
                     );
                 }
-                }
+            }
         }
     }
 
@@ -154,7 +154,7 @@ private:
                         "Command '" + cmdName + "' has optional parameter '" + paramName +
                         "' without a 'default' value. All optional parameters must have defaults."
                     );
-                    }
+                }
             } else {
                 // Required parameter
                 if (foundOptional) {
@@ -169,7 +169,8 @@ private:
         if (optionalCount > MAX_OPTIONAL_PARAMS) {
             result.addError(
                 "Command '" + cmdName + "' has " + std::to_string(optionalCount) +
-                " optional parameters. Maximum is " + std::to_string(MAX_OPTIONAL_PARAMS) + " optional parameter per command."
+                " optional parameters. Maximum is " + std::to_string(MAX_OPTIONAL_PARAMS) +
+                " optional parameter per command."
             );
         }
     }
@@ -184,11 +185,11 @@ private:
         return true;
     }
 
-    static void validateTelemetrySource(const json& source, int index, ValidationResult& result) {
+    static void validateTelemetrySource(const json &source, int index, ValidationResult &result) {
         const std::string label = "telemetry[" + std::to_string(index) + "]";
         if (!source.contains("name") || !source["name"].is_string() || source["name"].get<std::string>().empty()) {
             result.addError(label + " is missing a valid 'name' field");
-        }else {
+        } else {
             const std::string name = source["name"].get<std::string>();
             if (!isValidCommandName(name)) {
                 result.addError(
@@ -221,12 +222,13 @@ private:
             }
         }
 
-        if (!source.contains("description") || !source["description"].is_string() || source["description"].get<std::string>().empty()) {
+        if (!source.contains("description") || !source["description"].is_string() || source["description"].get<
+                std::string>().empty()) {
             result.addWarning(label + " is missing a 'description' field");
         }
     }
 
-    static void validateTelemetry(const json& data, ValidationResult& result) {
+    static void validateTelemetry(const json &data, ValidationResult &result) {
         if (!data.contains("telemetry")) return; // telemetry is optional
 
         if (!data["telemetry"].is_array()) {
@@ -244,7 +246,7 @@ private:
         uint16_t prevID = 0;
 
         for (size_t i = 0; i < data["telemetry"].size(); ++i) {
-            const auto& source = data["telemetry"][i];
+            const auto &source = data["telemetry"][i];
 
             validateTelemetrySource(source, static_cast<int>(i), result);
 
@@ -309,7 +311,7 @@ public:
         if (!std::isupper(deviceName[0])) {
             result.addError("Device name '" + deviceName + "' should start with an uppercase letter (PascalCase)");
         }
-        for (const char c : deviceName) {
+        for (const char c: deviceName) {
             if (!std::isalnum(c)) {
                 result.addError("'device' field must contain only alphanumeric characters (no spaces or underscores)");
                 break;
@@ -317,11 +319,11 @@ public:
         }
 
         if (!data.contains("typeShift") || !data["typeShift"].is_number_unsigned()) {
-            result.addWarning("'typeShift' field is missing. 'typeShift' field must be an unsigned integer");
-        }else {
+            result.addError("'typeShift' field is missing. 'typeShift' field must be an unsigned integer");
+        } else {
             const uint16_t typeShift = data["typeShift"].get<uint16_t>();
-            if (typeShift > 0xFFFF) {
-                result.addError("'typeShift' field must be a value between 0 and 65535");
+            if (typeShift > 0xFE) {
+                result.addError("'typeShift' field must be a value between 0 and 254");
             }
         }
 
@@ -407,6 +409,71 @@ public:
 
         validateTelemetry(data, result);
 
+        return result;
+    }
+
+    static ValidationResult validateCrossDevice(const std::vector<json> &allData) {
+        ValidationResult result;
+        // Maps shifted command ID -> "DeviceName::COMMAND_NAME"
+        std::map<uint16_t, std::string> seenCommandIDs;
+        // Maps shifted telemetry ID -> "DeviceName::TELEMETRY_NAME"
+        std::map<uint16_t, std::string> seenTelemetryIDs;
+        std::map<uint16_t, std::string> seenShifts;
+
+        for (const auto &data : allData) {
+            if (!data.contains("device") || !data.contains("typeShift")) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            const uint16_t shift = static_cast<uint16_t>(data["typeShift"].get<uint32_t>());
+            auto it = seenShifts.find(shift);
+            if (it != seenShifts.end()) {
+                result.addError(
+                    "Duplicate 'typeShift' value " + toHex(shift) +
+                    ": device '" + deviceName + "' conflicts with '" + it->second + "'"
+                );
+            } else {
+                seenShifts[shift] = deviceName;
+            }
+        }
+
+        for (const auto &data: allData) {
+            if (!data.contains("device") || !data.contains("typeShift")) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            const uint16_t shift = static_cast<uint16_t>(data["typeShift"].get<uint32_t>());
+
+            if (data.contains("commands") && data["commands"].is_array()) {
+                for (const auto &cmd: data["commands"]) {
+                    if (!cmd.contains("id") || !cmd.contains("name")) continue;
+                    const uint16_t shiftedId = static_cast<uint16_t>(cmd["id"].get<uint16_t>() | (shift << 8));
+                    const std::string label = deviceName + "::" + cmd["name"].get<std::string>();
+                    auto it = seenCommandIDs.find(shiftedId);
+                    if (it != seenCommandIDs.end()) {
+                        result.addError(
+                            "Cross-device command ID collision at shifted ID " + toHex(shiftedId) +
+                            ": '" + label + "' conflicts with '" + it->second + "'"
+                        );
+                    } else {
+                        seenCommandIDs[shiftedId] = label;
+                    }
+                }
+            }
+
+            if (data.contains("telemetry") && data["telemetry"].is_array()) {
+                for (const auto &src: data["telemetry"]) {
+                    if (!src.contains("id") || !src.contains("name")) continue;
+                    const uint16_t shiftedId = static_cast<uint16_t>(src["id"].get<uint16_t>() | (shift << 8));
+                    const std::string label = deviceName + "::" + src["name"].get<std::string>();
+                    auto it = seenTelemetryIDs.find(shiftedId);
+                    if (it != seenTelemetryIDs.end()) {
+                        result.addError(
+                            "Cross-device telemetry ID collision at shifted ID " + toHex(shiftedId) +
+                            ": '" + label + "' conflicts with '" + it->second + "'"
+                        );
+                    } else {
+                        seenTelemetryIDs[shiftedId] = label;
+                    }
+                }
+            }
+        }
         return result;
     }
 };

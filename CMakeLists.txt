@@ -18,39 +18,36 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/devices/*.json")
 
-# For each device JSON, register a custom command to generate its files
+# Discover all device JSON files
+file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/devices/*.json")
+
+# Derive per-device controller header paths from JSON filenames
+set(ALL_CONTROLLER_HEADERS "")
 foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
-    # Extract device name from filename e.g. IndicatorBoard.json -> IndicatorBoard
     get_filename_component(DEVICE_NAME ${DEVICE_JSON} NAME_WE)
-
-    add_custom_command(
-            OUTPUT
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/${DEVICE_NAME}Controller.h
-            ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
-            COMMAND CommandGenerator
-            ${DEVICE_JSON}
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/
-            ${CMAKE_SOURCE_DIR}/src/generated/
-            DEPENDS
-            ${DEVICE_JSON}
-            CommandGenerator
-            ${PREVIOUS_GENERATED_CONFIG}
-            COMMENT "Generating files for device: ${DEVICE_NAME}..."
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    )
-
-    # Each iteration depends on the previous one's GeneratedConfig output
-    set(PREVIOUS_GENERATED_CONFIG
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
-    )
-
-    list(APPEND ALL_GENERATED_HEADERS
-            ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/${DEVICE_NAME}Controller.h
-    )
+    list(APPEND ALL_CONTROLLER_HEADERS
+            "${CMAKE_SOURCE_DIR}/include/smartdrive/generated/${DEVICE_NAME}Controller.h")
 endforeach()
+
+# Single custom command — passes ALL json files at once
+add_custom_command(
+        OUTPUT
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
+        ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
+        ${ALL_CONTROLLER_HEADERS}
+        COMMAND CommandGenerator
+        ${DEVICE_JSON_FILES}
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/
+        ${CMAKE_SOURCE_DIR}/src/generated/
+        DEPENDS
+        ${DEVICE_JSON_FILES}
+        CommandGenerator
+        COMMENT "Generating files for all devices..."
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
 
 add_custom_target(GenerateCommands ALL
         DEPENDS
