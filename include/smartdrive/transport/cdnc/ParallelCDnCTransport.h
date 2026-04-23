@@ -168,6 +168,7 @@ protected:
     virtual void waitHalfPeriod() = 0; // one CLK half-period delay
     virtual void waitTurnaround() = 0; // slave pin-switch settling time
     virtual uint32_t currentUs() = 0;  // Monotonic microsecond counter used only for the ready-wait watchdog.
+    virtual uint16_t getDataMask() const = 0;
 
 private:
     // tx buffers
@@ -249,28 +250,43 @@ private:
         //  Poll DATA port for any present slave driving its pin HIGH.
         bool rxValid = false;
 
-        if (present != 0x0000)
+        // if (present != 0x0000)
+        // {
+        //     const uint32_t readyStart = currentUs();
+
+        //     while ((currentUs() - readyStart) < READY_TIMEOUT_US)
+        //     {
+        //         // Any present slave driving DATA HIGH = ready
+        //         if ((readDataPort() & present) != 0)
+        //         {
+        //             rxValid = true;
+        //             break;
+        //         }
+        //     }
+
+        //     if (!rxValid)
+        //     {
+        //         LOG(LogLevel::OP_WARNING, "ParallelCDnC: ready timeout — skipping RX");
+        //     }
+        // }
+
+        // if (!rxValid)
+        //     return;
+
+        const uint16_t pollMask = (present != 0x0000) ? present : getDataMask();
+        const uint32_t readyStart = currentUs();
+
+        while ((currentUs() - readyStart) < READY_TIMEOUT_US)
         {
-            const uint32_t readyStart = currentUs();
-
-            while ((currentUs() - readyStart) < READY_TIMEOUT_US)
+            if ((readDataPort() & pollMask) != 0)
             {
-                // Any present slave driving DATA HIGH = ready
-                if ((readDataPort() & present) != 0)
-                {
-                    rxValid = true;
-                    break;
-                }
-            }
-
-            if (!rxValid)
-            {
-                LOG(LogLevel::OP_WARNING, "ParallelCDnC: ready timeout — skipping RX");
+                rxValid = true;
+                break;
             }
         }
 
         if (!rxValid)
-            return;
+            LOG(LogLevel::OP_WARNING, "ParallelCDnC: ready timeout — skipping RX");
 
         // rx phase
         //  Slave has pre-set its first bit. Start clocking immediately.
@@ -286,11 +302,12 @@ private:
             waitHalfPeriod();
         }
 
-        // upack + accumulate
+        // unpack + accumulate
         //  Only reconstruct and accumulate bytes for present slaves.
+        const uint16_t unpackMask = (present != 0x0000) ? present : getDataMask();
         for (uint8_t s = 0; s < MAX_SLAVES; ++s)
         {
-            if (!isPresent(s))
+            if (!((unpackMask >> s) & 0x01))
                 continue;
 
             for (uint8_t byteIdx = 0; byteIdx < cycleBytes; ++byteIdx)

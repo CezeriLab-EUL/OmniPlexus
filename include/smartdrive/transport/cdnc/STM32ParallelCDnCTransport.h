@@ -102,6 +102,8 @@ protected:
         return DWT->CYCCNT / (SystemCoreClock / 1000000UL);
     }
 
+    uint16_t getDataMask() const override { return dataMask_; }
+
 private:
     GPIO_TypeDef *dataPort_;
     uint16_t dataMask_;
@@ -120,7 +122,7 @@ private:
     inline void delayUs(uint32_t us)
     {
         const uint32_t start = DWT->CYCCNT;
-        const uint32_t ticks = (SystemCoreClock / 1000000UL);
+        const uint32_t ticks = us * (SystemCoreClock / 1000000UL);
         while ((DWT->CYCCNT - start) < ticks)
         {
             __NOP();
