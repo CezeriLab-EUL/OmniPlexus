@@ -83,6 +83,7 @@ add_library(SmartDrive
         include/smartdrive/core/TriggerConfig.h
         include/smartdrive/core/TelemetryManager.h
         tests/transport/serial_telemetry_receive.cpp
+        include/smartdrive/transport/http/PcHttpTransport.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL
