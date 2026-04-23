@@ -9,7 +9,7 @@
 #include <csignal>
 
 #include "smartdrive/core/CommunicationManager.h"
-#include "smartdrive/transport/PcSerialTransport.h"
+#include "../../include/smartdrive/transport/serial/PcSerialTransport.h"
 #include "smartdrive/protocol/BinaryEncoder.h"
 #include "smartdrive/generated/TelemetrySourceIDs.h"
 

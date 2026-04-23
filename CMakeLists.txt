@@ -67,8 +67,8 @@ add_library(SmartDrive
         include/smartdrive/utils/CommandQueue.h
         include/smartdrive/core/CommunicationManager.h
         include/smartdrive/transport/AbstractTransport.h
-        include/smartdrive/transport/ArduinoSerialTransport.h
-        include/smartdrive/transport/PcSerialTransport.h
+        include/smartdrive/transport/serial/ArduinoSerialTransport.h
+        include/smartdrive/transport/serial/PcSerialTransport.h
         include/smartdrive/generated/IndicatorBoardController.h
         include/smartdrive/core/string.hpp
         include/smartdrive/utils/CRC8.h

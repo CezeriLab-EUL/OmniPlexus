@@ -10,7 +10,7 @@
 #include <chrono>
 #include <thread>
 
-#include "smartdrive/transport/PcSerialTransport.h"
+#include "../../include/smartdrive/transport/serial/PcSerialTransport.h"
 #include "smartdrive/protocol/BinaryEncoder.h"
 #include "smartdrive/generated/IndicatorBoardController.h"
 

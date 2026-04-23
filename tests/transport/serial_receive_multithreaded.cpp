@@ -6,7 +6,7 @@
 
 #include "smartdrive/protocol/BinaryEncoder.h"
 #include "smartdrive/core/CommunicationManager.h"
-#include "smartdrive/transport/PcSerialTransport.h"
+#include "../../include/smartdrive/transport/serial/PcSerialTransport.h"
 #include <csignal>
 
 volatile bool running = true;
