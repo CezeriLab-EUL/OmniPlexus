@@ -48,13 +48,13 @@ public:
 
         if (data.size == 0)
         {
-            LOG(LogLevel::ERROR, "CDnC: send() called with empty frame");
+            LOG(LogLevel::OP_ERROR, "CDnC: send() called with empty frame");
             return false;
         }
 
         if (data.size > ProtocolConstants::MAX_FRAME_SIZE)
         {
-            LOG(LogLevel::ERROR, "CDnC: frame exceeds MAX_FRAME_SIZE");
+            LOG(LogLevel::OP_ERROR, "CDnC: frame exceeds MAX_FRAME_SIZE");
             return false;
         }
 
@@ -124,7 +124,7 @@ protected:
     {
         if (rxCount == 0)
         {
-            LOG(LogLevel::WARNING, "CDnC: readByte() called with empty rx buffer");
+            LOG(LogLevel::OP_WARNING, "CDnC: readByte() called with empty rx buffer");
             return ProtocolConstants::NOP_BYTE;
         }
         const uint8_t b = rxBuffer[rxHead];
@@ -145,7 +145,7 @@ private:
     {
         if (rxCount >= ProtocolConstants::MAX_FRAME_SIZE)
         {
-            LOG(LogLevel::WARNING, "CDnC: RX buffer overrun, dropping oldest byte");
+            LOG(LogLevel::OP_WARNING, "CDnC: RX buffer overrun, dropping oldest byte");
             rxHead = (rxHead + 1) % ProtocolConstants::MAX_FRAME_SIZE;
             rxCount--;
         }

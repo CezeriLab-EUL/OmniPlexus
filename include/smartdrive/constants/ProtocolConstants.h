@@ -33,7 +33,8 @@ namespace ProtocolConstants
         TELEMETRY = 0x02
     };
 
-    enum class ResponseStatus : uint8_t {
+    enum class ResponseStatus : uint8_t
+    {
         OK = 0x00,
         UNKNOWN_COMMAND_TYPE = 0X01,
         INVALID_PARAMS = 0X02,

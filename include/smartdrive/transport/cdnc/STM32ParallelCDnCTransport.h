@@ -9,7 +9,7 @@
 class STM32ParallelCDnCTransport : public ParallelCDnCTransport
 {
 public:
-    STM32ParalleCDnCTransport(
+    STM32ParallelCDnCTransport(
         GPIO_TypeDef *dataPort,
         uint16_t dataMask,
         GPIO_TypeDef *clkPort,
@@ -42,9 +42,9 @@ public:
     void setClkHalfPeriod(uint32_t us) { clkHalfPeriodUs_ = us; }
     void setTurnaround(uint32_t us) { turnaroundUs_ = us; }
 
-    protecetd :
-        // set data por to input
-        void setDataPortOutput() override
+protected:
+    // set data por to input
+    void setDataPortOutput() override
     {
         setPortMode(dataPort_, dataMask_, GPIO_MODE_OUTPUT_PP);
     }
