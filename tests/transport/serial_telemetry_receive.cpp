@@ -43,12 +43,6 @@ int main() {
                std::cout << "Temperature: " << voltage << std::endl;
                break;
            }
-
-           case TelemetrySource::BOARD_VOLTAGE : {
-               auto voltage = data.unpack<float>();
-               std::cout << "Voltage: " << voltage << std::endl;
-               break;
-           }
        }
     });
 

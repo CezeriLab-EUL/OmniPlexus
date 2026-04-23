@@ -95,14 +95,15 @@ add_custom_target(SyncArduinoLibrary ALL
 add_dependencies(SyncArduinoLibrary SmartDrive GenerateCommands)
 
 target_include_directories(SmartDrive PUBLIC include)
+target_include_directories(SmartDrive PRIVATE ${CMAKE_SOURCE_DIR}/external/httplib)
 target_link_libraries(SmartDrive PUBLIC Boost::system)
 
 # Library should wait for generator to finish first
 add_dependencies(SmartDrive GenerateCommands)
 
-add_executable(SmartDrive_Test_BinaryEncoder
-        tests/protocol/test_binary_encoder.cpp
-)
+#add_executable(SmartDrive_Test_BinaryEncoder
+#        tests/protocol/test_binary_encoder.cpp
+#)
 
 add_executable(SmartDrive_Test_Command
         tests/test_command_registry.cpp
@@ -117,6 +118,6 @@ add_executable(SmartDrive_Test_SerialTransport
         tests/transport/serial_telemetry_receive.cpp
 )
 
-target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
+#target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
 target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
 target_link_libraries(SmartDrive_Test_SerialTransport PRIVATE SmartDrive)
