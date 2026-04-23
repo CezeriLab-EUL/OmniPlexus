@@ -2,6 +2,7 @@
   "version": "1.0",
   "description": "SmartDrive Commands for Indicator Board",
   "device": "IndicatorBoard",
+  "typeShift": 0,
   "commands": [
     {
       "id": 1,
