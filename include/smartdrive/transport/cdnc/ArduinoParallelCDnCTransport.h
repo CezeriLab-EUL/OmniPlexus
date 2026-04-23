@@ -140,37 +140,39 @@ public:
 
         waitForClkLow(); // should already be LOW, returns immediately if so
 
-        const uint8_t firstBit = (data.data[0] >> 7) & 0x01;
-        digitalWrite(pinData, firstBit ? HIGH : LOW);
+        // const uint8_t firstBit = (data.data[0] >> 7) & 0x01;
+        // digitalWrite(pinData, firstBit ? HIGH : LOW);
 
-        // clock out remaining bytes
+        // clock out bits MSB-first.
         // DATA is pre-set. For each bit:
-        //   a. Wait for CLK HIGH  — master samples DATA here.
-        //   b. Wait for CLK LOW   — end of bit window.
-        //   c. Pre-set next bit.
+        // Wait for CLK HIGH  — master samples DATA here.
+        // Wait for CLK LOW   — end of bit window.
+        // Protocol: pre-set DATA before rising edge, master samples on rising edge.
+
         for (size_t byteIdx = 0; byteIdx < data.size; ++byteIdx)
         {
             const uint8_t b = data.data[byteIdx];
             for (int8_t bit = 7; bit >= 0; --bit)
             {
-                // DATA is pre-set. Wait for master's rising edge.
+                // Pre-set this bit before the rising edge
+                digitalWrite(pinData, ((b >> bit) & 0x01) ? HIGH : LOW);
                 waitForClkHigh(0); // 0 = no timeout, master WILL clock
                 waitForClkLow();
 
-                // Pre-set next bit so it's stable before the next rising edge.
-                uint8_t nextBit = 0;
-                if (bit > 0)
-                {
-                    // Next bit is within the same byte
-                    nextBit = (b >> (bit - 1)) & 0x01;
-                }
-                else if (byteIdx + 1 < data.size)
-                {
-                    // Next bit is bit 7 of the next byte
-                    nextBit = (data.data[byteIdx + 1] >> 7) & 0x01;
-                }
-                // else: last bit of last byte — nextBit stays 0 (don't care)
-                digitalWrite(pinData, nextBit ? HIGH : LOW);
+                // // Pre-set next bit so it's stable before the next rising edge.
+                // uint8_t nextBit = 0;
+                // if (bit > 0)
+                // {
+                //     // Next bit is within the same byte
+                //     nextBit = (b >> (bit - 1)) & 0x01;
+                // }
+                // else if (byteIdx + 1 < data.size)
+                // {
+                //     // Next bit is bit 7 of the next byte
+                //     nextBit = (data.data[byteIdx + 1] >> 7) & 0x01;
+                // }
+                // // else: last bit of last byte — nextBit stays 0 (don't care)
+                // digitalWrite(pinData, nextBit ? HIGH : LOW);
             }
         }
 
