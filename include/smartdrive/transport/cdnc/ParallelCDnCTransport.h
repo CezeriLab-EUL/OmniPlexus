@@ -11,6 +11,9 @@ public:
     static constexpr uint8_t MAX_SLAVES = 16;
     static constexpr uint8_t BUF_SIZE = ProtocolConstants::MAX_FRAME_SIZE;
 
+    // worst case scenario timeout
+    static constexpr uint32_t READY_TIMEOUT_US = 200000UL;
+
     struct SlaveAccumulator
     {
         enum class State : uint8_t
@@ -142,15 +145,7 @@ public:
     void cycle()
     {
         const uint8_t cycleBytes = computeCycleLength();
-
-        if (cycleBytes == 0)
-        {
-            runCycle(1);
-        }
-        else
-        {
-            runCycle(cycleBytes);
-        }
+        runCycle(cycleBytes == 0 ? 1 : cycleBytes);
     }
 
     // per-slave frame access — called after cycle() returns.
@@ -172,6 +167,7 @@ protected:
     virtual void setClk(bool high) = 0;
     virtual void waitHalfPeriod() = 0; // one CLK half-period delay
     virtual void waitTurnaround() = 0; // slave pin-switch settling time
+    virtual uint32_t currentUs() = 0;  // Monotonic microsecond counter used only for the ready-wait watchdog.
 
 private:
     // tx buffers
@@ -205,6 +201,7 @@ private:
     {
         const uint8_t totalBits = cycleBytes * 8;
 
+        // transpose
         uint16_t sendbuffer[BUF_SIZE * 8] = {};
 
         for (uint8_t s = 0; s < MAX_SLAVES; ++s)
@@ -231,6 +228,7 @@ private:
             }
         }
 
+        // tx phase
         setDataPortOutput();
 
         for (uint8_t i = 0; i < totalBits; ++i)
@@ -243,8 +241,40 @@ private:
             waitHalfPeriod(); // hold low before next bit
         }
 
+        // turnaround
         setDataPortInput();
         waitTurnaround();
+
+        // ready wait
+        //  Poll DATA port for any present slave driving its pin HIGH.
+        bool rxValid = false;
+
+        if (present != 0x0000)
+        {
+            const uint32_t readyStart = currentUs();
+
+            while ((currentUs() - readyStart) < READY_TIMEOUT_US)
+            {
+                // Any present slave driving DATA HIGH = ready
+                if ((readDataPort() & present) != 0)
+                {
+                    rxValid = true;
+                    break;
+                }
+            }
+
+            if (!rxValid)
+            {
+                LOG(LogLevel::OP_WARNING, "ParallelCDnC: ready timeout — skipping RX");
+            }
+        }
+
+        if (!rxValid)
+            return;
+
+        // rx phase
+        //  Slave has pre-set its first bit. Start clocking immediately.
+        //  Sample DATA on every rising CLK edge.
 
         for (uint8_t i = 0; i < totalBits; ++i)
         {
@@ -256,8 +286,13 @@ private:
             waitHalfPeriod();
         }
 
+        // upack + accumulate
+        //  Only reconstruct and accumulate bytes for present slaves.
         for (uint8_t s = 0; s < MAX_SLAVES; ++s)
         {
+            if (!isPresent(s))
+                continue;
+
             for (uint8_t byteIdx = 0; byteIdx < cycleBytes; ++byteIdx)
             {
                 uint8_t rxByte = 0;
@@ -265,7 +300,7 @@ private:
                 {
                     const uint8_t bitPos = byteIdx * 8 + bit;
                     const uint8_t bitVal = (recvBits[bitPos] >> s) & 0x01;
-                    rxByte |= (bitVal << (7 - bit)); // MSB first
+                    rxByte |= (bitVal << (7 - bit));
                 }
                 accumulators[s].processByte(rxByte);
             }

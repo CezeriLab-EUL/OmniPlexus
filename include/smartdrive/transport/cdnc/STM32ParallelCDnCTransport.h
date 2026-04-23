@@ -14,14 +14,16 @@ public:
         uint16_t dataMask,
         GPIO_TypeDef *clkPort,
         uint16_t clkPin,
-        uint32_t clkHalfPeriodUs = 2,
-        uint32_t turnaroundUs = 500)
+        uint32_t clkHalfPeriodUs = 50, // 2
+        uint32_t turnaroundUs = 25000) // 500
         : dataPort_(dataPort),
           dataMask_(dataMask),
           clkPort_(clkPort),
           clkPin_(clkPin),
           clkHalfPeriodUs_(clkHalfPeriodUs),
-          turnaroundUs_(turnaroundUs) {}
+          turnaroundUs_(turnaroundUs)
+    {
+    }
 
     void begin()
     {
@@ -89,6 +91,15 @@ public:
     void waitTurnaround() override
     {
         delayUs(turnaroundUs_);
+    }
+
+    /*Monotonic microsecond counter using DWT cycle counter.
+    Returns DWT->CYCCNT divided by CPU MHz (168 for F407 at max speed).
+    Wraps every ~25 seconds — safe because the base class poll loop uses
+    unsigned subtraction: (currentUs() - readyStart) handles wrap correctly.*/
+    uint32_t currentUs() override
+    {
+        return DWT->CYCCNT / (SystemCoreClock / 1000000UL);
     }
 
 private:

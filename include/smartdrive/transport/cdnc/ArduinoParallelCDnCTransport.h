@@ -116,9 +116,15 @@ public:
 
     // overidden send from abstract transport
     /* Called by CommunicationManager when _handleCommand fires _sendAck/_sendNack.
-    At this point the master is in its turnaround gap (CLK LOW, GPIOE = INPUT).
-    Slave switches DATA to OUTPUT, waits for master to resume clocking,
-    and shifts out every byte of `data` MSB-first on rising CLK edges.
+    Protocol:
+      1. READY SIGNAL  — drive DATA HIGH immediately. This is what the master
+                         polls for in its ready-wait loop. The master will not
+                         start clocking until it sees this HIGH.
+      2. WAIT FOR CLK  — master detected ready and is now starting its RX phase.
+                         Wait for the first rising CLK edge.
+      3. CLOCK OUT     — shift each bit out MSB-first, pre-set before rising edge.
+      4. RELEASE DATA  — INPUT after last bit; pull-down holds LOW.
+
     */
 
     bool send(const SerializedData &data) override
@@ -129,14 +135,19 @@ public:
             return false;
         }
 
-        waitForClkLow(); // should already be LOW, returns immediately if so
-        delayMicroseconds(turnaroundUs / 2);
-
         pinMode(pinData, OUTPUT);
+        digitalWrite(pinData, HIGH); // drive high immediately to signal ready
+
+        waitForClkLow(); // should already be LOW, returns immediately if so
+
         const uint8_t firstBit = (data.data[0] >> 7) & 0x01;
         digitalWrite(pinData, firstBit ? HIGH : LOW);
 
         // clock out remaining bytes
+        // DATA is pre-set. For each bit:
+        //   a. Wait for CLK HIGH  — master samples DATA here.
+        //   b. Wait for CLK LOW   — end of bit window.
+        //   c. Pre-set next bit.
         for (size_t byteIdx = 0; byteIdx < data.size; ++byteIdx)
         {
             const uint8_t b = data.data[byteIdx];
@@ -144,7 +155,6 @@ public:
             {
                 // DATA is pre-set. Wait for master's rising edge.
                 waitForClkHigh(0); // 0 = no timeout, master WILL clock
-
                 waitForClkLow();
 
                 // Pre-set next bit so it's stable before the next rising edge.
@@ -165,8 +175,15 @@ public:
         }
 
         // release data line
+        // Pull-down holds line LOW so absent-slave poll reads clean 0.
         pinMode(pinData, 0x00); // INPUT
         return true;
+    }
+
+    // currentUs() privide for completeness, future base classes may require it
+    uint32_t currentUs()
+    {
+        return micros();
     }
 
 protected:
