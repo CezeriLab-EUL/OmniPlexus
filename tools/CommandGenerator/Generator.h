@@ -489,6 +489,7 @@ private:
         out << "void CommandRegistry::initialize() {\n\n";
 
         for (const auto &data: allData) {
+            const std::string deviceName = data["device"].get<std::string>();
             for (const auto &cmd: data["commands"]) {
                 const std::string name = cmd["name"].get<std::string>();
                 const std::string desc = cmd.contains("description")
@@ -497,7 +498,7 @@ private:
 
                 out << "    // " << name << "\n";
                 out << "    registerCommand({\n";
-                out << "        CommandType::" << name << ",\n";
+                out << "        " << deviceName <<  "CommandType::" << name << ",\n";
                 out << "        \"" << name << "\",\n";
                 out << "        \"" << desc << "\",\n";
                 out << "        {\n";

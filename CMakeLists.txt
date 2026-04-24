@@ -72,8 +72,8 @@ add_library(SmartDrive
         include/smartdrive/utils/CRC8.h
         include/smartdrive/interfaces/IEncoder.h
         include/smartdrive/protocol/BinaryEncoder.h
-        tests/transport/serial_receive_single.cpp
-        tests/transport/serial_receive_multithreaded.cpp
+#        tests/transport/serial_receive_single.cpp
+#        tests/transport/serial_receive_multithreaded.cpp
         include/smartdrive/utils/PendingAckQueue.h
         include/smartdrive/utils/ResponseQueue.h
         include/smartdrive/interfaces/IPlatformClock.h

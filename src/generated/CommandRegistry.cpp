@@ -12,7 +12,7 @@ void CommandRegistry::initialize() {
 
     // OLED_PRINT_STR
     registerCommand({
-        CommandType::OLED_PRINT_STR,
+        IndicatorBoardCommandType::OLED_PRINT_STR,
         "OLED_PRINT_STR",
         "Print string on OLED at specified position",
         {
@@ -24,7 +24,7 @@ void CommandRegistry::initialize() {
 
     // OLED_DRAW_FRAME
     registerCommand({
-        CommandType::OLED_DRAW_FRAME,
+        IndicatorBoardCommandType::OLED_DRAW_FRAME,
         "OLED_DRAW_FRAME",
         "Draw a rectangular frame on OLED",
         {
@@ -36,7 +36,7 @@ void CommandRegistry::initialize() {
 
     // OLED_DRAW_BAR
     registerCommand({
-        CommandType::OLED_DRAW_BAR,
+        IndicatorBoardCommandType::OLED_DRAW_BAR,
         "OLED_DRAW_BAR",
         "Draw a progress bar on OLED",
         {
@@ -48,7 +48,7 @@ void CommandRegistry::initialize() {
 
     // OLED_CLEAR
     registerCommand({
-        CommandType::OLED_CLEAR,
+        IndicatorBoardCommandType::OLED_CLEAR,
         "OLED_CLEAR",
         "Clear the OLED display buffer",
         {
@@ -57,7 +57,7 @@ void CommandRegistry::initialize() {
 
     // OLED_REFRESH
     registerCommand({
-        CommandType::OLED_REFRESH,
+        IndicatorBoardCommandType::OLED_REFRESH,
         "OLED_REFRESH",
         "Send buffer to OLED display (update screen)",
         {
@@ -66,7 +66,7 @@ void CommandRegistry::initialize() {
 
     // OLED_SET_BRIGHTNESS
     registerCommand({
-        CommandType::OLED_SET_BRIGHTNESS,
+        IndicatorBoardCommandType::OLED_SET_BRIGHTNESS,
         "OLED_SET_BRIGHTNESS",
         "Set OLED display brightness",
         {
@@ -76,7 +76,7 @@ void CommandRegistry::initialize() {
 
     // LED_SET_BLOCK
     registerCommand({
-        CommandType::LED_SET_BLOCK,
+        IndicatorBoardCommandType::LED_SET_BLOCK,
         "LED_SET_BLOCK",
         "Set all LEDs to the same color (RGB565 format)",
         {
@@ -86,7 +86,7 @@ void CommandRegistry::initialize() {
 
     // LED_SET_SINGLE
     registerCommand({
-        CommandType::LED_SET_SINGLE,
+        IndicatorBoardCommandType::LED_SET_SINGLE,
         "LED_SET_SINGLE",
         "Set a single LED to specified color (RGB565 format)",
         {
@@ -97,7 +97,7 @@ void CommandRegistry::initialize() {
 
     // BEEP
     registerCommand({
-        CommandType::BEEP,
+        IndicatorBoardCommandType::BEEP,
         "BEEP",
         "Sound the buzzer for specified duration",
         {
@@ -107,7 +107,7 @@ void CommandRegistry::initialize() {
 
     // RESET
     registerCommand({
-        CommandType::RESET,
+        IndicatorBoardCommandType::RESET,
         "RESET",
         "Reset hardware subsystems",
         {
@@ -117,7 +117,7 @@ void CommandRegistry::initialize() {
 
     // OLED_SET_FONT
     registerCommand({
-        CommandType::OLED_SET_FONT,
+        IndicatorBoardCommandType::OLED_SET_FONT,
         "OLED_SET_FONT",
         "Set OLED font from preset",
         {
@@ -127,7 +127,7 @@ void CommandRegistry::initialize() {
 
     // OLED_SET_CURSOR
     registerCommand({
-        CommandType::OLED_SET_CURSOR,
+        IndicatorBoardCommandType::OLED_SET_CURSOR,
         "OLED_SET_CURSOR",
         "Set cursor position for next print",
         {
@@ -138,7 +138,7 @@ void CommandRegistry::initialize() {
 
     // SEND_ID
     registerCommand({
-        CommandType::SEND_ID,
+        IndicatorBoardCommandType::SEND_ID,
         "SEND_ID",
         "Send ID with protocol revision and slave capabilities to STM32",
         {
@@ -150,7 +150,7 @@ void CommandRegistry::initialize() {
 
     // DISCOVERY
     registerCommand({
-        CommandType::DISCOVERY,
+        IndicatorBoardCommandType::DISCOVERY,
         "DISCOVERY",
         "Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.",
         {
