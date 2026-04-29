@@ -80,8 +80,9 @@ public:
     PcHttpTransport(const char *host, uint16_t port) : role(HttpRole::CLIENT) {
         cli = new httplib::Client(host, port);
         cli->set_connection_timeout(2); //2 seconds
-        cli->set_read_timeout(2); //2 seconds
+        cli->set_read_timeout(10, 0); //2 seconds
         cli->set_write_timeout(2); //2 seconds
+        cli->set_keep_alive(false);
     }
 
     ~PcHttpTransport() {
@@ -106,6 +107,7 @@ public:
             auto res = cli->Post(targetPath.c_str(), reinterpret_cast<const char *>(data.data), data.size,
                                  "application/octet-stream");
             if (!res) {
+                LOG(LogLevel::OP_ERROR, httplib::to_string(res.error()).c_str());
                 LOG(LogLevel::OP_ERROR, "HTTP CLIENT: request failed (no response/timeout)");
                 return false;
             }

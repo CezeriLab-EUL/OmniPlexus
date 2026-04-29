@@ -5,20 +5,19 @@
 #ifndef SMARTDRIVE_ESPHTTPTRANSPORT_H
 #define SMARTDRIVE_ESPHTTPTRANSPORT_H
 
-#ifdef ARDUINO
+#if defined(ARDUINO) && defined(ESP32)
+#include "smartdrive/utils/Logger.h"
+#include "smartdrive/constants/ProtocolConstants.h"
 
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WebServer.h>
+#include <HTTPClient.h>
 #include "smartdrive/interfaces/ITransport.h"
 #include "smartdrive/types/ProtocolTypes.h"
 #include "smartdrive/utils/Logger.h"
 #include "types.h"
 
-// 4096 bytes is comfortable for httplib's internal parsing + your lambda.
-// If you add heavy processing inside the handler, increase this.
-static constexpr uint32_t HTTP_TASK_STACK_SIZE  = 4096;
-static constexpr UBaseType_t HTTP_TASK_PRIORITY = 1;
-static constexpr BaseType_t  HTTP_TASK_CORE     = 0;  // pin to core 0, leave core 1 for the main loop
 static constexpr const char* HTTP_ENDPOINT = "/smartdrive";
 
 class EspHttpTransport;
@@ -36,9 +35,9 @@ class EspHttpTransport : public ITransport {
         }
 
         struct Lock {
-            SemaphoreHandle_t& handle;
+            const SemaphoreHandle_t& handle;
             bool taken;
-            explicit Lock(SemaphoreHandle_t& h) : handle(h), taken(false) {
+            explicit Lock(const SemaphoreHandle_t& h) : handle(h), taken(false) {
                 taken = (xSemaphoreTake(handle, portMAX_DELAY) == pdTRUE);
             }
             ~Lock() {
@@ -53,7 +52,6 @@ class EspHttpTransport : public ITransport {
     FrameSlot slot;
 
     WebServer* server = nullptr;
-    TaskHandle_t serverTask = nullptr;
     uint16_t listenPort = 0;
 
     uint16_t targetPort = 0;
@@ -67,15 +65,33 @@ public:
 
         server->on(HTTP_ENDPOINT, HTTP_POST, [this]() {
             handlePostRequest();
+        }, [this]() {
+            //called as raw bytes arrive
+            HTTPRaw& raw = server->raw();
+            if (raw.status == RAW_START) {
+                FrameSlot::Lock lock(slot.mutex);
+                if (lock.taken) slot.size = 0;
+            }
+            else if (raw.status == RAW_WRITE) {
+                FrameSlot::Lock lock(slot.mutex);
+                if (lock.taken &&
+                    (slot.size + raw.currentSize) <= ProtocolConstants::MAX_FRAME_SIZE) {
+                    memcpy(slot.buffer + slot.size, raw.buf, raw.currentSize);
+                    slot.size += raw.currentSize;
+                }
+            }
+            else if (raw.status == RAW_END) {
+                FrameSlot::Lock lock(slot.mutex);
+                if (lock.taken && slot.size > 0) {
+                    slot.ready = true;
+                }
+            }
         });
 
+        const char* headerKeys[] = {"Content-Length"};
+        size_t headerKeysCount = sizeof(headerKeys) / sizeof(char*);
+        server->collectHeaders(headerKeys, headerKeysCount);
         server->begin();
-
-        xTaskCreatePinnedToCore(httpServerTask,
-            "OmniPlexusHTTP",
-            HTTP_TASK_STACK_SIZE,
-            this,
-            HTTP_TASK_PRIORITY, &serverTask, HTTP_TASK_CORE);
     }
 
     EspHttpTransport(const char* host, uint16_t port) : role(HttpRole::CLIENT), targetHost(host), targetPort(port) {
@@ -84,10 +100,6 @@ public:
 
     ~EspHttpTransport() {
         if (role == HttpRole::SERVER) {
-            if (serverTask) {
-                vTaskDelete(serverTask);
-                serverTask = nullptr;
-            }
             if (server) {
                 server->stop();
                 delete server;
@@ -111,7 +123,6 @@ public:
 
             http.begin(url);
             http.addHeader("Content-Type", "application/octet-stream");
-            .
             const int httpCode = http.POST(
                 const_cast<uint8_t*>(data.data),
                 static_cast<int>(data.size)
@@ -159,7 +170,12 @@ public:
     }
 
     void accumulate() override {
-        //intentially empty
+        if (server) {
+            const unsigned long start = millis();
+            while (millis() - start < 20) {  // pump for 20ms
+                server->handleClient();
+            }
+        }
     }
 
     bool hasCompleteFrame() const override {
@@ -184,57 +200,33 @@ public:
 
 private:
     void handlePostRequest() {
-        if (!server->hasArg("plain") || server->arg("plain").length() == 0) {
+        String contentLengthStr = server->header("Content-Length");
+        Serial.print("Expected: ");
+        Serial.print(contentLengthStr);
+        Serial.print(" Got: ");
+        Serial.println(slot.size);
+        if (contentLengthStr.length() != 0) {
+            int expectedSize = contentLengthStr.toInt();
+            Serial.println(expectedSize);
+            if (slot.size == 0 || slot.size != expectedSize) {
+                LOG(LogLevel::OP_WARNING, "HTTP SERVER: received POST with unexpected size");
+                server->sendHeader("Connection", "close");
+                server->sendHeader("Content-Length", "0");
+                server->send(400);
+                return;
+            }
+            server->sendHeader("Connection", "close");
+            server->sendHeader("Content-Length", "0");
+            server->send(200);
+        }else {
+            LOG(LogLevel::OP_WARNING, "HTTP SERVER: received POST without Content-Length");
+            server->sendHeader("Connection", "close");
+            server->sendHeader("Content-Length", "0");
             server->send(400);
-            return;
         }
-
-        const String& body    = server->arg("plain");
-        const size_t  bodyLen = body.length();
-
-        if (bodyLen > ProtocolConstants::MAX_FRAME_SIZE) {
-            LOG(LogLevel::OP_WARNING, "HTTP SERVER: incoming frame too large, dropping");
-            server->send(413);
-            return;
-        }
-
-        {
-            FrameSlot::Lock lock(slot.mutex);
-
-            if (!lock.taken) {
-                server->send(503);
-                return;
-            }
-
-            if (slot.ready) {
-                // Previous frame not yet consumed — drop incoming, same
-                // policy as AbstractTransport and PcHttpTransport.
-                LOG(LogLevel::OP_WARNING, "HTTP SERVER: previous frame not released, dropping");
-                server->send(503);
-                return;
-            }
-
-            memcpy(slot.buffer, body.c_str(), bodyLen);
-            slot.size  = bodyLen;
-            slot.ready = true;
-        }
-
-        server->send(200);
     }
 
-    friend void httpServerTask(void* param);
 };
-
-
-static void httpServerTask(void* param) {
-    EspHttpTransport* self = static_cast<EspHttpTransport*>(param);
-    for (;;) {
-        if (self->server) {
-            self->server->handleClient();
-        }
-        vTaskDelay(1);  // yield for 1 FreeRTOS tick (~1ms at default tick rate)
-    }
-}
 
 #endif
 

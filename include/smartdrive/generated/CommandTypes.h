@@ -8,6 +8,17 @@
 
 #include "../core/platform.h"
 
+// Device: Esp
+namespace EspCommandType {
+
+    // Turn on the built-in LED on the ESP board
+    constexpr uint16_t TURNON_BUILTIN_LED = 0x0101;
+
+    // Turn off the built-in LED on the ESP board
+    constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0102;
+
+} // namespace EspCommandType
+
 // Device: IndicatorBoard
 namespace IndicatorBoardCommandType {
 

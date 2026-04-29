@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "description": "SmartDrive Commands for Esp Board",
+  "device": "Esp",
+  "typeShift": 1,
+  "commands": [
+    {
+      "id": 1,
+      "name": "TURNON_BUILTIN_LED",
+      "description": "Turn on the built-in LED on the ESP board",
+      "acknowledges": false,
+      "params": []
+    },
+    {
+      "id": 2,
+      "name": "TURNOFF_BUILTIN_LED",
+      "description": "Turn off the built-in LED on the ESP board",
+      "acknowledges": false,
+      "params": []
+    }
+  ],
+  "telemetry": [
+    {
+      "id": 1,
+      "name": "BOARD_VOLTAGE",
+      "description": "Current board voltage in volts",
+      "type": "UINT8"
+    },
+    {
+      "id": 2,
+      "name": "BOARD_TEMPERATURE",
+      "description": "ESP board temperature in celsius",
+      "type": "FLOAT"
+    }
+  ]
+}

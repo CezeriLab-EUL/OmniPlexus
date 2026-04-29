@@ -84,6 +84,7 @@ add_library(SmartDrive
         include/smartdrive/transport/http/PcHttpTransport.h
         include/smartdrive/transport/http/EspHttpTransport.h
         include/smartdrive/transport/http/types.h
+        tests/transport/http/send_command.cpp
 )
 
 add_custom_target(SyncArduinoLibrary ALL
@@ -116,7 +117,9 @@ add_executable(SmartDrive_Test_SerialTransport
 #        tests/transport/serial_receive_single.cpp
 #        tests/transport/serial_receive_multithreaded.cpp
 #        tests/transport/serial_command_response.cpp
-        tests/transport/serial_telemetry_receive.cpp
+#        tests/transport/serial_telemetry_receive.cpp
+#        tests/transport/http/send_command.cpp
+        tests/transport/http/receive_telemetry.cpp
 )
 
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)

@@ -24,6 +24,16 @@ public:
 
         switch(cmd.commandType) {
 
+            case EspCommandType::TURNON_BUILTIN_LED: {
+                // No parameters
+                return offset;
+            }
+
+            case EspCommandType::TURNOFF_BUILTIN_LED: {
+                // No parameters
+                return offset;
+            }
+
             case IndicatorBoardCommandType::OLED_PRINT_STR: {
                 // params[0]: x (UINT16, required)
                 memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
@@ -168,6 +178,16 @@ offset += sizeof(uint16_t);
         cmdOut.commandType = cmdType;
 
         switch(cmdType) {
+
+            case EspCommandType::TURNON_BUILTIN_LED: {
+                // No parameters
+                return true;
+            }
+
+            case EspCommandType::TURNOFF_BUILTIN_LED: {
+                // No parameters
+                return true;
+            }
 
             case IndicatorBoardCommandType::OLED_PRINT_STR: {
                 if (bufferSize < 8) return false;

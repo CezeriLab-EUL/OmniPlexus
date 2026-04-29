@@ -10,6 +10,24 @@
 
 void CommandRegistry::initialize() {
 
+    // TURNON_BUILTIN_LED
+    registerCommand({
+        EspCommandType::TURNON_BUILTIN_LED,
+        "TURNON_BUILTIN_LED",
+        "Turn on the built-in LED on the ESP board",
+        {
+        }
+    });
+
+    // TURNOFF_BUILTIN_LED
+    registerCommand({
+        EspCommandType::TURNOFF_BUILTIN_LED,
+        "TURNOFF_BUILTIN_LED",
+        "Turn off the built-in LED on the ESP board",
+        {
+        }
+    });
+
     // OLED_PRINT_STR
     registerCommand({
         IndicatorBoardCommandType::OLED_PRINT_STR,
