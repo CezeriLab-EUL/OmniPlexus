@@ -34,6 +34,11 @@ public:
                 return offset;
             }
 
+            case EspCommandType::GET_BOARD_TEMPERATURE: {
+                // No parameters
+                return offset;
+            }
+
             case IndicatorBoardCommandType::OLED_PRINT_STR: {
                 // params[0]: x (UINT16, required)
                 memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
@@ -185,6 +190,11 @@ offset += sizeof(uint16_t);
             }
 
             case EspCommandType::TURNOFF_BUILTIN_LED: {
+                // No parameters
+                return true;
+            }
+
+            case EspCommandType::GET_BOARD_TEMPERATURE: {
                 // No parameters
                 return true;
             }

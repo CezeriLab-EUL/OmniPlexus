@@ -33,6 +33,13 @@ public:
         return comms.dispatch(cmd, false);
     }
 
+    // Request the current temperature of the ESP board
+    bool getBoardTemperature() {
+        Command cmd;
+        cmd.commandType = EspCommandType::GET_BOARD_TEMPERATURE;
+        return comms.dispatch(cmd, false);
+    }
+
 }; // class EspController
 
 #endif // SMARTDRIVE_ESPCONTROLLER_H

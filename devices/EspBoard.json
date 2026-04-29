@@ -17,6 +17,13 @@
       "description": "Turn off the built-in LED on the ESP board",
       "acknowledges": false,
       "params": []
+    },
+    {
+      "id": 3,
+      "name": "GET_BOARD_TEMPERATURE",
+      "description": "Request the current temperature of the ESP board",
+      "acknowledges": false,
+      "params": []
     }
   ],
   "telemetry": [

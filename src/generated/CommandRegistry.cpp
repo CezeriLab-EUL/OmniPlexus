@@ -28,6 +28,15 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // GET_BOARD_TEMPERATURE
+    registerCommand({
+        EspCommandType::GET_BOARD_TEMPERATURE,
+        "GET_BOARD_TEMPERATURE",
+        "Request the current temperature of the ESP board",
+        {
+        }
+    });
+
     // OLED_PRINT_STR
     registerCommand({
         IndicatorBoardCommandType::OLED_PRINT_STR,

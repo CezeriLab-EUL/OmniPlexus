@@ -17,6 +17,9 @@ namespace EspCommandType {
     // Turn off the built-in LED on the ESP board
     constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0102;
 
+    // Request the current temperature of the ESP board
+    constexpr uint16_t GET_BOARD_TEMPERATURE = 0x0103;
+
 } // namespace EspCommandType
 
 // Device: IndicatorBoard
