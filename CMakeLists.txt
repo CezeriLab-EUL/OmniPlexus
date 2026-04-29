@@ -89,6 +89,10 @@ add_library(SmartDrive
         include/smartdrive/transport/wifi/EspWiFiTransport.h
         include/smartdrive/transport/wifi/PcWiFiTransport.h
         tests/transport/wifi/send_command.cpp
+        include/smartdrive/interfaces/IMutex.h
+        include/smartdrive/mutex/NullMutex.h
+        include/smartdrive/mutex/StdMutex.h
+        include/smartdrive/mutex/FreeRtosMutex.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL
