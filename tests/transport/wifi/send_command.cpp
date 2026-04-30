@@ -17,7 +17,7 @@ void wait(int ms) {
 }
 
 int main() {
-    const char* host = "192.168.12.53";
+    const char* host = "192.168.12.59";
     const uint16_t port = 9000;
 
     std::cout << "Connecting to ESP..." << std::endl;
@@ -61,6 +61,21 @@ int main() {
         std::cout << "Failed to turn LED OFF" << std::endl;
     }
 
+    // single thread
+    // while (running) {
+    //
+    //     cm.listen();
+    //
+    //     static auto lastRequest = std::chrono::steady_clock::now();
+    //     auto now = std::chrono::steady_clock::now();
+    //     if (std::chrono::duration_cast<std::chrono::milliseconds>(
+    //             now - lastRequest).count() >= 2000) {
+    //         device.getBoardTemperature();
+    //         lastRequest = now;
+    //             }
+    // }
+
+    //multiple threads
     std::thread telemetryThread([&device]() {
         while (running) {
             device.getBoardTemperature();
@@ -76,6 +91,7 @@ int main() {
     });
 
     listenerThread.join();
+    telemetryThread.join();
 
     return 0;
 }

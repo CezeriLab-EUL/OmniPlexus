@@ -14,9 +14,9 @@
 #include "../utils/ResponseQueue.h"
 #include "../utils/PendingAckQueue.h"
 #include "../utils/Logger.h"
+#include "smartdrive/interfaces/IMutex.h"
 
-class CommunicationManager
-{
+class CommunicationManager {
 public:
     using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, void *context);
     using CommandResponseCallback = void (*)(const CommandResponse &response, void *context);
@@ -35,28 +35,44 @@ private:
     void *callbackContext = nullptr;
     void *responseCallbackContext = nullptr;
     void *telemetryCallbackContext = nullptr;
+    IMutex *sendMutex = nullptr;
+    IMutex *listenMutex = nullptr;
+
+    struct MutexGuard {
+        IMutex* mutex;
+        explicit MutexGuard(IMutex* m) : mutex(m) {
+            if (mutex) mutex->lock();
+        }
+        ~MutexGuard() {
+            if (mutex) mutex->unlock();
+        }
+    };
 
 public:
-    CommunicationManager(IEncoder *encoder, ITransport *transport) : encoder(encoder), transport(transport) {}
+    CommunicationManager(IEncoder *encoder, ITransport *transport, IMutex *sendMutex = nullptr,
+                         IMutex *listenMutex = nullptr) : encoder(encoder), transport(transport), sendMutex(sendMutex),
+                                                          listenMutex(listenMutex) {
+    }
 
-    void onCommandReceived(CommandCallback cb, void *context = nullptr){
+    void onCommandReceived(CommandCallback cb, void *context = nullptr) {
         callback = cb;
         callbackContext = context;
     }
 
-    void onResponseReceived(CommandResponseCallback cb, void *context = nullptr){
+    void onResponseReceived(CommandResponseCallback cb, void *context = nullptr) {
         responseCallback = cb;
         responseCallbackContext = context;
     }
 
-    void onTelemetryReceived(TelemetryCallback cb, void *context = nullptr){
+    void onTelemetryReceived(TelemetryCallback cb, void *context = nullptr) {
         telemetryCallback = cb;
         telemetryCallbackContext = context;
     }
 
-    bool dispatch(const Command &cmd, bool requiresAck = false){
-        if (!encoder || !transport)
-        {
+    bool dispatch(const Command &cmd, bool requiresAck = false) {
+        MutexGuard guard(sendMutex);
+
+        if (!encoder || !transport) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
@@ -69,16 +85,16 @@ public:
                 return false;
             }
             seqNum = nextSeqNum;
-            nextSeqNum = (nextSeqNum >= ProtocolConstants::SEQ_NUM_MAX) ?
-                        ProtocolConstants::SEQ_NUM_MIN : nextSeqNum + 1;
+            nextSeqNum = (nextSeqNum >= ProtocolConstants::SEQ_NUM_MAX)
+                             ? ProtocolConstants::SEQ_NUM_MIN
+                             : nextSeqNum + 1;
 
             pendingAcks.push({seqNum, cmd.commandType});
         }
 
         const SerializedData frame = encoder->serializeCommand(cmd, seqNum);
 
-        if (frame.size == 0)
-        {
+        if (frame.size == 0) {
             LOG(LogLevel::OP_ERROR, "Failed to serialize command");
             return false;
         }
@@ -87,6 +103,8 @@ public:
     }
 
     bool dispatchTelemetry(const Telemetry &value) {
+        MutexGuard guard(sendMutex);
+
         if (!encoder || !transport) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
@@ -109,7 +127,9 @@ public:
         return sendResponse(response);
     }
 
-    bool sendResponse(const CommandResponse& response) {
+    bool sendResponse(const CommandResponse &response) {
+        MutexGuard guard(sendMutex);
+
         if (!encoder || !transport) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
@@ -125,17 +145,17 @@ public:
         return transport->send(frame);
     }
 
-    void listen(){
-        if (!encoder || !transport)
-        {
+    void listen() {
+        MutexGuard guard(listenMutex);
+
+        if (!encoder || !transport) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return;
         }
 
         transport->accumulate();
 
-        if (transport->hasCompleteFrame())
-        {
+        if (transport->hasCompleteFrame()) {
             RawData frame = transport->getFrame();
 
             if (!ProtocolConstants::isValidFrameType(frame.data[0])) {
@@ -145,59 +165,55 @@ public:
             }
 
             const ProtocolConstants::FrameType frameType =
-                ProtocolConstants::decodeType(frame.data[0]);
+                    ProtocolConstants::decodeType(frame.data[0]);
 
             if (frameType == ProtocolConstants::FrameType::COMMAND) {
                 PackedCommand packed;
-                if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize, packed.seqNum)){
+                if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize, packed.seqNum)) {
                     queue.push(packed);
-                }
-                else{
+                } else {
                     LOG(LogLevel::OP_ERROR, "Failed to extract command payload from frame");
                 }
-            }else if (frameType == ProtocolConstants::FrameType::RESPONSE) {
+            } else if (frameType == ProtocolConstants::FrameType::RESPONSE) {
                 CommandResponse response;
                 if (encoder->deserializeResponse(frame, response)) {
                     if (response.seqNum != ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET) {
                         pendingAcks.resolve(response.seqNum, response.commandType);
                     }
                     responseQueue.push(response);
-                }else {
+                } else {
                     LOG(LogLevel::OP_ERROR, "Failed to deserialize response");
                 }
-            }else if (frameType == ProtocolConstants::FrameType::TELEMETRY) {
+            } else if (frameType == ProtocolConstants::FrameType::TELEMETRY) {
                 Telemetry telemetry;
                 if (encoder->deserializeTelemetry(frame, telemetry)) {
                     if (telemetryCallback) {
                         telemetryCallback(telemetry, telemetryCallbackContext);
-                    }else {
+                    } else {
                         LOG(LogLevel::OP_WARNING, "Telemetry received but no callback registered");
                     }
-                }else {
+                } else {
                     LOG(LogLevel::OP_ERROR, "Failed to deserialize telemetry");
                 }
-            }else {
+            } else {
                 LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
             }
             transport->releaseFrame();
         }
     }
 
-    void processCommands(){
-        if (!callback)
-        {
-            if (!queue.isEmpty()){
+    void processCommands() {
+        if (!callback) {
+            if (!queue.isEmpty()) {
                 LOG(LogLevel::OP_WARNING, "Commands queued but no callback registered");
             }
             return;
         }
 
         PackedCommand packed;
-        while (queue.pop(packed))
-        {
+        while (queue.pop(packed)) {
             Command cmd;
-            if (!CommandPacker::unpack(packed.paramBytes, packed.paramSize, cmd))
-            {
+            if (!CommandPacker::unpack(packed.paramBytes, packed.paramSize, cmd)) {
                 LOG(LogLevel::OP_ERROR, "Failed to unpack command from queue");
                 continue;
             }
@@ -218,15 +234,15 @@ public:
         }
     }
 
-    uint8_t pendingCount() const{
+    uint8_t pendingCount() const {
         return queue.size();
     }
 
-    void flushQueue(){
+    void flushQueue() {
         queue.clear();
     }
 
-    void flushResponseQueue(){
+    void flushResponseQueue() {
         responseQueue.clear();
     }
 };

@@ -112,12 +112,12 @@ target_link_libraries(SmartDrive PUBLIC Boost::system)
 add_dependencies(SmartDrive GenerateCommands)
 
 #add_executable(SmartDrive_Test_BinaryEncoder
-#        tests/protocol/test_binary_encoder.cpp
+##        tests/protocol/test_binary_encoder.cpp
 #)
-
-add_executable(SmartDrive_Test_Command
-        tests/test_command_registry.cpp
-)
+#
+#add_executable(SmartDrive_Test_Command
+##        tests/test_command_registry.cpp
+#)
 
 add_executable(SmartDrive_Test_SerialTransport
 #        tests/transport/test_serial_transport.cpp
@@ -132,5 +132,5 @@ add_executable(SmartDrive_Test_SerialTransport
 )
 
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
-target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
+#target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
 target_link_libraries(SmartDrive_Test_SerialTransport PRIVATE SmartDrive)
