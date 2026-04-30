@@ -10,6 +10,8 @@
 #include <thread>
 #include <chrono>
 
+#include "smartdrive/mutex/StdMutex.h"
+
 volatile bool running = true;
 
 void wait(int ms) {
@@ -30,7 +32,9 @@ int main() {
     std::cout << "Connected!" << std::endl;
 
     BinaryEncoder encoder;
-    CommunicationManager cm(&encoder, &transport);
+    StdMutex sendMutex;
+    StdMutex listenMutex;
+    CommunicationManager cm(&encoder, &transport, &sendMutex, &listenMutex);
     cm.onTelemetryReceived([](const Telemetry& data, void* ctx) {
         switch (data.sourceID) {
             case TelemetrySource::BOARD_TEMPERATURE: {
