@@ -18,10 +18,6 @@ file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
 file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/devices/*.json")
 
-# Discover all device JSON files
-file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/devices/*.json")
-
 # Derive per-device controller header paths from JSON filenames
 set(ALL_CONTROLLER_HEADERS "")
 foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
@@ -36,6 +32,7 @@ add_custom_command(
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/TelemetrySourceIDs.h
         ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
         ${ALL_CONTROLLER_HEADERS}
         COMMAND CommandGenerator
@@ -54,49 +51,17 @@ add_custom_target(GenerateCommands ALL
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandTypes.h
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/CommandPacker.h
         ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/GeneratedConfig.h
+        ${CMAKE_SOURCE_DIR}/include/smartdrive/generated/TelemetrySourceIDs.h
         ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
-        ${ALL_GENERATED_HEADERS}
+        ${ALL_CONTROLLER_HEADERS}
 )
 
 add_library(SmartDrive
         src/generated/CommandRegistry.cpp
-        include/smartdrive/core/platform.h
-        include/smartdrive/interfaces/ITransport.h
-        include/smartdrive/utils/CommandQueue.h
-        include/smartdrive/core/CommunicationManager.h
-        include/smartdrive/transport/AbstractTransport.h
-        include/smartdrive/transport/serial/ArduinoSerialTransport.h
-        include/smartdrive/transport/serial/PcSerialTransport.h
-        include/smartdrive/generated/IndicatorBoardController.h
-        include/smartdrive/core/string.hpp
-        include/smartdrive/utils/CRC8.h
-        include/smartdrive/interfaces/IEncoder.h
-        include/smartdrive/protocol/BinaryEncoder.h
-#        tests/transport/serial_receive_single.cpp
-#        tests/transport/serial_receive_multithreaded.cpp
-        include/smartdrive/utils/PendingAckQueue.h
-        include/smartdrive/utils/ResponseQueue.h
-        include/smartdrive/interfaces/IPlatformClock.h
-        include/smartdrive/core/PlatformClock.h
-        include/smartdrive/core/TriggerConfig.h
-        include/smartdrive/core/TelemetryManager.h
-#        tests/transport/serial_telemetry_receive.cpp
-        include/smartdrive/transport/http/PcHttpTransport.h
-        include/smartdrive/transport/http/EspHttpTransport.h
-        include/smartdrive/transport/http/types.h
-#        tests/transport/http/send_command.cpp
-        include/smartdrive/interfaces/IConnectable.h
-        include/smartdrive/transport/wifi/EspWiFiTransport.h
-        include/smartdrive/transport/wifi/PcWiFiTransport.h
-#        tests/transport/wifi/send_command.cpp
-        include/smartdrive/interfaces/IMutex.h
-        include/smartdrive/mutex/NullMutex.h
-        include/smartdrive/mutex/StdMutex.h
-        include/smartdrive/mutex/FreeRtosMutex.h
-        include/smartdrive/core/TransportManager.h
+        src/OpxSession.cpp
 )
 
-add_custom_target(SyncArduinoLibrary ALL
+add_custom_target(SyncArduinoLibrary
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/include/smartdrive
         ${ARDUINO_LIBRARY_PATH}/smartdrive
@@ -105,8 +70,13 @@ add_custom_target(SyncArduinoLibrary ALL
 
 add_dependencies(SyncArduinoLibrary SmartDrive GenerateCommands)
 
-target_include_directories(SmartDrive PUBLIC include)
-target_include_directories(SmartDrive PRIVATE ${CMAKE_SOURCE_DIR}/external/httplib)
+target_include_directories(SmartDrive PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_include_directories(SmartDrive PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/httplib>
+)
 target_link_libraries(SmartDrive PUBLIC Boost::system)
 
 # Library should wait for generator to finish first
@@ -135,3 +105,22 @@ add_executable(SmartDrive_Test_SerialTransport
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
 #target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
 target_link_libraries(SmartDrive_Test_SerialTransport PRIVATE SmartDrive)
+
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+install(TARGETS SmartDrive
+        EXPORT SmartDriveTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(DIRECTORY include/smartdrive
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(EXPORT SmartDriveTargets
+        FILE SmartDriveConfig.cmake
+        NAMESPACE SmartDrive::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SmartDrive
+)
