@@ -218,7 +218,7 @@ private:
         for (const auto& data : allData) {
             if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
             const std::string deviceName = data["device"].get<std::string>();
-            out << "    // Device: " << deviceName << "\n";
+            out << "namespace " << deviceName << "TelemetrySource {\n\n";
             for (const auto& source : data["telemetry"]) {
                 const std::string name = source["name"].get<std::string>();
                 const uint16_t id = shiftedId(data, source["id"].get<uint16_t>());
@@ -226,6 +226,7 @@ private:
                     out << "    // " << source["description"].get<std::string>() << "\n";
                 out << "    constexpr uint16_t " << name << " = " << toHex(id) << ";\n\n";
             }
+            out << "} // namespace " << deviceName << "TelemetrySource\n\n";
         }
 
         out << "} // namespace TelemetrySource\n\n";
@@ -619,8 +620,13 @@ private:
                 out << "    // " << cmd["description"].get<std::string>() << "\n";
             }
 
+
+            // Add transportID as last parameter with default
+            std::string fullParams = paramList.str();
+            if (!fullParams.empty()) fullParams += ", ";
+            fullParams += "uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT";
             // Write method signature
-            out << "    bool " << methodName << "(" << paramList.str() << ") {\n";
+            out << "    bool " << methodName << "(" << fullParams << ") {\n";
 
             // Build Command struct inside the method
             out << "        Command cmd;\n";
@@ -648,7 +654,7 @@ private:
             const bool requiresAck = cmd["acknowledges"].get<bool>();
             const std::string ackStr = requiresAck ? "true" : "false";
 
-            out << "        return comms.dispatch(cmd, " << ackStr << ");\n";
+            out << "        return comms.dispatch(cmd, transportID, " << ackStr << ");\n";
             out << "    }\n\n";
         }
 
