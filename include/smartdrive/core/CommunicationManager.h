@@ -8,23 +8,24 @@
 #include "platform.h"
 #include "../interfaces/IEncoder.h"
 #include "../generated/CommandPacker.h"
-#include "../interfaces/ITransport.h"
 #include "../types/ProtocolTypes.h"
 #include "../utils/CommandQueue.h"
 #include "../utils/ResponseQueue.h"
 #include "../utils/PendingAckQueue.h"
 #include "../utils/Logger.h"
 #include "smartdrive/interfaces/IMutex.h"
+#include "smartdrive/core/TransportManager.h"
 
 class CommunicationManager {
 public:
-    using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, void *context);
-    using CommandResponseCallback = void (*)(const CommandResponse &response, void *context);
-    using TelemetryCallback = void (*)(const Telemetry &telemetry, void *context);
+    using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, uint8_t sourceTransportID, void *context);
+    using CommandResponseCallback = void (*)(const CommandResponse &response,uint8_t sourceTransportID,  void *context);
+    using TelemetryCallback = void (*)(const Telemetry &telemetry, uint8_t sourceTransportID, void *context);
 
 private:
     IEncoder *encoder;
-    ITransport *transport;
+    TransportManager *transportManager;
+    uint8_t lastSourceTransportID = 0;
     CommandQueue queue;
     ResponseQueue responseQueue;
     PendingAckQueue pendingAcks;
@@ -48,34 +49,64 @@ private:
         }
     };
 
-public:
-    CommunicationManager(IEncoder *encoder, ITransport *transport, IMutex *sendMutex = nullptr,
-                         IMutex *listenMutex = nullptr) : encoder(encoder), transport(transport), sendMutex(sendMutex),
-                                                          listenMutex(listenMutex) {
+    static void onFrameReceivedStatic(const TaggedFrame& tagged, void* context) {
+        static_cast<CommunicationManager*>(context)->onFrameReceived(tagged);
     }
 
-    void onCommandReceived(CommandCallback cb, void *context = nullptr) {
-        callback = cb;
-        callbackContext = context;
+    void onFrameReceived(const TaggedFrame& tagged) {
+        const RawData& frame = tagged.frame;
+
+        if (!ProtocolConstants::isValidFrameType(frame.data[0])) {
+            LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
+            return;
+        }
+
+        const ProtocolConstants::FrameType frameType =
+            ProtocolConstants::decodeType(frame.data[0]);
+
+        if (frameType == ProtocolConstants::FrameType::COMMAND) {
+            PackedCommand packed;
+            if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize, packed.seqNum)) {
+                packed.sourceTransportID = tagged.transportID;
+                queue.push(packed);
+            } else {
+                LOG(LogLevel::OP_ERROR, "Failed to extract command payload from frame");
+            }
+        } else if (frameType == ProtocolConstants::FrameType::RESPONSE) {
+            CommandResponse response;
+            if (encoder->deserializeResponse(frame, response)) {
+                if (response.seqNum != ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET) {
+                    pendingAcks.resolve(response.seqNum, response.commandType);
+                }
+                responseQueue.push(response, tagged.transportID);
+            } else {
+                LOG(LogLevel::OP_ERROR, "Failed to deserialize response");
+            }
+        } else if (frameType == ProtocolConstants::FrameType::TELEMETRY) {
+            Telemetry telemetry;
+            if (encoder->deserializeTelemetry(frame, telemetry)) {
+                if (telemetryCallback) {
+                    telemetryCallback(telemetry, tagged.transportID, telemetryCallbackContext);
+                } else {
+                    LOG(LogLevel::OP_WARNING, "Telemetry received but no callback registered");
+                }
+            } else {
+                LOG(LogLevel::OP_ERROR, "Failed to deserialize telemetry");
+            }
+        } else {
+            LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
+        }
     }
 
-    void onResponseReceived(CommandResponseCallback cb, void *context = nullptr) {
-        responseCallback = cb;
-        responseCallbackContext = context;
-    }
-
-    void onTelemetryReceived(TelemetryCallback cb, void *context = nullptr) {
-        telemetryCallback = cb;
-        telemetryCallbackContext = context;
-    }
-
-    bool dispatch(const Command &cmd, bool requiresAck = false) {
-        MutexGuard guard(sendMutex);
-
-        if (!encoder || !transport) {
+    bool doDispatchCommand(const Command &cmd, uint8_t transportID, bool requiresAck) {
+        if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
+
+        const uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+                                ? lastSourceTransportID
+                                : transportID;
 
         uint8_t seqNum = ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET;
 
@@ -99,16 +130,18 @@ public:
             return false;
         }
 
-        return transport->send(frame);
+        return transportManager->send(frame, resolvedID);
     }
 
-    bool dispatchTelemetry(const Telemetry &value) {
-        MutexGuard guard(sendMutex);
-
-        if (!encoder || !transport) {
+    bool doDispatchTelemetry(const Telemetry &value, uint8_t transportID, bool toAll) {
+        if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
+
+        const uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+                                ? lastSourceTransportID
+                                : transportID;
 
         const SerializedData frame = encoder->serializeTelemetry(value);
         if (frame.size == 0) {
@@ -116,7 +149,78 @@ public:
             return false;
         }
 
-        return transport->send(frame);
+        if (toAll) {
+            return transportManager->sendToAll(frame);
+        }
+
+        return transportManager->send(frame, resolvedID);
+    }
+
+    bool doDispatchResponse(const CommandResponse &response, uint8_t transportID) {
+        if (!encoder || !transportManager) {
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
+            return false;
+        }
+
+        const uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+                                ? lastSourceTransportID
+                                : transportID;
+
+        const SerializedData frame = encoder->serializeResponse(response);
+
+        if (frame.size == 0) {
+            LOG(LogLevel::OP_ERROR, "Failed to serialize response");
+            return false;
+        }
+
+        return transportManager->send(frame, resolvedID);
+    }
+
+public:
+    CommunicationManager(IEncoder *encoder, TransportManager *transportManager, IMutex *sendMutex = nullptr,
+                         IMutex *listenMutex = nullptr) : encoder(encoder), transportManager(transportManager), sendMutex(sendMutex),
+                                                          listenMutex(listenMutex) {
+        transportManager->onFrameReceived(onFrameReceivedStatic, this);
+    }
+
+    void onCommandReceived(CommandCallback cb, void *context = nullptr) {
+        callback = cb;
+        callbackContext = context;
+    }
+
+    void onResponseReceived(CommandResponseCallback cb, void *context = nullptr) {
+        responseCallback = cb;
+        responseCallbackContext = context;
+    }
+
+    void onTelemetryReceived(TelemetryCallback cb, void *context = nullptr) {
+        telemetryCallback = cb;
+        telemetryCallbackContext = context;
+    }
+
+    bool dispatch(const Command &cmd, bool requiresAck = false) {
+        MutexGuard guard(sendMutex);
+        return doDispatchCommand(cmd, ProtocolConstants::TRANSPORT_ID_DEFAULT, requiresAck);
+    }
+
+    bool dispatch(const Command &cmd, uint8_t transportID,  bool requiresAck = false) {
+        MutexGuard guard(sendMutex);
+        return doDispatchCommand(cmd, transportID, requiresAck);
+    }
+
+    bool dispatchTelemetry(const Telemetry &value) {
+        MutexGuard guard(sendMutex);
+        return doDispatchTelemetry(value, ProtocolConstants::TRANSPORT_ID_DEFAULT, false);
+    }
+
+    bool dispatchTelemetry(const Telemetry &value, uint8_t transportID) {
+        MutexGuard guard(sendMutex);
+        return doDispatchTelemetry(value, transportID, false);
+    }
+
+    bool dispatchTelemetryToAll(const Telemetry &value) {
+        MutexGuard guard(sendMutex);
+        return doDispatchTelemetry(value, ProtocolConstants::TRANSPORT_ID_DEFAULT, true);
     }
 
     bool sendResponse(uint8_t seqNum, uint16_t commandType, ProtocolConstants::ResponseStatus status) {
@@ -129,77 +233,23 @@ public:
 
     bool sendResponse(const CommandResponse &response) {
         MutexGuard guard(sendMutex);
+        return doDispatchResponse(response, ProtocolConstants::TRANSPORT_ID_DEFAULT);
+    }
 
-        if (!encoder || !transport) {
-            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
-            return false;
-        }
-
-        const SerializedData frame = encoder->serializeResponse(response);
-
-        if (frame.size == 0) {
-            LOG(LogLevel::OP_ERROR, "Failed to serialize response");
-            return false;
-        }
-
-        return transport->send(frame);
+    bool sendResponse(const CommandResponse &response, uint8_t transportID) {
+        MutexGuard guard(sendMutex);
+        return doDispatchResponse(response, transportID);
     }
 
     void listen() {
         MutexGuard guard(listenMutex);
 
-        if (!encoder || !transport) {
+        if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return;
         }
 
-        transport->accumulate();
-
-        if (transport->hasCompleteFrame()) {
-            RawData frame = transport->getFrame();
-
-            if (!ProtocolConstants::isValidFrameType(frame.data[0])) {
-                LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
-                transport->releaseFrame();
-                return;
-            }
-
-            const ProtocolConstants::FrameType frameType =
-                    ProtocolConstants::decodeType(frame.data[0]);
-
-            if (frameType == ProtocolConstants::FrameType::COMMAND) {
-                PackedCommand packed;
-                if (encoder->extractCommandPayload(frame, packed.paramBytes, packed.paramSize, packed.seqNum)) {
-                    queue.push(packed);
-                } else {
-                    LOG(LogLevel::OP_ERROR, "Failed to extract command payload from frame");
-                }
-            } else if (frameType == ProtocolConstants::FrameType::RESPONSE) {
-                CommandResponse response;
-                if (encoder->deserializeResponse(frame, response)) {
-                    if (response.seqNum != ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET) {
-                        pendingAcks.resolve(response.seqNum, response.commandType);
-                    }
-                    responseQueue.push(response);
-                } else {
-                    LOG(LogLevel::OP_ERROR, "Failed to deserialize response");
-                }
-            } else if (frameType == ProtocolConstants::FrameType::TELEMETRY) {
-                Telemetry telemetry;
-                if (encoder->deserializeTelemetry(frame, telemetry)) {
-                    if (telemetryCallback) {
-                        telemetryCallback(telemetry, telemetryCallbackContext);
-                    } else {
-                        LOG(LogLevel::OP_WARNING, "Telemetry received but no callback registered");
-                    }
-                } else {
-                    LOG(LogLevel::OP_ERROR, "Failed to deserialize telemetry");
-                }
-            } else {
-                LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
-            }
-            transport->releaseFrame();
-        }
+        transportManager->listen();
     }
 
     void processCommands() {
@@ -217,7 +267,8 @@ public:
                 LOG(LogLevel::OP_ERROR, "Failed to unpack command from queue");
                 continue;
             }
-            callback(cmd, packed.seqNum, callbackContext);
+            lastSourceTransportID = packed.sourceTransportID;
+            callback(cmd, packed.seqNum, packed.sourceTransportID, callbackContext);
         }
     }
 
@@ -228,9 +279,10 @@ public:
             }
             return;
         }
-        CommandResponse response;
-        while (responseQueue.pop(response)) {
-            responseCallback(response, responseCallbackContext);
+        QueuedResponse queued;
+        while (responseQueue.pop(queued)) {
+            lastSourceTransportID = queued.sourceTransportID;
+            responseCallback(queued.response, queued.sourceTransportID , responseCallbackContext);
         }
     }
 

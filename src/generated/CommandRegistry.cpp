@@ -184,6 +184,24 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // TURNON_BUILTIN_LED
+    registerCommand({
+        IndicatorBoardCommandType::TURNON_BUILTIN_LED,
+        "TURNON_BUILTIN_LED",
+        "Turn on the built-in LED on the Indicator Board",
+        {
+        }
+    });
+
+    // TURNOFF_BUILTIN_LED
+    registerCommand({
+        IndicatorBoardCommandType::TURNOFF_BUILTIN_LED,
+        "TURNOFF_BUILTIN_LED",
+        "Turn off the built-in LED on the Indicator Board",
+        {
+        }
+    });
+
 } // CommandRegistry::initialize()
 
 #endif // EMBEDDED_BUILD

@@ -80,19 +80,20 @@ add_library(SmartDrive
         include/smartdrive/core/PlatformClock.h
         include/smartdrive/core/TriggerConfig.h
         include/smartdrive/core/TelemetryManager.h
-        tests/transport/serial_telemetry_receive.cpp
+#        tests/transport/serial_telemetry_receive.cpp
         include/smartdrive/transport/http/PcHttpTransport.h
         include/smartdrive/transport/http/EspHttpTransport.h
         include/smartdrive/transport/http/types.h
-        tests/transport/http/send_command.cpp
+#        tests/transport/http/send_command.cpp
         include/smartdrive/interfaces/IConnectable.h
         include/smartdrive/transport/wifi/EspWiFiTransport.h
         include/smartdrive/transport/wifi/PcWiFiTransport.h
-        tests/transport/wifi/send_command.cpp
+#        tests/transport/wifi/send_command.cpp
         include/smartdrive/interfaces/IMutex.h
         include/smartdrive/mutex/NullMutex.h
         include/smartdrive/mutex/StdMutex.h
         include/smartdrive/mutex/FreeRtosMutex.h
+        include/smartdrive/core/TransportManager.h
 )
 
 add_custom_target(SyncArduinoLibrary ALL

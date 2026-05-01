@@ -37,5 +37,13 @@
 #endif
 #endif
 
+#ifndef MAX_TRANSPORTS
+#ifdef __AVR__
+#define MAX_TRANSPORTS 2
+#else
+#define MAX_TRANSPORTS 3
+#endif
+#endif
+
 
 #endif //SMARTDRIVE_CONFIG_H

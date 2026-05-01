@@ -10,19 +10,25 @@
 
 namespace TelemetrySource {
 
-    // Device: Esp
+namespace EspTelemetrySource {
+
     // Current board voltage in volts
     constexpr uint16_t BOARD_VOLTAGE = 0x0101;
 
     // ESP board temperature in celsius
     constexpr uint16_t BOARD_TEMPERATURE = 0x0102;
 
-    // Device: IndicatorBoard
+} // namespace EspTelemetrySource
+
+namespace IndicatorBoardTelemetrySource {
+
     // Current OLED brightness level (0-255)
     constexpr uint16_t DISPLAY_BRIGHTNESS = 0x0001;
 
     // Number of active LEDs currently lit
     constexpr uint16_t LED_COUNT = 0x0002;
+
+} // namespace IndicatorBoardTelemetrySource
 
 } // namespace TelemetrySource
 

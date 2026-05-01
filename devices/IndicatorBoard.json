@@ -239,6 +239,20 @@
       "description": "Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.",
       "acknowledges": false,
       "params": []
+    },
+    {
+      "id": 15,
+      "name": "TURNON_BUILTIN_LED",
+      "description": "Turn on the built-in LED on the Indicator Board",
+      "acknowledges": false,
+      "params": []
+    },
+    {
+      "id": 16,
+      "name": "TURNOFF_BUILTIN_LED",
+      "description": "Turn off the built-in LED on the Indicator Board",
+      "acknowledges": false,
+      "params": []
     }
   ],
   "telemetry": [

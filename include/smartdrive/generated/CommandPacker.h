@@ -163,6 +163,16 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case IndicatorBoardCommandType::TURNON_BUILTIN_LED: {
+                // No parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::TURNOFF_BUILTIN_LED: {
+                // No parameters
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -444,6 +454,16 @@ offset += sizeof(uint16_t);
             }
 
             case IndicatorBoardCommandType::DISCOVERY: {
+                // No parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::TURNON_BUILTIN_LED: {
+                // No parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::TURNOFF_BUILTIN_LED: {
                 // No parameters
                 return true;
             }

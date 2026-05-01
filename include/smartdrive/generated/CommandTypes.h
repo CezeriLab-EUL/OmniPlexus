@@ -67,6 +67,12 @@ namespace IndicatorBoardCommandType {
     // Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.
     constexpr uint16_t DISCOVERY = 0x000E;
 
+    // Turn on the built-in LED on the Indicator Board
+    constexpr uint16_t TURNON_BUILTIN_LED = 0x000F;
+
+    // Turn off the built-in LED on the Indicator Board
+    constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0010;
+
 } // namespace IndicatorBoardCommandType
 
 #endif // SMARTDRIVE_COMMANDTYPES_H

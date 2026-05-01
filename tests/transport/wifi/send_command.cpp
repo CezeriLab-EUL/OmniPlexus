@@ -1,16 +1,15 @@
-//
-// Created by dunamis on 30/04/2026.
-//
-
 #include "smartdrive/transport/wifi/PcWiFiTransport.h"
 #include "smartdrive/protocol/BinaryEncoder.h"
 #include "smartdrive/generated/EspController.h"
-#include "smartdrive/generated/TelemetrySourceIDs.h"
+#include "smartdrive/core/TransportManager.h"
+#include "smartdrive/mutex/StdMutex.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
 
-#include "smartdrive/mutex/StdMutex.h"
+namespace TransportID {
+    constexpr uint8_t WIFI = 0;
+}
 
 volatile bool running = true;
 
@@ -19,7 +18,7 @@ void wait(int ms) {
 }
 
 int main() {
-    const char* host = "192.168.12.59";
+    const char* host = "192.168.12.52";
     const uint16_t port = 9000;
 
     std::cout << "Connecting to ESP..." << std::endl;
@@ -32,18 +31,14 @@ int main() {
     std::cout << "Connected!" << std::endl;
 
     BinaryEncoder encoder;
+
+    TransportManager tm;
+    tm.add(&transport, TransportID::WIFI);
+
     StdMutex sendMutex;
     StdMutex listenMutex;
-    CommunicationManager cm(&encoder, &transport, &sendMutex, &listenMutex);
-    cm.onTelemetryReceived([](const Telemetry& data, void* ctx) {
-        switch (data.sourceID) {
-            case TelemetrySource::BOARD_TEMPERATURE: {
-                auto temp = data.unpack<float>();
-                std::cout << "Temperature: " << temp << std::endl;
-                break;
-            }
-        }
-    });
+
+    CommunicationManager cm(&encoder, &tm, &sendMutex, &listenMutex);
     EspController device(cm);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -65,29 +60,6 @@ int main() {
         std::cout << "Failed to turn LED OFF" << std::endl;
     }
 
-    // single thread
-    // while (running) {
-    //
-    //     cm.listen();
-    //
-    //     static auto lastRequest = std::chrono::steady_clock::now();
-    //     auto now = std::chrono::steady_clock::now();
-    //     if (std::chrono::duration_cast<std::chrono::milliseconds>(
-    //             now - lastRequest).count() >= 2000) {
-    //         device.getBoardTemperature();
-    //         lastRequest = now;
-    //             }
-    // }
-
-    //multiple threads
-    std::thread telemetryThread([&device]() {
-        while (running) {
-            device.getBoardTemperature();
-
-            wait(2000);
-        }
-    });
-
     std::thread listenerThread([&cm]() {
         while (running) {
             cm.listen();
@@ -95,7 +67,6 @@ int main() {
     });
 
     listenerThread.join();
-    telemetryThread.join();
 
     return 0;
 }

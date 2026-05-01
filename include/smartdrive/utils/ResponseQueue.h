@@ -13,12 +13,17 @@
 #include <mutex>
 #endif
 
+struct QueuedResponse {
+    CommandResponse response;
+    uint8_t sourceTransportID;
+};
+
 class ResponseQueue {
 public:
     static constexpr uint8_t CAPACITY = PENDING_ACK_CAPACITY;
 
 private:
-    CommandResponse buffer[CAPACITY];
+    QueuedResponse buffer[CAPACITY];
     uint8_t head = 0;
     uint8_t tail = 0;
     uint8_t count = 0;
@@ -45,21 +50,21 @@ private:
 public:
     ResponseQueue() = default;
 
-    bool push(const CommandResponse& response) {
+    bool push(const CommandResponse& response, uint8_t sourceTransportID = 0) {
         lock();
         if (count == CAPACITY) {
             LOG(LogLevel::OP_WARNING, "ResponseQueue is full, cannot track response");
             unlock();
             return false;
         }
-        buffer[tail] = response;
+        buffer[tail]= {response, sourceTransportID};
         tail = (tail + 1) % CAPACITY;
         count++;
         unlock();
         return true;
     }
 
-    bool pop(CommandResponse& responseOut) {
+    bool pop(QueuedResponse& responseOut) {
         lock();
         if (count == 0) {
             unlock();

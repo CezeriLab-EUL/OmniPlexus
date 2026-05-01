@@ -20,24 +20,24 @@ public:
     explicit EspController(CommunicationManager& comms) : comms(comms) {}
 
     // Turn on the built-in LED on the ESP board
-    bool turnonBuiltinLed() {
+    bool turnonBuiltinLed(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = EspCommandType::TURNON_BUILTIN_LED;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Turn off the built-in LED on the ESP board
-    bool turnoffBuiltinLed() {
+    bool turnoffBuiltinLed(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = EspCommandType::TURNOFF_BUILTIN_LED;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Request the current temperature of the ESP board
-    bool getBoardTemperature() {
+    bool getBoardTemperature(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = EspCommandType::GET_BOARD_TEMPERATURE;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
 }; // class EspController

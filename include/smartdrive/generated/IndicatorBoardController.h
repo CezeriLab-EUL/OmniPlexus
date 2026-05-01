@@ -20,122 +20,136 @@ public:
     explicit IndicatorBoardController(CommunicationManager& comms) : comms(comms) {}
 
     // Print string on OLED at specified position
-    bool oledPrintStr(uint16_t x, uint16_t y, const char* text) {
+    bool oledPrintStr(uint16_t x, uint16_t y, const char* text, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_PRINT_STR;
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = text;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Draw a rectangular frame on OLED
-    bool oledDrawFrame(uint16_t x, uint16_t y, uint16_t width) {
+    bool oledDrawFrame(uint16_t x, uint16_t y, uint16_t width, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_DRAW_FRAME;
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = width;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Draw a progress bar on OLED
-    bool oledDrawBar(uint16_t x, uint16_t y, uint8_t percent) {
+    bool oledDrawBar(uint16_t x, uint16_t y, uint8_t percent, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_DRAW_BAR;
         cmd.params[0] = x;
         cmd.params[1] = y;
         cmd.params[2] = percent;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Clear the OLED display buffer
-    bool oledClear() {
+    bool oledClear(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_CLEAR;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Send buffer to OLED display (update screen)
-    bool oledRefresh() {
+    bool oledRefresh(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_REFRESH;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Set OLED display brightness
-    bool oledSetBrightness(uint8_t brightness) {
+    bool oledSetBrightness(uint8_t brightness, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_SET_BRIGHTNESS;
         cmd.params[0] = brightness;
-        return comms.dispatch(cmd, true);
+        return comms.dispatch(cmd, transportID, true);
     }
 
     // Set all LEDs to the same color (RGB565 format)
-    bool ledSetBlock(uint16_t color) {
+    bool ledSetBlock(uint16_t color, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::LED_SET_BLOCK;
         cmd.params[0] = color;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Set a single LED to specified color (RGB565 format)
-    bool ledSetSingle(uint16_t index, uint16_t color) {
+    bool ledSetSingle(uint16_t index, uint16_t color, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::LED_SET_SINGLE;
         cmd.params[0] = index;
         cmd.params[1] = color;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Sound the buzzer for specified duration
-    bool beep(uint16_t duration) {
+    bool beep(uint16_t duration, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::BEEP;
         cmd.params[0] = duration;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Reset hardware subsystems
-    bool reset(uint8_t mode) {
+    bool reset(uint8_t mode, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::RESET;
         cmd.params[0] = mode;
-        return comms.dispatch(cmd, true);
+        return comms.dispatch(cmd, transportID, true);
     }
 
     // Set OLED font from preset
-    bool oledSetFont(uint8_t font_id) {
+    bool oledSetFont(uint8_t font_id, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_SET_FONT;
         cmd.params[0] = font_id;
-        return comms.dispatch(cmd, true);
+        return comms.dispatch(cmd, transportID, true);
     }
 
     // Set cursor position for next print
-    bool oledSetCursor(uint16_t x, uint16_t y) {
+    bool oledSetCursor(uint16_t x, uint16_t y, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::OLED_SET_CURSOR;
         cmd.params[0] = x;
         cmd.params[1] = y;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
     }
 
     // Send ID with protocol revision and slave capabilities to STM32
-    bool sendId(uint8_t id, uint8_t protocol_revision, uint16_t slave_capabilities) {
+    bool sendId(uint8_t id, uint8_t protocol_revision, uint16_t slave_capabilities, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::SEND_ID;
         cmd.params[0] = id;
         cmd.params[1] = protocol_revision;
         cmd.params[2] = slave_capabilities;
-        return comms.dispatch(cmd, true);
+        return comms.dispatch(cmd, transportID, true);
     }
 
     // Broadcast by master at startup to all slave slots. Each responding slave replies with SEND_ID carrying its id, protocol_revision, and slave_capabilities. Master uses responses to populate the presence map.
-    bool discovery() {
+    bool discovery(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = IndicatorBoardCommandType::DISCOVERY;
-        return comms.dispatch(cmd, false);
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Turn on the built-in LED on the Indicator Board
+    bool turnonBuiltinLed(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::TURNON_BUILTIN_LED;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Turn off the built-in LED on the Indicator Board
+    bool turnoffBuiltinLed(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::TURNOFF_BUILTIN_LED;
+        return comms.dispatch(cmd, transportID, false);
     }
 
 }; // class IndicatorBoardController

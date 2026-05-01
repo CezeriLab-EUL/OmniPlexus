@@ -26,6 +26,8 @@ namespace ProtocolConstants
     constexpr uint8_t SEQ_NUM_MIN = 0x01;
     constexpr uint8_t SEQ_NUM_MAX = 0xFF;
 
+    static constexpr uint8_t TRANSPORT_ID_DEFAULT = 0xFF;
+
     enum class FrameType : uint8_t
     {
         COMMAND = 0x00,
