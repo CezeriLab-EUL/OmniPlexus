@@ -10,12 +10,13 @@
 #include <Arduino.h>
 #include "smartdrive/transport/AbstractTransport.h"
 
+template<typename SerialType>
 class ArduinoSerialTransport : public AbstractTransport {
 private:
-    HardwareSerial& serial;
+    SerialType& serial;
     uint32_t baudRate;
 public:
-    ArduinoSerialTransport(HardwareSerial& serial, uint32_t baudRate) : serial(serial), baudRate(baudRate){}
+    ArduinoSerialTransport(SerialType& serial, uint32_t baudRate) : serial(serial), baudRate(baudRate){}
 
     void begin() {
         serial.begin(baudRate);
