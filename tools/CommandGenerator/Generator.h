@@ -17,7 +17,7 @@ class Generator {
 private:
     static uint16_t shiftedId(const json& deviceData, uint16_t rawId) {
         const uint16_t shift = deviceData.contains("typeShift")
-            ? static_cast<uint16_t>(deviceData["typeShift"].get<uint32_t>())
+            ? deviceData["typeShift"].get<uint16_t>()
             : 0;
         return static_cast<uint16_t>(rawId | (shift << 8));
     }
@@ -566,6 +566,8 @@ private:
         out << "private:\n";
         out << "    CommunicationManager& comms;\n\n";
         out << "public:\n";
+        const uint16_t typeId = data["typeShift"].get<uint16_t>();
+        out << "    static constexpr uint16_t TYPE_ID = " << typeId << ";\n\n";
         out << "    explicit " << className << "(CommunicationManager& comms) : comms(comms) {}\n\n";
 
         for (const auto &cmd: data["commands"]) {

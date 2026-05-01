@@ -17,6 +17,8 @@ private:
     CommunicationManager& comms;
 
 public:
+    static constexpr uint16_t TYPE_ID = 0;
+
     explicit IndicatorBoardController(CommunicationManager& comms) : comms(comms) {}
 
     // Print string on OLED at specified position

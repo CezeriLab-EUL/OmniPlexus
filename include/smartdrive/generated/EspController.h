@@ -17,6 +17,8 @@ private:
     CommunicationManager& comms;
 
 public:
+    static constexpr uint16_t TYPE_ID = 1;
+
     explicit EspController(CommunicationManager& comms) : comms(comms) {}
 
     // Turn on the built-in LED on the ESP board
