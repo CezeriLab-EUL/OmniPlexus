@@ -1,158 +1,199 @@
 //
-// Created by Immaculata on 02/03/2026.
-//
 // CDnCTransport.h
-// Component Discovery and Communication (CDnC) Protocol Transport
+// ITransport implementation wrapping the CDnC half-duplex parallel bus.
+// One instance per slave (index 0–15). Slave index == transport ID.
 //
-// Abstract base for all CDnC physical implementations.
-// Sits below AbstractTransport in the stack — concrete subclasses only need
-// to implement txByte(), rxByte(), turnaround(), assertCS(), deassertCS().
-//
-// Half-duplex, synchronous, single DATA line + CLK.
-// Master always drives CLK. DATA direction switches between TX and RX phases.
-//
-// Full transaction for one frame:
-//   [Assert CS]
-//   [TX phase]   master clocks out every byte of the serialized frame
-//   [Turnaround] master releases DATA, slave switches to OUTPUT
-//   [RX phase]   master clocks in slave response byte by byte
-//   [Deassert CS]
-//
-// TX and RX phases are completely separate — this is the fundamental difference
-// from full-duplex SPI where exchangeByte() does both simultaneously.
-//
+// NOTE: cdnc_exchange() must be called from the main firmware loop separately.
+// CDnCTransport::accumulate() only drains the software RX ring buffers;
+// it does not drive the physical bus.
 
 #ifndef SMARTDRIVE_CDNCTRANSPORT_H
 #define SMARTDRIVE_CDNCTRANSPORT_H
 
-#include "smartdrive/transport/AbstractTransport.h"
-#include "smartdrive/types/ProtocolTypes.h"
+#ifdef STM32F4xx
+
+#include "smartdrive/interfaces/ITransport.h"
+#include "smartdrive/constants/ProtocolConstants.h"
 #include "smartdrive/utils/Logger.h"
+#include "CDnC.h"
 
-class CDnCTransport : public AbstractTransport
-{
-    // RX ring buffer — filled during send() from the slave's response.
-    // AbstractTransport::accumulate() drains this via bytesAvailable()/readByte().
-    uint8_t rxBuffer[ProtocolConstants::MAX_FRAME_SIZE];
-    uint8_t rxHead = 0;
-    uint8_t rxTail = 0;
-    uint8_t rxCount = 0;
+// Sentinel: pass to CDnCTransport constructor to create a TX-only broadcast
+// instance. accumulate() / hasCompleteFrame() / getFrame() are no-ops.
 
+class CDnCTransport : public ITransport {
 public:
-    // send() — transmits the frame then immediately clocks in the slave response.
-    // Both TX and RX happen within a single CS assertion.
-    // The slave response is buffered in rxBuffer for accumulate() to process.
-    bool send(const SerializedData &data) override
+    explicit CDnCTransport(uint8_t slaveIndex)
+        : _slaveIndex(slaveIndex)
     {
-        clearRxBuffer();
+        resetParser();
+    }
 
-        if (data.size == 0)
-        {
-            LOG(LogLevel::OP_ERROR, "CDnC: send() called with empty frame");
+    // ITransport — TX
+    // Enqueue all bytes of `data` into the CDnC TX ring buffer for this slave.
+    // For the broadcast instance, enqueues identically to all 16 slave slots.
+    //
+    // Returns false immediately on the first cdnc_send_byte() overflow.
+    // Partial enqueue on overflow is acceptable: the OPX framing layer will
+    // detect the truncated frame via CRC and header re-sync on the slave side.
+    bool send(const SerializedData& data) override {
+        if (_slaveIndex == CDNC_SLAVE_BROADCAST) {
+            return sendBroadcast(data);
+        }
+
+        uint32_t slotsNeeded = (uint32_t)data.size * 8;
+        uint32_t w = cdnc_write_ptr(_slaveIndex);
+        uint32_t r = cdnc_read_ptr();
+        if ((w - r) + slotsNeeded > CDNC_TX_BUF_SIZE) {
+            LOG(LogLevel::OP_ERROR, "CDnCTransport: TX buffer would overflow — increase CDNC_TX_BUF_SIZE or slow command rate");
             return false;
         }
 
-        if (data.size > ProtocolConstants::MAX_FRAME_SIZE)
-        {
-            LOG(LogLevel::OP_ERROR, "CDnC: frame exceeds MAX_FRAME_SIZE");
-            return false;
-        }
-
-        assertCS();
-
-        // TX phase — clock out every byte of the serialized frame
-        for (size_t i = 0; i < data.size; ++i)
-        {
-            txByte(data.data[i]);
-        }
-
-        // Turnaround — release DATA, give slave time to switch pin to OUTPUT
-        turnaround();
-
-        // RX phase — clock in slave response into rxBuffer.
-        // Frame is self-describing: byte[0] = header, byte[1] = payload length.
-        // Total frame size = 2 + payloadLength + 1 (CRC).
-        // Read first 2 bytes to learn exact size, then read the rest.
-        const uint8_t header = rxByte();
-        const uint8_t lengthByte = rxByte();
-
-        bufferRxByte(header);
-        bufferRxByte(lengthByte);
-
-        if (ProtocolConstants::isValidHeader(header) &&
-            lengthByte > 0 &&
-            lengthByte <= ProtocolConstants::MAX_PAYLOAD_SIZE)
-        {
-            // payload bytes + 1 CRC byte
-            const uint8_t remaining = lengthByte + ProtocolConstants::CRC_OFFSET;
-            for (uint8_t i = 0; i < remaining; ++i)
-            {
-                bufferRxByte(rxByte());
+        
+        for (size_t i = 0; i < data.size; i++) {
+            if (!cdnc_send_byte(_slaveIndex, data.data[i])) {
+                LOG(LogLevel::OP_ERROR, "CDnCTransport: TX queue overflow");
+                return false;
             }
         }
-        // If header is invalid (slave sent NOP / not ready), the accumulator
-        // state machine discards the bytes cleanly — no special handling needed.
-
-        deassertCS();
         return true;
     }
 
-    // CDnC primitives — subclasses implement these per platform.
+    // ITransport — RX
+    // Drain the CDnC RX ring buffer for this slave byte-by-byte, feeding each
+    // byte through the OPX frame parser state machine.
     //
-    // txByte(out)  — clock out one byte MSB first. DATA line = OUTPUT.
-    // rxByte()     — clock in one byte MSB first. DATA line = INPUT. Returns byte.
-    // turnaround() — release DATA line. Wait long enough for slave to react
-    //                and switch its DATA pin to OUTPUT before first RX clock.
-    // assertCS()   — pull CS low  (active low, selects target component)
-    // deassertCS() — pull CS high (deselects target component)
-    virtual void txByte(uint8_t out) = 0;
-    virtual uint8_t rxByte() = 0;
-    virtual void turnaround() = 0;
-    virtual void assertCS() = 0;
-    virtual void deassertCS() = 0;
+    // Stops as soon as a complete frame is assembled so the frame buffer is
+    // not overwritten before the caller calls releaseFrame(). This satisfies
+    // TransportManager::listen()'s single-frame-per-cycle contract.
+    //
+    // No-op for the broadcast instance (it never receives).
+    void accumulate() override {
+        if (_slaveIndex == CDNC_SLAVE_BROADCAST) return;
+        if (_frameReady) return;    // hold frame until releaseFrame() is called
 
-protected:
-    // AbstractTransport hooks — these feed the framing state machine in
-    // AbstractTransport::accumulate(). Drains rxBuffer rather than reading
-    // live hardware, because bytes were already captured during send() above.
-    uint16_t bytesAvailable() override
-    {
-        return rxCount;
-    }
-
-    uint8_t readByte() override
-    {
-        if (rxCount == 0)
-        {
-            LOG(LogLevel::OP_WARNING, "CDnC: readByte() called with empty rx buffer");
-            return ProtocolConstants::NOP_BYTE;
+        uint8_t byte;
+        while (cdnc_recv_byte(_slaveIndex, &byte)) {
+            if (parseByte(byte)) {
+                break;  // frame complete — stop draining until released
+            }
         }
-        const uint8_t b = rxBuffer[rxHead];
-        rxHead = (rxHead + 1) % ProtocolConstants::MAX_FRAME_SIZE;
-        rxCount--;
-        return b;
     }
 
-    void clearRxBuffer()
-    {
-        rxHead = 0;
-        rxTail = 0;
-        rxCount = 0;
+    bool hasCompleteFrame() const override {
+        return _frameReady;
     }
+
+    // Returns a RawData view into the internal frame buffer.
+    // Valid only between hasCompleteFrame() == true and releaseFrame().
+    RawData getFrame() override {
+        return RawData{ _frameBuf, _framePos };
+    }
+
+    // Discard the current frame and reset the parser for the next frame.
+    void releaseFrame() override {
+        _frameReady = false;
+        resetParser();
+    }
+
+    // Accessors
+    uint8_t slaveIndex()  const { return _slaveIndex; }
+    bool    isBroadcast() const { return _slaveIndex == CDNC_SLAVE_BROADCAST; }
+
 
 private:
-    void bufferRxByte(const uint8_t byte)
-    {
-        if (rxCount >= ProtocolConstants::MAX_FRAME_SIZE)
-        {
-            LOG(LogLevel::OP_WARNING, "CDnC: RX buffer overrun, dropping oldest byte");
-            rxHead = (rxHead + 1) % ProtocolConstants::MAX_FRAME_SIZE;
-            rxCount--;
+     // OPX frame parser state machine
+     // Reconstructs OPX frames from the raw byte stream in the CDnC RX buffer.
+
+    // Discard rules while in WAIT_HEADER:
+    //   • 0x00 NOP/pad bytes  — silently dropped (cdnc_post_exchange_pad output)
+    //   • Invalid header byte — logged and dropped; parser stays in WAIT_HEADER
+    //
+    // Once a valid header is accepted the parser commits to that frame.
+    // A bad LENGTH (> MAX_PAYLOAD_SIZE) triggers a re-sync to WAIT_HEADER.
+
+    enum class ParseState : uint8_t {
+        WAIT_HEADER,
+        WAIT_LENGTH,
+        READING_PAYLOAD,
+        READING_CRC,
+    };
+
+    uint8_t    _slaveIndex;
+    ParseState _state              = ParseState::WAIT_HEADER;
+    uint8_t    _frameBuf[ProtocolConstants::MAX_FRAME_SIZE];
+    uint8_t    _expectedPayloadLen = 0;
+    uint8_t    _framePos           = 0;
+    bool       _frameReady         = false;
+
+    // Feed one byte. Returns true when a complete frame is in _frameBuf.
+    bool parseByte(uint8_t byte) {
+        switch (_state) {
+
+        case ParseState::WAIT_HEADER:
+            if (byte == ProtocolConstants::NOP_BYTE) {
+                return false;   // pad — silently discard
+            }
+            if (!ProtocolConstants::isValidHeader(byte) ||
+                !ProtocolConstants::isValidFrameType(byte)) {
+                LOG(LogLevel::OP_WARNING, "CDnCTransport: bad header, resyncing");
+                return false;
+            }
+            _frameBuf[0] = byte;
+            _framePos    = 1;
+            _state       = ParseState::WAIT_LENGTH;
+            return false;
+
+        case ParseState::WAIT_LENGTH:
+            _expectedPayloadLen = byte;
+            _frameBuf[_framePos++] = byte;
+
+            if (_expectedPayloadLen > ProtocolConstants::MAX_PAYLOAD_SIZE) {
+                LOG(LogLevel::OP_WARNING, "CDnCTransport: payload length too large, resyncing");
+                resetParser();
+                return false;
+            }
+
+            _state = (_expectedPayloadLen == 0)
+                ? ParseState::READING_CRC
+                : ParseState::READING_PAYLOAD;
+            return false;
+
+        case ParseState::READING_PAYLOAD:
+            _frameBuf[_framePos++] = byte;
+            if (_framePos == static_cast<uint8_t>(2 + _expectedPayloadLen)) {
+                _state = ParseState::READING_CRC;
+            }
+            return false;
+
+        case ParseState::READING_CRC:
+            _frameBuf[_framePos++] = byte;
+            _frameReady = true;
+            return true;
         }
-        rxBuffer[rxTail] = byte;
-        rxTail = (rxTail + 1) % ProtocolConstants::MAX_FRAME_SIZE;
-        rxCount++;
+
+        return false;
     }
+
+    void resetParser() {
+        _state              = ParseState::WAIT_HEADER;
+        _framePos           = 0;
+        _expectedPayloadLen = 0;
+    }
+
+    // Broadcast TX helper
+    bool sendBroadcast(const SerializedData& data) {
+        for (uint8_t slave = 0; slave < CDNC_MAX_SLAVES; slave++) {
+            for (size_t i = 0; i < data.size; i++) {
+                if (!cdnc_send_byte(slave, data.data[i])) {
+                    LOG(LogLevel::OP_ERROR, "CDnCTransport: broadcast TX overflow");
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
 };
+#endif // STM32F4xx
 
 #endif // SMARTDRIVE_CDNCTRANSPORT_H

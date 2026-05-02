@@ -41,7 +41,7 @@
 #ifdef __AVR__
 #define MAX_TRANSPORTS 2
 #else
-#define MAX_TRANSPORTS 3
+#define MAX_TRANSPORTS 18
 #endif
 #endif
 
