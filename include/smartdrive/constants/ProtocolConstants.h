@@ -19,12 +19,17 @@ namespace ProtocolConstants
     constexpr uint8_t CRC_OFFSET = 1;
     constexpr uint8_t NOP_BYTE = 0x00; // Sent when clocking in data with nothing to transmit
 
-    constexpr uint16_t PROTOCOL_OVERHEAD = 3; // STX+TYPE(1) + LENGTH(1) + CRC(1)
+    constexpr uint16_t PROTOCOL_OVERHEAD = 2; // STX+TYPE(1) + CRC(1)
     constexpr uint16_t MAX_FRAME_SIZE = MAX_PAYLOAD_SIZE + PROTOCOL_OVERHEAD;
 
     constexpr uint8_t SEQ_NUM_FIRE_AND_FORGET = 0x00;
     constexpr uint8_t SEQ_NUM_MIN = 0x01;
     constexpr uint8_t SEQ_NUM_MAX = 0xFF;
+
+    constexpr uint8_t RESPONSE_PREAMBLE_SIZE = 0; // Size can be known from header alone
+    constexpr uint8_t COMMAND_PREAMBLE_SIZE = 3; // seqNum(1) + CommandType(2)
+    constexpr uint8_t TELEMETRY_PREAMBLE_SIZE = 3; // sourceID(2) + typeAndSize(1)
+    constexpr uint8_t STRING_SENTINEL = 0xFF; //returned by the command packer for commands that have string params
 
     static constexpr uint8_t TRANSPORT_ID_DEFAULT = 0xFF;
 
