@@ -473,6 +473,50 @@ offset += sizeof(uint16_t);
         }
     }
 
+    // NOTE TO CODE GENERATOR MAINTAINER:
+    // packedSize() and stringParamOffset() are kept in sync with pack() by the generator.
+    // When adding a new command to the JSON, regenerate to update all three.
+
+    // Returns total bytes that pack() writes for the given commandType,
+    // INCLUDING the 2-byte commandType prefix.
+    // Returns 0xFF (STRING_SENTINEL) if the command has a string parameter.
+    // Returns 0 for unknown command types.
+    static uint8_t packedSize(uint16_t commandType) {
+        switch (commandType) {
+            case EspCommandType::TURNON_BUILTIN_LED: return 2;
+            case EspCommandType::TURNOFF_BUILTIN_LED: return 2;
+            case EspCommandType::GET_BOARD_TEMPERATURE: return 2;
+            case IndicatorBoardCommandType::OLED_PRINT_STR: return 0xFF; // string param — variable length
+            case IndicatorBoardCommandType::OLED_DRAW_FRAME: return 8;
+            case IndicatorBoardCommandType::OLED_DRAW_BAR: return 7;
+            case IndicatorBoardCommandType::OLED_CLEAR: return 2;
+            case IndicatorBoardCommandType::OLED_REFRESH: return 2;
+            case IndicatorBoardCommandType::OLED_SET_BRIGHTNESS: return 3;
+            case IndicatorBoardCommandType::LED_SET_BLOCK: return 4;
+            case IndicatorBoardCommandType::LED_SET_SINGLE: return 6;
+            case IndicatorBoardCommandType::BEEP: return 4;
+            case IndicatorBoardCommandType::RESET: return 3;
+            case IndicatorBoardCommandType::OLED_SET_FONT: return 3;
+            case IndicatorBoardCommandType::OLED_SET_CURSOR: return 6;
+            case IndicatorBoardCommandType::SEND_ID: return 6;
+            case IndicatorBoardCommandType::DISCOVERY: return 2;
+            case IndicatorBoardCommandType::TURNON_BUILTIN_LED: return 2;
+            case IndicatorBoardCommandType::TURNOFF_BUILTIN_LED: return 2;
+            default: return 0;
+        }
+    }
+
+    // Returns the byte offset from the start of the payload (after the header byte)
+    // where the string parameter's typeAndSize byte can be found.
+    // Only meaningful when packedSize() returns 0xFF.
+    // Returns 0 for non-string commands.
+    static uint8_t stringParamOffset(uint16_t commandType) {
+        switch (commandType) {
+            case IndicatorBoardCommandType::OLED_PRINT_STR: return 7; // seqNum(1) + commandType(2) + x(2) + y(2)
+            default: return 0;
+        }
+    }
+
 }; // class CommandPacker
 
 #endif // SMARTDRIVE_COMMANDPACKER_H
