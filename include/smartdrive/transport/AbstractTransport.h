@@ -100,6 +100,12 @@ private:
     }
 
     void processByte(const uint8_t byte) {
+        if (bytesCollected >= ProtocolConstants::MAX_FRAME_SIZE) {
+            LOG(LogLevel::OP_ERROR, "Frame buffer overflow, resetting");
+            reset();
+            return;
+        }
+
         switch (state) {
             case AccumulatorState::WAITING_FOR_HEADER: {
                 if (!ProtocolConstants::isValidHeader(byte) || !ProtocolConstants::isValidFrameType(byte)) {
@@ -137,9 +143,9 @@ private:
                         const uint8_t offset = CommandPacker::stringParamOffset(commandType);
                         stringBytesUntilTypeAndSize = offset - preambleTarget;
                         state = AccumulatorState::READING_STRING_TYPESIZE;
-                    }else if (remaining == 0) {
+                    } else if (remaining == 0) {
                         state = AccumulatorState::VALIDATING_CRC;
-                    }else {
+                    } else {
                         remainderTarget = remaining;
                         state = AccumulatorState::READING_REMAINDER;
                     }
@@ -162,16 +168,16 @@ private:
 
                 if (remainderTarget == 0) {
                     state = AccumulatorState::VALIDATING_CRC;
-                }else {
+                } else {
                     state = AccumulatorState::READING_REMAINDER;
                 }
 
                 break;
             }
 
-            case AccumulatorState::READING_REMAINDER : {
+            case AccumulatorState::READING_REMAINDER: {
                 accumulateBuffer[bytesCollected++] = byte;
-                remainderTarget --;
+                remainderTarget--;
 
                 if (remainderTarget == 0) {
                     state = AccumulatorState::VALIDATING_CRC;
@@ -183,16 +189,16 @@ private:
             case AccumulatorState::VALIDATING_CRC: {
                 const uint8_t receivedCRC = byte;
                 accumulateBuffer[bytesCollected++] = byte;
-                RawData toCheck {accumulateBuffer, static_cast<size_t>(bytesCollected - 1)};
+                RawData toCheck{accumulateBuffer, static_cast<size_t>(bytesCollected - 1)};
                 const uint8_t calculatedCRC = CRC8::compute(toCheck);
                 if (receivedCRC != calculatedCRC) {
                     LOG(LogLevel::OP_ERROR, "CRC mismatch, resetting");
                     reset();
-                }else {
+                } else {
                     if (!frameConsumed) {
                         LOG(LogLevel::OP_WARNING, "Previous frame not released, dropping new frame");
                         reset();
-                    }else {
+                    } else {
                         memcpy(readyBuffer, accumulateBuffer, bytesCollected);
                         frameConsumed = false;
                         state = AccumulatorState::FRAME_READY;

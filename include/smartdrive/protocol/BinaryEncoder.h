@@ -18,12 +18,11 @@ private:
     struct FrameParseResult {
         bool valid;
         size_t payloadStart;
-        uint8_t payloadLength;
     };
 
     FrameParseResult validateFrameHeader(const RawData &rawData,
                                          const ProtocolConstants::FrameType expectedType) const {
-        FrameParseResult result{false, 0, 0};
+        FrameParseResult result{false, 0};
 
         if (rawData.size < ProtocolConstants::PROTOCOL_OVERHEAD) {
             LOG(LogLevel::OP_ERROR, "Frame too small");
@@ -44,7 +43,6 @@ private:
             return result;
         }
 
-        result.payloadLength = rawData.data[offset++];
         result.payloadStart = offset;
         result.valid = true;
 
@@ -102,7 +100,6 @@ private:
         size_t offset = 0;
 
         out.data[offset++] = ProtocolConstants::encodeHeader(type);
-        out.data[offset++] = static_cast<uint8_t>(payloadSize);
 
         memcpy(&out.data[offset], payload, payloadSize);
         offset += payloadSize;
@@ -141,30 +138,35 @@ public:
        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::COMMAND);
         if (!frameInfo.valid){return false;}
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::OP_ERROR, "Invalid frame size");
+        const size_t payloadSize = rawData.size - ProtocolConstants::PROTOCOL_OVERHEAD;
+        if (payloadSize < 1) {
+            LOG(LogLevel::OP_ERROR, "Invalid command frame size");
             return false;
         }
 
-        return CommandPacker::unpack(&rawData.data[frameInfo.payloadStart + 1],
-            frameInfo.payloadLength - 1, cmdOut);
+        const size_t crcOffset = rawData.size - ProtocolConstants::CRC_SIZE;
+        if (!verifyCRC(rawData, crcOffset)) { return false; }
+
+        return CommandPacker::unpack(&rawData.data[frameInfo.payloadStart+1], payloadSize-1, cmdOut); // the +1 and -1 is to skip seqNum
     }
 
     bool extractCommandPayload(const RawData &frame, uint8_t *payloadOut, uint8_t &payloadSizeOut, uint8_t &seqNumOut) override {
         auto frameInfo = validateFrameHeader(frame, ProtocolConstants::FrameType::COMMAND);
         if (!frameInfo.valid) return false;
 
-        if (frame.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::OP_ERROR, "Invalid frame size");
+        const size_t payloadSize = frame.size - ProtocolConstants::PROTOCOL_OVERHEAD;
+        if (payloadSize < 1) {
+            LOG(LogLevel::OP_ERROR, "Invalid command frame size");
             return false;
         }
 
-        const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
+        const size_t crcOffset = frame.size - ProtocolConstants::CRC_SIZE;
         if (!verifyCRC(frame, crcOffset)) return false;
 
         seqNumOut = frame.data[frameInfo.payloadStart];
-        payloadSizeOut = frameInfo.payloadLength - 1; //-1 because we are not storing seqNum
-        memcpy(payloadOut, &frame.data[frameInfo.payloadStart + 1], payloadSizeOut); //+1 becuase we dont want to copy tje seqNum
+        payloadSizeOut = static_cast<uint8_t>(payloadSize - 1); // -1 to skip seqNum
+        memcpy(payloadOut, &frame.data[frameInfo.payloadStart + 1], payloadSizeOut);
+
         return true;
     }
 
@@ -184,18 +186,14 @@ public:
         auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::RESPONSE);
         if (!frameInfo.valid){return false;}
 
-        if (frameInfo.payloadLength != sizeof(CommandResponse)) {
+        const size_t payloadSize = rawData.size - ProtocolConstants::PROTOCOL_OVERHEAD;
+        if (payloadSize != sizeof(CommandResponse)) {
             LOG(LogLevel::OP_ERROR, "Invalid response payload size");
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::OP_ERROR, "Invalid frame size");
-            return false;
-        }
-
-        const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
-        if (!verifyCRC(rawData, crcOffset)) {return false;}
+        const size_t crcOffset = rawData.size - ProtocolConstants::CRC_SIZE;
+        if (!verifyCRC(rawData, crcOffset)) { return false; }
 
         const uint8_t* p = &rawData.data[frameInfo.payloadStart];
         responseOut.seqNum = p[0];
@@ -229,18 +227,15 @@ public:
         auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::TELEMETRY);
         if (!frameInfo.valid) { return false; }
 
-        if (frameInfo.payloadLength < 3) { // Minimum size: 2 bytes for sourceID + 1 byte for typeAndSize
+        const size_t payloadSize = rawData.size - ProtocolConstants::PROTOCOL_OVERHEAD;
+        if (payloadSize < 3) { // minimum: sourceID(2) + typeAndSize(1)
             LOG(LogLevel::OP_ERROR, "Invalid telemetry payload size");
             return false;
         }
 
-        if (rawData.size != frameInfo.payloadStart + frameInfo.payloadLength + ProtocolConstants::CRC_SIZE) {
-            LOG(LogLevel::OP_ERROR, "Invalid frame size");
-            return false;
-        }
-
-        const size_t crcOffset = frameInfo.payloadStart + frameInfo.payloadLength;
+        const size_t crcOffset = rawData.size - ProtocolConstants::CRC_SIZE;
         if (!verifyCRC(rawData, crcOffset)) { return false; }
+
 
         const uint8_t* p = &rawData.data[frameInfo.payloadStart];
 
@@ -248,7 +243,7 @@ public:
         telemetryOut.setTypeAndSizeRaw(p[2]);
 
         const size_t dataSize = telemetryOut.getDataSize();
-        if (dataSize + 3 > frameInfo.payloadLength) {
+        if (dataSize + 3 > payloadSize) {
             LOG(LogLevel::OP_ERROR, "Invalid telemetry data size");
             return false;
         }

@@ -25,7 +25,7 @@ public:
 private:
     IEncoder *encoder;
     TransportManager *transportManager;
-    uint8_t lastSourceTransportID = 0;
+    uint8_t lastSourceTransportID = ProtocolConstants::TRANSPORT_ID_DEFAULT;
     CommandQueue queue;
     ResponseQueue responseQueue;
     PendingAckQueue pendingAcks;
@@ -99,14 +99,26 @@ private:
     }
 
     bool doDispatchCommand(const Command &cmd, uint8_t transportID, bool requiresAck) {
+
         if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
 
-        const uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+        fprintf(stderr, "doDispatchCommand called, transportID=%d, lastSourceTransportID=%d\n",
+            transportID, lastSourceTransportID);
+         uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
                                 ? lastSourceTransportID
                                 : transportID;
+
+        if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+            resolvedID = transportManager->firstActiveID();
+            if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+                LOG(LogLevel::OP_ERROR, "No active transport to dispatch to");
+                return false;
+            }
+        }
+        fprintf(stderr, "resolvedID=%d\n", resolvedID);
 
         uint8_t seqNum = ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET;
 
@@ -139,9 +151,17 @@ private:
             return false;
         }
 
-        const uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+        uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
                                 ? lastSourceTransportID
                                 : transportID;
+
+        if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+            resolvedID = transportManager->firstActiveID();
+            if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+                LOG(LogLevel::OP_ERROR, "No active transport to dispatch to");
+                return false;
+            }
+        }
 
         const SerializedData frame = encoder->serializeTelemetry(value);
         if (frame.size == 0) {
@@ -162,9 +182,16 @@ private:
             return false;
         }
 
-        const uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+        uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
                                 ? lastSourceTransportID
                                 : transportID;
+        if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+            resolvedID = transportManager->firstActiveID();
+            if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+                LOG(LogLevel::OP_ERROR, "No active transport to dispatch to");
+                return false;
+            }
+        }
 
         const SerializedData frame = encoder->serializeResponse(response);
 

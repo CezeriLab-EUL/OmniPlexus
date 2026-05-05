@@ -51,6 +51,13 @@ public:
         frameCallbackContext = context;
     }
 
+    uint8_t firstActiveID() const {
+        for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
+            if (entries[i].active) return entries[i].id;
+        }
+        return ProtocolConstants::TRANSPORT_ID_DEFAULT;
+    }
+
     bool add(ITransport *transport, uint8_t id) {
         if (count >= MAX_TRANSPORTS) {
             LOG(LogLevel::OP_ERROR, "TransportManager: max transports reached");
