@@ -8,6 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 #include "lib/nlohmann/json.hpp"
+#include "Validator.h"
 
 using json = nlohmann::json;
 
@@ -211,7 +212,7 @@ private:
                     const std::string name = src["name"].get<std::string>();
                     const uint16_t sourceID = src["id"].get<uint16_t>();
                     // ID = (typeShift << 8) | (0x80 | sourceID)
-                    const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (0x80 | sourceID));
+                    const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (TELEMETRY_REQUEST_BASE | sourceID));
                     if (src.contains("description") && !src["description"].get<std::string>().empty())
                         out << "    // Request current value of: " << src["description"].get<std::string>() << "\n";
                     out << "    constexpr uint16_t GET_" << name << " = " << toHex(getID) << ";\n\n";
@@ -340,11 +341,8 @@ private:
         for (const auto &data: allData) {
             if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
             const std::string deviceName = data["device"].get<std::string>();
-            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
             for (const auto &src: data["telemetry"]) {
                 const std::string name = src["name"].get<std::string>();
-                const uint16_t sourceID = src["id"].get<uint16_t>();
-                const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (0x80 | sourceID));
                 out << "            case " << deviceName << "CommandType::GET_" << name << ": {\n";
                 out << "                // Auto-generated telemetry request — no parameters\n";
                 out << "                return offset;\n";
@@ -505,11 +503,8 @@ private:
         for (const auto &data: allData) {
             if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
             const std::string deviceName = data["device"].get<std::string>();
-            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
             for (const auto &src: data["telemetry"]) {
                 const std::string name = src["name"].get<std::string>();
-                const uint16_t sourceID = src["id"].get<uint16_t>();
-                const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (0x80 | sourceID));
                 out << "            case " << deviceName << "CommandType::GET_" << name << ": {\n";
                 out << "                // Auto-generated telemetry request — no parameters\n";
                 out << "                return true;\n";
@@ -577,10 +572,8 @@ private:
         for (const auto &data: allData) {
             if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
             const std::string deviceName = data["device"].get<std::string>();
-            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
             for (const auto &src: data["telemetry"]) {
                 const std::string name = src["name"].get<std::string>();
-                const uint16_t sourceID = src["id"].get<uint16_t>();
                 out << "            case " << deviceName << "CommandType::GET_" << name << ": return 2;\n";
             }
         }
