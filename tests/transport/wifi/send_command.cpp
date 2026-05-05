@@ -18,7 +18,7 @@ void wait(int ms) {
 }
 
 int main() {
-    const char* host = "192.168.12.52";
+    const char* host = "192.168.12.136";
     const uint16_t port = 9000;
 
     std::cout << "Connecting to ESP..." << std::endl;

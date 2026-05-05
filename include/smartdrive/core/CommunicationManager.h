@@ -105,8 +105,6 @@ private:
             return false;
         }
 
-        fprintf(stderr, "doDispatchCommand called, transportID=%d, lastSourceTransportID=%d\n",
-            transportID, lastSourceTransportID);
          uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
                                 ? lastSourceTransportID
                                 : transportID;
@@ -118,7 +116,6 @@ private:
                 return false;
             }
         }
-        fprintf(stderr, "resolvedID=%d\n", resolvedID);
 
         uint8_t seqNum = ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET;
 

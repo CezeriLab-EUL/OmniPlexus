@@ -59,7 +59,6 @@ add_custom_target(GenerateCommands ALL
 add_library(SmartDrive
         src/generated/CommandRegistry.cpp
         src/OpxSession.cpp
-        tests/transport/test_serial_opx.cpp
 )
 
 add_custom_target(SyncArduinoLibrary
@@ -100,8 +99,7 @@ add_executable(SmartDrive_Test_SerialTransport
 #        tests/transport/serial_telemetry_receive.cpp
 #        tests/transport/http/send_command.cpp
 #        tests/transport/http/receive_telemetry.cpp
-#        tests/transport/wifi/send_command.cpp
-        tests/transport/test_serial_opx.cpp
+        tests/transport/wifi/send_command.cpp
 )
 
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
