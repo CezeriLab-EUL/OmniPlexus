@@ -202,6 +202,22 @@ private:
                     out << "    // " << cmd["description"].get<std::string>() << "\n";
                 out << "    constexpr uint16_t " << name << " = " << toHex(id) << ";\n\n";
             }
+
+            // Auto-generated GET commands for telemetry sources
+            if (data.contains("telemetry") && !data["telemetry"].empty()) {
+                out << "    // --- Auto-generated telemetry request commands ---\n\n";
+                const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+                for (const auto &src: data["telemetry"]) {
+                    const std::string name = src["name"].get<std::string>();
+                    const uint16_t sourceID = src["id"].get<uint16_t>();
+                    // ID = (typeShift << 8) | (0x80 | sourceID)
+                    const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (0x80 | sourceID));
+                    if (src.contains("description") && !src["description"].get<std::string>().empty())
+                        out << "    // Request current value of: " << src["description"].get<std::string>() << "\n";
+                    out << "    constexpr uint16_t GET_" << name << " = " << toHex(getID) << ";\n\n";
+                }
+            }
+
             out << "} // namespace " << deviceName << "CommandType\n\n";
         }
 
@@ -316,6 +332,22 @@ private:
                     out << "                return offset;\n";
                 }
 
+                out << "            }\n\n";
+            }
+        }
+
+        // Auto-generated GET commands — no parameters, just return offset after writing commandType
+        for (const auto &data: allData) {
+            if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+            for (const auto &src: data["telemetry"]) {
+                const std::string name = src["name"].get<std::string>();
+                const uint16_t sourceID = src["id"].get<uint16_t>();
+                const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (0x80 | sourceID));
+                out << "            case " << deviceName << "CommandType::GET_" << name << ": {\n";
+                out << "                // Auto-generated telemetry request — no parameters\n";
+                out << "                return offset;\n";
                 out << "            }\n\n";
             }
         }
@@ -469,6 +501,22 @@ private:
             }
         }
 
+        // Auto-generated GET commands — no parameters to unpack
+        for (const auto &data: allData) {
+            if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+            for (const auto &src: data["telemetry"]) {
+                const std::string name = src["name"].get<std::string>();
+                const uint16_t sourceID = src["id"].get<uint16_t>();
+                const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (0x80 | sourceID));
+                out << "            case " << deviceName << "CommandType::GET_" << name << ": {\n";
+                out << "                // Auto-generated telemetry request — no parameters\n";
+                out << "                return true;\n";
+                out << "            }\n\n";
+            }
+        }
+
         out << "            default:\n";
         out << "                return false; // Unknown command type\n";
         out << "        }\n";
@@ -524,6 +572,19 @@ private:
                 }
             }
         }
+
+        // Auto-generated GET commands — always 2 bytes (commandType only, no params)
+        for (const auto &data: allData) {
+            if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+            for (const auto &src: data["telemetry"]) {
+                const std::string name = src["name"].get<std::string>();
+                const uint16_t sourceID = src["id"].get<uint16_t>();
+                out << "            case " << deviceName << "CommandType::GET_" << name << ": return 2;\n";
+            }
+        }
+
 
         out << "            default: return 0;\n";
         out << "        }\n";
@@ -657,6 +718,25 @@ private:
             }
         }
 
+        for (const auto &data: allData) {
+            if (!data.contains("telemetry") || data["telemetry"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            for (const auto &src: data["telemetry"]) {
+                const std::string name = src["name"].get<std::string>();
+                const std::string desc = src.contains("description")
+                    ? "Request current value of: " + src["description"].get<std::string>()
+                    : "Request current value of " + name;
+
+                out << "    // GET_" << name << " (auto-generated telemetry request)\n";
+                out << "    registerCommand({\n";
+                out << "        " << deviceName << "CommandType::GET_" << name << ",\n";
+                out << "        \"GET_" << name << "\",\n";
+                out << "        \"" << desc << "\",\n";
+                out << "        {}\n";  // no parameters
+                out << "    });\n\n";
+            }
+        }
+
         out << "} // CommandRegistry::initialize()\n\n";
         out << "#endif // EMBEDDED_BUILD\n";
 
@@ -782,6 +862,34 @@ private:
 
             out << "        return comms.dispatch(cmd, transportID, " << ackStr << ");\n";
             out << "    }\n\n";
+        }
+
+        if (data.contains("telemetry") && !data["telemetry"].empty()) {
+            out << "    // --- Telemetry request methods (ON_REQUEST trigger) ---\n\n";
+            for (const auto &src: data["telemetry"]) {
+                const std::string srcName = src["name"].get<std::string>();
+                const std::string methodName = "get" + [&]() {
+                    // Convert UPPER_SNAKE_CASE to PascalCase for the method name
+                    std::string pascal;
+                    bool capitalizeNext = true;
+                    for (char c : srcName) {
+                        if (c == '_') { capitalizeNext = true; }
+                        else if (capitalizeNext) { pascal += static_cast<char>(std::toupper(c)); capitalizeNext = false; }
+                        else { pascal += static_cast<char>(std::tolower(c)); }
+                    }
+                    return pascal;
+                }();
+
+                if (src.contains("description") && !src["description"].get<std::string>().empty()) {
+                    out << "    // Request current value of: " << src["description"].get<std::string>() << "\n";
+                }
+                out << "    bool " << methodName
+                    << "(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {\n";
+                out << "        Command cmd;\n";
+                out << "        cmd.commandType = " << deviceName << "CommandType::GET_" << srcName << ";\n";
+                out << "        return comms.dispatch(cmd, transportID, false);\n";
+                out << "    }\n\n";
+            }
         }
 
         out << "}; // class " << className << "\n\n";

@@ -35,7 +35,16 @@ public:
         return comms.dispatch(cmd, transportID, false);
     }
 
-    // Request the current temperature of the ESP board
+    // --- Telemetry request methods (ON_REQUEST trigger) ---
+
+    // Request current value of: Current board voltage in volts
+    bool getBoardVoltage(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::GET_BOARD_VOLTAGE;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Request current value of: ESP board temperature in celsius
     bool getBoardTemperature(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         Command cmd;
         cmd.commandType = EspCommandType::GET_BOARD_TEMPERATURE;

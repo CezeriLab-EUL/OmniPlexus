@@ -34,11 +34,6 @@ public:
                 return offset;
             }
 
-            case EspCommandType::GET_BOARD_TEMPERATURE: {
-                // No parameters
-                return offset;
-            }
-
             case IndicatorBoardCommandType::OLED_PRINT_STR: {
                 // params[0]: x (UINT16, required)
                 memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
@@ -173,6 +168,26 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case EspCommandType::GET_BOARD_VOLTAGE: {
+                // Auto-generated telemetry request — no parameters
+                return offset;
+            }
+
+            case EspCommandType::GET_BOARD_TEMPERATURE: {
+                // Auto-generated telemetry request — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS: {
+                // Auto-generated telemetry request — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_LED_COUNT: {
+                // Auto-generated telemetry request — no parameters
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -200,11 +215,6 @@ offset += sizeof(uint16_t);
             }
 
             case EspCommandType::TURNOFF_BUILTIN_LED: {
-                // No parameters
-                return true;
-            }
-
-            case EspCommandType::GET_BOARD_TEMPERATURE: {
                 // No parameters
                 return true;
             }
@@ -468,6 +478,26 @@ offset += sizeof(uint16_t);
                 return true;
             }
 
+            case EspCommandType::GET_BOARD_VOLTAGE: {
+                // Auto-generated telemetry request — no parameters
+                return true;
+            }
+
+            case EspCommandType::GET_BOARD_TEMPERATURE: {
+                // Auto-generated telemetry request — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS: {
+                // Auto-generated telemetry request — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_LED_COUNT: {
+                // Auto-generated telemetry request — no parameters
+                return true;
+            }
+
             default:
                 return false; // Unknown command type
         }
@@ -485,7 +515,6 @@ offset += sizeof(uint16_t);
         switch (commandType) {
             case EspCommandType::TURNON_BUILTIN_LED: return 2;
             case EspCommandType::TURNOFF_BUILTIN_LED: return 2;
-            case EspCommandType::GET_BOARD_TEMPERATURE: return 2;
             case IndicatorBoardCommandType::OLED_PRINT_STR: return 0xFF; // string param — variable length
             case IndicatorBoardCommandType::OLED_DRAW_FRAME: return 8;
             case IndicatorBoardCommandType::OLED_DRAW_BAR: return 7;
@@ -502,6 +531,10 @@ offset += sizeof(uint16_t);
             case IndicatorBoardCommandType::DISCOVERY: return 2;
             case IndicatorBoardCommandType::TURNON_BUILTIN_LED: return 2;
             case IndicatorBoardCommandType::TURNOFF_BUILTIN_LED: return 2;
+            case EspCommandType::GET_BOARD_VOLTAGE: return 2;
+            case EspCommandType::GET_BOARD_TEMPERATURE: return 2;
+            case IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS: return 2;
+            case IndicatorBoardCommandType::GET_LED_COUNT: return 2;
             default: return 0;
         }
     }

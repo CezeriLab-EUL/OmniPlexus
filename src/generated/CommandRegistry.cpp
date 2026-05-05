@@ -28,15 +28,6 @@ void CommandRegistry::initialize() {
         }
     });
 
-    // GET_BOARD_TEMPERATURE
-    registerCommand({
-        EspCommandType::GET_BOARD_TEMPERATURE,
-        "GET_BOARD_TEMPERATURE",
-        "Request the current temperature of the ESP board",
-        {
-        }
-    });
-
     // OLED_PRINT_STR
     registerCommand({
         IndicatorBoardCommandType::OLED_PRINT_STR,
@@ -200,6 +191,38 @@ void CommandRegistry::initialize() {
         "Turn off the built-in LED on the Indicator Board",
         {
         }
+    });
+
+    // GET_BOARD_VOLTAGE (auto-generated telemetry request)
+    registerCommand({
+        EspCommandType::GET_BOARD_VOLTAGE,
+        "GET_BOARD_VOLTAGE",
+        "Request current value of: Current board voltage in volts",
+        {}
+    });
+
+    // GET_BOARD_TEMPERATURE (auto-generated telemetry request)
+    registerCommand({
+        EspCommandType::GET_BOARD_TEMPERATURE,
+        "GET_BOARD_TEMPERATURE",
+        "Request current value of: ESP board temperature in celsius",
+        {}
+    });
+
+    // GET_DISPLAY_BRIGHTNESS (auto-generated telemetry request)
+    registerCommand({
+        IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS,
+        "GET_DISPLAY_BRIGHTNESS",
+        "Request current value of: Current OLED brightness level (0-255)",
+        {}
+    });
+
+    // GET_LED_COUNT (auto-generated telemetry request)
+    registerCommand({
+        IndicatorBoardCommandType::GET_LED_COUNT,
+        "GET_LED_COUNT",
+        "Request current value of: Number of active LEDs currently lit",
+        {}
     });
 
 } // CommandRegistry::initialize()

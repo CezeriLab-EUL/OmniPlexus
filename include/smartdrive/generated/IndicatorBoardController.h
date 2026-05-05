@@ -154,6 +154,22 @@ public:
         return comms.dispatch(cmd, transportID, false);
     }
 
+    // --- Telemetry request methods (ON_REQUEST trigger) ---
+
+    // Request current value of: Current OLED brightness level (0-255)
+    bool getDisplayBrightness(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Request current value of: Number of active LEDs currently lit
+    bool getLedCount(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_LED_COUNT;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
 }; // class IndicatorBoardController
 
 #endif // SMARTDRIVE_INDICATORBOARDCONTROLLER_H

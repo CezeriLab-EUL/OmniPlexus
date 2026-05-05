@@ -23,6 +23,7 @@ static const int MAX_PARAMS = 3;
 static const int MAX_OPTIONAL_PARAMS = 1;
 static const uint16_t MIN_ID = 0x0001;
 static const uint16_t MAX_ID = 0xFFFF;
+static const uint8_t TELEMETRY_REQUEST_BASE = 0x80;
 
 struct ValidationResult {
     bool valid = true;
@@ -395,9 +396,12 @@ public:
             }
 
             if (prevID > 0 && id != prevID + 1) {
-                result.addWarning("ID gap detected between " + toHex(prevID) +
-                                  " and " + toHex(id) +
-                                  " (this may be intentional for grouping)");
+                const uint16_t lowByte = id & 0xFF;
+                if (lowByte < TELEMETRY_REQUEST_BASE) {
+                    result.addWarning("ID gap detected between " + toHex(prevID) +
+                                      " and " + toHex(id) +
+                                      " (this may be intentional for grouping)");
+                }
             }
             prevID = id;
 
@@ -443,8 +447,19 @@ public:
             if (data.contains("commands") && data["commands"].is_array()) {
                 for (const auto &cmd: data["commands"]) {
                     if (!cmd.contains("id") || !cmd.contains("name")) continue;
-                    const uint16_t shiftedId = static_cast<uint16_t>(cmd["id"].get<uint16_t>() | (shift << 8));
+                    const uint16_t rawId = cmd["id"].get<uint16_t>();
+                    const uint16_t shiftedId = static_cast<uint16_t>(rawId | (shift << 8));
                     const std::string label = deviceName + "::" + cmd["name"].get<std::string>();
+
+                    // Skip reserved range — those IDs belong to auto-generated GET commands
+                    if ((rawId & 0xFF) >= TELEMETRY_REQUEST_BASE) {
+                        result.addWarning(
+                            "Command '" + label + "' has ID in the reserved telemetry request range (>= 0x80). "
+                            "This range is reserved for auto-generated GET commands."
+                        );
+                        continue;
+                    }
+
                     auto it = seenCommandIDs.find(shiftedId);
                     if (it != seenCommandIDs.end()) {
                         result.addError(

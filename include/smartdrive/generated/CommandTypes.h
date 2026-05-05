@@ -17,8 +17,13 @@ namespace EspCommandType {
     // Turn off the built-in LED on the ESP board
     constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0102;
 
-    // Request the current temperature of the ESP board
-    constexpr uint16_t GET_BOARD_TEMPERATURE = 0x0103;
+    // --- Auto-generated telemetry request commands ---
+
+    // Request current value of: Current board voltage in volts
+    constexpr uint16_t GET_BOARD_VOLTAGE = 0x0181;
+
+    // Request current value of: ESP board temperature in celsius
+    constexpr uint16_t GET_BOARD_TEMPERATURE = 0x0182;
 
 } // namespace EspCommandType
 
@@ -72,6 +77,14 @@ namespace IndicatorBoardCommandType {
 
     // Turn off the built-in LED on the Indicator Board
     constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0010;
+
+    // --- Auto-generated telemetry request commands ---
+
+    // Request current value of: Current OLED brightness level (0-255)
+    constexpr uint16_t GET_DISPLAY_BRIGHTNESS = 0x0081;
+
+    // Request current value of: Number of active LEDs currently lit
+    constexpr uint16_t GET_LED_COUNT = 0x0082;
 
 } // namespace IndicatorBoardCommandType
 
