@@ -59,12 +59,18 @@ add_custom_target(GenerateCommands ALL
 add_library(SmartDrive
         src/generated/CommandRegistry.cpp
         src/OpxSession.cpp
+        include/smartdrive/core/OpxDevice.h
+        src/OpxDevice.cpp
 )
 
 add_custom_target(SyncArduinoLibrary
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/include/smartdrive
         ${ARDUINO_LIBRARY_PATH}/smartdrive
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/src/OpxDevice.cpp
+        ${ARDUINO_LIBRARY_PATH}/OpxDevice.cpp
         COMMENT "Syncing SmartDrive headers to Arduino library..."
 )
 
