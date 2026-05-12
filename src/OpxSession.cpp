@@ -2,14 +2,14 @@
 // Created by dunamis on 01/05/2026.
 //
 
-#include "smartdrive/core/OpxSession.h"
+#include "opx/core/OpxSession.h"
 
 #ifndef EMBEDDED_BUILD
 
-#include "smartdrive/transport/wifi/PcWiFiTransport.h"
-#include "smartdrive/transport/serial/PcSerialTransport.h"
-#include "smartdrive/transport/http/PcHttpTransport.h"
-#include "smartdrive/interfaces/IConnectable.h"
+#include "opx/transport/wifi/PcWiFiTransport.h"
+#include "opx/transport/serial/PcSerialTransport.h"
+#include "opx/transport/http/PcHttpTransport.h"
+#include "opx/interfaces/IConnectable.h"
 #include  <chrono>
 
 OpxSession::OpxSession() {

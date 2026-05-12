@@ -7,7 +7,7 @@
 // OmniPlexus (opx) - Embedded Device Facade Implementation
 //
 
-#include "smartdrive/core/OpxDevice.h"
+#include "opx/core/OpxDevice.h"
 
 #ifdef ARDUINO
 #ifdef ESP32
