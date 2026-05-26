@@ -21,6 +21,14 @@
 #endif
 #endif
 
+#ifndef MAX_SETTINGS
+#ifdef __AVR__
+#define MAX_SETTINGS 8
+#else
+#define MAX_SETTINGS 16
+#endif
+#endif
+
 #ifndef COMMAND_QUEUE_CAPACITY
 #ifdef __AVR__
 #define COMMAND_QUEUE_CAPACITY 2

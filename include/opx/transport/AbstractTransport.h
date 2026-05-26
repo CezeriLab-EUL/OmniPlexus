@@ -80,6 +80,13 @@ private:
             return static_cast<uint8_t>(temp.getDataSize());
         }
 
+        if (currentFrameType == ProtocolConstants::FrameType::SETTING) {
+            // Buffer layout: [0]=header, [1..2]=settingID, [3]=typeAndSize
+            ValueSource temp;
+            temp.setTypeAndSizeRaw(accumulateBuffer[3]);
+            return static_cast<uint8_t>(temp.getDataSize());
+        }
+
         if (currentFrameType == ProtocolConstants::FrameType::COMMAND) {
             // Buffer layout: [0]=header, [1]=seqNum, [2..3]=commandType (little-endian)
             const uint16_t commandType =
@@ -120,9 +127,12 @@ private:
                     remainderTarget = computeRemainingPayload();
                     state = AccumulatorState::READING_REMAINDER;
                 } else {
-                    preambleTarget = (currentFrameType == ProtocolConstants::FrameType::COMMAND)
-                                         ? ProtocolConstants::COMMAND_PREAMBLE_SIZE
-                                         : ProtocolConstants::TELEMETRY_PREAMBLE_SIZE;
+                    if (currentFrameType == ProtocolConstants::FrameType::COMMAND) {
+                        preambleTarget = ProtocolConstants::COMMAND_PREAMBLE_SIZE;
+                    } else if (currentFrameType == ProtocolConstants::FrameType::TELEMETRY ||
+                               currentFrameType == ProtocolConstants::FrameType::SETTING) {
+                        preambleTarget = ProtocolConstants::SETTING_PREAMBLE_SIZE; // both are 3
+                               }
                     state = AccumulatorState::READING_PREAMBLE;
                 }
                 break;

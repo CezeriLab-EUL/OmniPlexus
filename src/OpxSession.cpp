@@ -136,6 +136,13 @@ void OpxSession::onTelemetry(TelemetryHandler handler) {
     }
 }
 
+void OpxSession::onSetting(SettingHandler handler) {
+    settingHandler = std::move(handler);
+    if (cm.has_value()) {
+        cm->onSettingReceived(settingBridge, this);
+    }
+}
+
 void OpxSession::onCommand(CommandHandler handler) {
     commandHandler = std::move(handler);
     if (cm.has_value()) {
@@ -254,6 +261,7 @@ void OpxSession::rewireHandlers() {
     if (telemetryHandler) cm->onTelemetryReceived(telemetryBridge, this);
     if (commandHandler) cm->onCommandReceived(commandBridge, this);
     if (responseHandler) cm->onResponseReceived(responseBridge, this);
+    if (settingHandler) cm->onSettingReceived(settingBridge, this);
 }
 
 void OpxSession::startThreads() {
@@ -294,6 +302,16 @@ void OpxSession::telemetryBridge(const Telemetry &telemetry,
         session->telemetryHandler(telemetry, sourceTransportID);
     }
 }
+
+void OpxSession::settingBridge(const SettingsData &setting,
+                                uint8_t sourceTransportID,
+                                void *context) {
+    auto *session = static_cast<OpxSession *>(context);
+    if (session->settingHandler) {
+        session->settingHandler(setting, sourceTransportID);
+    }
+}
+
 
 void OpxSession::commandBridge(const Command &cmd,
                                const uint8_t &seqNum,

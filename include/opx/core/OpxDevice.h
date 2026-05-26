@@ -10,6 +10,7 @@
 #include "opx/core/CommunicationManager.h"
 #include "opx/core/TransportManager.h"
 #include "opx/core/TelemetryManager.h"
+#include "opx/core/SettingsManager.h"
 #include "opx/core/TriggerConfig.h"
 #include "opx/core/PlatformClock.h"
 #include "opx/protocol/BinaryEncoder.h"
@@ -45,6 +46,7 @@ public:
                                      uint8_t sourceTransportID, void *context);
     using TelemetryHandler = void (*)(const Telemetry &,
                                       uint8_t sourceTransportID, void *context);
+    using SettingChangedHandler = void (*)(uint16_t settingID, const ValueSource &newValue, void *context);
 
     OpxDevice();
 
@@ -95,6 +97,13 @@ bool sendTelemetryNow(uint16_t sourceID);
 bool setTelemetryTrigger(uint16_t sourceID, TriggerConfig trigger);
 bool enableTelemetry(uint16_t sourceID);
 bool disableTelemetry(uint16_t sourceID);
+bool registerSetting(uint16_t settingID, ValueType type);
+bool updateSetting(uint16_t settingID, const ValueSource &value, bool broadcast = false);
+bool attachSettingCallback(uint16_t settingID, SettingsManager::SettingChangedCallback cb, void *context = nullptr);
+void onAnySettingChanged(SettingsManager::SettingChangedCallback cb, void *context = nullptr);
+void broadcastAllSettings();
+void broadcastOneSetting(uint16_t settingID);
+const SettingsData *getSetting(uint16_t settingID) const;
 bool unregisterTelemetry(uint16_t sourceID);
 CommunicationManager *comms();
 
@@ -110,6 +119,7 @@ TransportSlot *findSlot(OpxDeviceTransportID id);
 bool slotOccupied(OpxDeviceTransportID id) const;
 void ensureCommunicationManager();
 void ensureTelemetryManager();
+void ensureSettingsManager();
 void rewireHandlers();
 bool addTransport(ITransport *transport, OpxDeviceTransportID id);
 void removeTransport(OpxDeviceTransportID id);
@@ -126,6 +136,7 @@ static void responseBridge(const CommandResponse &response,
 static void telemetryBridge(const Telemetry &telemetry,
                             uint8_t sourceTransportID,
                             void *context);
+static void settingBridge(const SettingsData &setting, uint8_t sourceTransportID, void *context);
 
 BinaryEncoder encoder;
 PlatformClock clock;
@@ -142,6 +153,7 @@ NullMutex listenMutex;
 #endif
 CommunicationManager *cm = nullptr;
 TelemetryManager *telemetryManager = nullptr;
+SettingsManager *settingsManager = nullptr;
 
 // Non-CDnC transport slots
 TransportSlot slots[MAX_DEVICE_TRANSPORTS];

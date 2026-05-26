@@ -37,6 +37,7 @@ public:
     using TelemetryHandler = std::function<void(const Telemetry &telemetry, uint8_t sourceTransportID)>;
     using CommandHandler = std::function<void(const Command &cmd, uint8_t seqNum, uint8_t sourceTransportID)>;
     using ResponseHandler = std::function<void(const CommandResponse &response, uint8_t sourceTransportID)>;
+    using SettingHandler = std::function<void(const SettingsData &setting, uint8_t sourceTransportID)>;
 
     OpxSession();
 
@@ -70,6 +71,19 @@ public:
     void onCommand(CommandHandler handler);
 
     void onCommandResponse(ResponseHandler handler);
+
+    void onSetting(SettingHandler handler);
+
+    bool dispatch(const Command& cmd, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        if (!cm.has_value()) return false;
+        return cm->dispatch(cmd, transportID);
+    }
+
+    bool getAllSettings(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = ProtocolConstants::GET_ALL_SETTINGS_COMMAND;
+        return dispatch(cmd, transportID);
+    }
 
     template<typename TController>
     TController &getDevice();
@@ -107,6 +121,8 @@ private:
 
     static void responseBridge(const CommandResponse &response, uint8_t sourceTransportID, void *context);
 
+    static void settingBridge(const SettingsData &setting, uint8_t sourceTransportID, void *context);
+
     BinaryEncoder encoder;
     StdMutex sendMutex;
     StdMutex listenMutex;
@@ -119,6 +135,7 @@ private:
     TelemetryHandler telemetryHandler;
     CommandHandler commandHandler;
     ResponseHandler responseHandler;
+    SettingHandler settingHandler;
 
     CommandRegistry reg;
 

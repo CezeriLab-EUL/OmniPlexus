@@ -242,6 +242,9 @@ void OpxDevice::endAll() {
     }
 #endif
 
+    delete settingsManager;
+    settingsManager = nullptr;
+
     // Destroy telemetryManager before cm — it holds a pointer to cm internally
     delete telemetryManager;
     telemetryManager = nullptr;
@@ -260,7 +263,6 @@ void OpxDevice::onCommand(CommandHandler handler, void* context) {
     commandHandlerContext = context;
     // If cm already exists, register immediately.
     // If not, rewireHandlers() will register when cm is constructed.
-    if (cm) cm->onCommandReceived(commandBridge, this);
 }
 
 void OpxDevice::onResponse(ResponseHandler handler, void* context) {
@@ -394,6 +396,55 @@ bool OpxDevice::unregisterTelemetry(uint16_t sourceID) {
     return telemetryManager->unregisterSource(sourceID);
 }
 
+bool OpxDevice::registerSetting(uint16_t settingID, ValueType type) {
+    ensureSettingsManager();
+    return settingsManager->registerSetting(settingID, type);
+}
+
+//Setting management methods:
+bool OpxDevice::updateSetting(uint16_t settingID, const ValueSource &value, bool broadcast) {
+    if (!settingsManager) {
+        LOG(LogLevel::OP_WARNING, "OpxDevice: updateSetting() called before registerSetting().");
+        return false;
+    }
+    return settingsManager->update(settingID, value, broadcast);
+}
+
+
+bool OpxDevice::attachSettingCallback(uint16_t settingID,
+                                       SettingsManager::SettingChangedCallback cb,
+                                       void *context) {
+    if (!settingsManager) {
+        LOG(LogLevel::OP_WARNING, "OpxDevice: attachSettingCallback() called before registerSetting().");
+        return false;
+    }
+#ifndef OPX_PLATFORM_AVR
+    return settingsManager->attachCallback(settingID, cb, context);
+#else
+    return false;
+#endif
+}
+
+void OpxDevice::onAnySettingChanged(SettingsManager::SettingChangedCallback cb, void *context) {
+    ensureSettingsManager();
+    settingsManager->onAnySettingChanged(cb, context);
+}
+
+void OpxDevice::broadcastAllSettings() {
+    if (!settingsManager) return;
+    settingsManager->broadcastAll();
+}
+
+void OpxDevice::broadcastOneSetting(uint16_t settingID) {
+    if (!settingsManager) return;
+    settingsManager->broadcastOne(settingID);
+}
+
+const SettingsData *OpxDevice::getSetting(uint16_t settingID) const {
+    if (!settingsManager) return nullptr;
+    return settingsManager->get(settingID);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Escape Hatch
 // ─────────────────────────────────────────────────────────────────────────────
@@ -440,12 +491,20 @@ void OpxDevice::ensureTelemetryManager() {
     telemetryManager = new TelemetryManager(&clock, cm);
 }
 
+void OpxDevice::ensureSettingsManager() {
+    if (settingsManager) return;
+    ensureCommunicationManager();
+    settingsManager = new SettingsManager(cm);
+    if (cm) cm->onSettingReceived(settingBridge, this);
+}
+
 void OpxDevice::rewireHandlers() {
     if (!cm) return;
 
-    if (commandHandler)  cm->onCommandReceived(commandBridge, this);
+    cm->onCommandReceived(commandBridge, this); // always register, not conditional
     if (responseHandler) cm->onResponseReceived(responseBridge, this);
     if (telemetryHandler) cm->onTelemetryReceived(telemetryBridge, this);
+    if (settingsManager)  cm->onSettingReceived(settingBridge, this);
 }
 
 bool OpxDevice::addTransport(ITransport* transport, OpxDeviceTransportID id) {
@@ -525,11 +584,24 @@ void OpxDevice::stopListenTask() {
 // any knowledge about OpxDevice.
 // ─────────────────────────────────────────────────────────────────────────────
 
-void OpxDevice::commandBridge(const Command&  cmd,
-                               const uint8_t&  seqNum,
-                               uint8_t         sourceTransportID,
-                               void*           context) {
-    auto* device = static_cast<OpxDevice*>(context);
+void OpxDevice::commandBridge(const Command &cmd,
+                               const uint8_t &seqNum,
+                               uint8_t sourceTransportID,
+                               void *context) {
+    auto *device = static_cast<OpxDevice *>(context);
+    Serial.println(cmd.commandType, HEX);
+
+    // Auto-route setting commands to SettingsManager
+    if (device->settingsManager) {
+        const uint8_t category = (cmd.commandType >> 8) & 0x07;
+        const bool isSettingCmd = (category == 0x2 || category == 0x3)
+                                  || cmd.commandType == ProtocolConstants::GET_ALL_SETTINGS_COMMAND;
+        if (isSettingCmd) {
+            device->settingsManager->handleCommand(cmd, sourceTransportID);
+            return; // setting commands don't reach the user callback
+        }
+    }
+
     if (device->commandHandler) {
         device->commandHandler(cmd, seqNum, sourceTransportID,
                                device->commandHandlerContext);
@@ -554,6 +626,16 @@ void OpxDevice::telemetryBridge(const Telemetry& telemetry,
         device->telemetryHandler(telemetry, sourceTransportID,
                                  device->telemetryHandlerContext);
     }
+}
+
+void OpxDevice::settingBridge(const SettingsData &setting,
+                               uint8_t sourceTransportID,
+                               void *context) {
+    // Setting frames received from peers — currently just stored via
+    // SettingsManager. Future: could fire a user callback here if needed.
+    // OpxDevice doesn't expose an onIncomingSetting() hook yet since
+    // the device is typically the one that owns and serves settings,
+    // not receives them. This can be extended in the discovery phase.
 }
 
 #endif // ARDUINO

@@ -21,6 +21,7 @@ public:
     using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, uint8_t sourceTransportID, void *context);
     using CommandResponseCallback = void (*)(const CommandResponse &response,uint8_t sourceTransportID,  void *context);
     using TelemetryCallback = void (*)(const Telemetry &telemetry, uint8_t sourceTransportID, void *context);
+    using SettingCallback = void (*)(const SettingsData &setting, uint8_t sourceTransportID, void *context);
 
 private:
     IEncoder *encoder;
@@ -33,9 +34,11 @@ private:
     CommandCallback callback = nullptr;
     CommandResponseCallback responseCallback = nullptr;
     TelemetryCallback telemetryCallback = nullptr;
+    SettingCallback settingCallback = nullptr;
     void *callbackContext = nullptr;
     void *responseCallbackContext = nullptr;
     void *telemetryCallbackContext = nullptr;
+    void *settingCallbackContext = nullptr;
     IMutex *sendMutex = nullptr;
     IMutex *listenMutex = nullptr;
 
@@ -92,6 +95,18 @@ private:
                 }
             } else {
                 LOG(LogLevel::OP_ERROR, "Failed to deserialize telemetry");
+            }
+        } else if (frameType == ProtocolConstants::FrameType::SETTING) {
+            LOG(LogLevel::OP_WARNING, "SETTING frame received on PC");
+            SettingsData setting;
+            if (encoder->deserializeSetting(tagged.frame, setting)) {
+                if (settingCallback) {
+                    settingCallback(setting, tagged.transportID, settingCallbackContext);
+                } else {
+                    LOG(LogLevel::OP_WARNING, "Setting received but no callback registered");
+                }
+            } else {
+                LOG(LogLevel::OP_ERROR, "Failed to deserialize setting");
             }
         } else {
             LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
@@ -222,6 +237,11 @@ public:
         telemetryCallbackContext = context;
     }
 
+    void onSettingReceived(SettingCallback cb, void *context = nullptr) {
+        settingCallback = cb;
+        settingCallbackContext = context;
+    }
+
     bool dispatch(const Command &cmd, bool requiresAck = false) {
         MutexGuard guard(sendMutex);
         return doDispatchCommand(cmd, ProtocolConstants::TRANSPORT_ID_DEFAULT, requiresAck);
@@ -245,6 +265,48 @@ public:
     bool dispatchTelemetryToAll(const Telemetry &value) {
         MutexGuard guard(sendMutex);
         return doDispatchTelemetry(value, ProtocolConstants::TRANSPORT_ID_DEFAULT, true);
+    }
+
+
+    bool dispatchSetting(const SettingsData& setting, uint8_t transportID=ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        MutexGuard guard(sendMutex);
+        if (!encoder || !transportManager) {
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
+            return false;
+        }
+
+        uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+                                ? lastSourceTransportID
+                                : transportID;
+
+        if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+            resolvedID = transportManager->firstActiveID();
+            if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+                LOG(LogLevel::OP_ERROR, "No active transport to dispatch to");
+                return false;
+            }
+        }
+
+        const SerializedData frame = encoder->serializeSetting(setting);
+        if (frame.size == 0) {
+            LOG(LogLevel::OP_ERROR, "Failed to serialize setting");
+            return false;
+        }
+
+        return transportManager->send(frame, resolvedID);
+    }
+
+    bool dispatchSettingToAll(const SettingsData& setting) {
+        MutexGuard guard(sendMutex);
+        if (!encoder || !transportManager) {
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
+        }
+        const SerializedData frame = encoder->serializeSetting(setting);
+        if (frame.size == 0) {
+            LOG(LogLevel::OP_ERROR, "Failed to serialize setting");
+            return false;
+        }
+        return transportManager->sendToAll(frame);
     }
 
     bool sendResponse(uint8_t seqNum, uint16_t commandType, ProtocolConstants::ResponseStatus status) {
@@ -291,6 +353,7 @@ public:
                 LOG(LogLevel::OP_ERROR, "Failed to unpack command from queue");
                 continue;
             }
+            LOG(LogLevel::OP_WARNING, "processCommands: dispatching cmdType");
             lastSourceTransportID = packed.sourceTransportID;
             callback(cmd, packed.seqNum, packed.sourceTransportID, callbackContext);
         }

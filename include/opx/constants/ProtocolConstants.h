@@ -29,7 +29,11 @@ namespace ProtocolConstants
     constexpr uint8_t RESPONSE_PREAMBLE_SIZE = 0; // Size can be known from header alone
     constexpr uint8_t COMMAND_PREAMBLE_SIZE = 3; // seqNum(1) + CommandType(2)
     constexpr uint8_t TELEMETRY_PREAMBLE_SIZE = 3; // sourceID(2) + typeAndSize(1)
+    constexpr uint8_t SETTING_PREAMBLE_SIZE = 3; // settingID(2) + typeAndSize(1)
+
+    constexpr uint16_t GET_ALL_SETTINGS_COMMAND = 0xFF00;
     constexpr uint8_t STRING_SENTINEL = 0xFF; //returned by the command packer for commands that have string params (don't forget to update the generator if this value is modified)
+
 
     static constexpr uint8_t TRANSPORT_ID_DEFAULT = 0xFF;
 
@@ -37,7 +41,8 @@ namespace ProtocolConstants
     {
         COMMAND = 0x00,
         RESPONSE = 0x01,
-        TELEMETRY = 0x02
+        TELEMETRY = 0x02,
+        SETTING = 0x03,
     };
 
     enum class ResponseStatus : uint8_t
@@ -67,7 +72,7 @@ namespace ProtocolConstants
 
     constexpr bool isValidFrameType(const uint8_t header)
     {
-        return (header >> TYPE_SHIFT) <= static_cast<uint8_t>(FrameType::TELEMETRY);
+        return (header >> TYPE_SHIFT) <= static_cast<uint8_t>(FrameType::SETTING);
     }
 }
 

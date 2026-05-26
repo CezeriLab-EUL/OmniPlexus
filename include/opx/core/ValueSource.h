@@ -40,7 +40,7 @@ inline const char *typeToString(const ValueType t) {
 }
 
 template<class T_>
-    struct  TypeTraits;
+struct TypeTraits;
 
 template<>
 struct TypeTraits<uint8_t> {
@@ -169,7 +169,7 @@ public:
         return *this;
     }
 
-    ValueSource &operator=(const string_view& value) {
+    ValueSource &operator=(const string_view &value) {
         packString(value.data(), value.size());
         return *this;
     }
@@ -291,6 +291,30 @@ public:
     void clear() {
         typeAndSize = 0x00;
         memset(data, 0, sizeof(data));
+    }
+
+    void initDefault(ValueType type) {
+        memset(data, 0, sizeof(data));
+        switch (type) {
+            case ValueType::UINT8: setTypeAndSize(ValueType::UINT8, 0);
+                break;
+            case ValueType::INT8: setTypeAndSize(ValueType::INT8, 0);
+                break;
+            case ValueType::UINT16: setTypeAndSize(ValueType::UINT16, 0);
+                break;
+            case ValueType::INT16: setTypeAndSize(ValueType::INT16, 0);
+                break;
+            case ValueType::UINT32: setTypeAndSize(ValueType::UINT32, 0);
+                break;
+            case ValueType::INT32: setTypeAndSize(ValueType::INT32, 0);
+                break;
+            case ValueType::FLOAT: setTypeAndSize(ValueType::FLOAT, 0);
+                break;
+            case ValueType::STRING: setTypeAndSize(ValueType::STRING, 0);
+                break;
+            default: clear();
+                break;
+        }
     }
 
     bool isEmpty() const {

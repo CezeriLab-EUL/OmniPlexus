@@ -170,6 +170,83 @@ public:
         return comms.dispatch(cmd, transportID, false);
     }
 
+    // --- Setting request and set methods ---
+
+    // Get current value of: Default OLED brightness on startup (0-255)
+    bool getOledBrightness(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_SETTING_OLED_BRIGHTNESS;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Default OLED brightness on startup (0-255)
+    bool setOledBrightness(uint8_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::SET_SETTING_OLED_BRIGHTNESS;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
+    // Get current value of: Default OLED contrast on startup (0-255)
+    bool getOledContrast(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_SETTING_OLED_CONTRAST;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Default OLED contrast on startup (0-255)
+    bool setOledContrast(uint8_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::SET_SETTING_OLED_CONTRAST;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
+    // Get current value of: Default font preset on startup (0=small, 1=medium, 2=large)
+    bool getDefaultFont(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_SETTING_DEFAULT_FONT;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Default font preset on startup (0=small, 1=medium, 2=large)
+    bool setDefaultFont(uint8_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::SET_SETTING_DEFAULT_FONT;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
+    // Get current value of: Default LED color on startup (RGB565 format)
+    bool getLedDefaultColor(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_SETTING_LED_DEFAULT_COLOR;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Default LED color on startup (RGB565 format)
+    bool setLedDefaultColor(uint16_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::SET_SETTING_LED_DEFAULT_COLOR;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
+    // Get current value of: Whether the buzzer is enabled (0=disabled, 1=enabled)
+    bool getBuzzerEnabled(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::GET_SETTING_BUZZER_ENABLED;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Whether the buzzer is enabled (0=disabled, 1=enabled)
+    bool setBuzzerEnabled(uint8_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
 }; // class IndicatorBoardController
 
 #endif // SMARTDRIVE_INDICATORBOARDCONTROLLER_H

@@ -6,15 +6,18 @@
 #define SMARTDRIVE_PLATFORM_H
 
 #ifdef ARDUINO
-    #include <stdint.h>
-    #include <stdlib.h>
-    #include <string.h>
-    using ::size_t;
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+using ::size_t;
+    #ifdef __AVR__
+    #define OPX_PLATFORM_AVR
+    #endif
 #else
-    #include <cstdint>
-    #include <cstdlib>
-    #include <cstring>
-    using std::size_t;
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+using std::size_t;
 #endif
 
 

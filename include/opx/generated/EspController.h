@@ -51,6 +51,53 @@ public:
         return comms.dispatch(cmd, transportID, false);
     }
 
+    // --- Setting request and set methods ---
+
+    // Get current value of: WiFi channel to use for communication (1-13)
+    bool getWifiChannel(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::GET_SETTING_WIFI_CHANNEL;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: WiFi channel to use for communication (1-13)
+    bool setWifiChannel(uint8_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::SET_SETTING_WIFI_CHANNEL;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
+    // Get current value of: Interval in milliseconds between periodic telemetry sends
+    bool getTelemetryIntervalMs(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Interval in milliseconds between periodic telemetry sends
+    bool setTelemetryIntervalMs(uint32_t value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::SET_SETTING_TELEMETRY_INTERVAL_MS;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
+    // Get current value of: Human-readable name for this ESP device
+    bool getDeviceName(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::GET_SETTING_DEVICE_NAME;
+        return comms.dispatch(cmd, transportID, false);
+    }
+
+    // Set value of: Human-readable name for this ESP device
+    bool setDeviceName(const char* value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+        Command cmd;
+        cmd.commandType = EspCommandType::SET_SETTING_DEVICE_NAME;
+        cmd.params[0] = value;
+        return comms.dispatch(cmd, transportID, true);
+    }
+
 }; // class EspController
 
 #endif // SMARTDRIVE_ESPCONTROLLER_H

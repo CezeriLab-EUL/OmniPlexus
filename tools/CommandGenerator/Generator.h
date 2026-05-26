@@ -16,11 +16,20 @@ static const int COMMAND_TYPE_SIZE = 2; // uint16_t
 
 class Generator {
 private:
+    static const uint8_t CATEGORY_COMMAND = 0x0;
+    static const uint8_t CATEGORY_TELEMETRY = 0x1;
+    static const uint8_t CATEGORY_SETTING_GET = 0x2;
+    static const uint8_t CATEGORY_SETTING_SET = 0x3;
+
     static uint16_t shiftedId(const json &deviceData, uint16_t rawId) {
         const uint16_t shift = deviceData.contains("typeShift")
                                    ? deviceData["typeShift"].get<uint16_t>()
                                    : 0;
         return static_cast<uint16_t>(rawId | (shift << 8));
+    }
+
+    static uint16_t buildCommandID(uint16_t typeShift, uint8_t category, uint16_t localID) {
+        return static_cast<uint16_t>((typeShift << 11) | (category << 8) | localID);
     }
 
     // Write a string to a file, throws on failure
@@ -103,6 +112,17 @@ private:
         return "0";
     }
 
+    static size_t sizeofForTypeValue(const std::string &type) {
+        if (type == "FLOAT") return sizeof(float);
+        if (type == "INT8") return sizeof(int8_t);
+        if (type == "UINT8") return sizeof(uint8_t);
+        if (type == "INT16") return sizeof(int16_t);
+        if (type == "UINT16") return sizeof(uint16_t);
+        if (type == "INT32") return sizeof(int32_t);
+        if (type == "UINT32") return sizeof(uint32_t);
+        return 0;
+    }
+
     // Map a JSON type string to the ValueType enum name
     static std::string valueTypeEnum(const std::string &type) {
         return "ValueType::" + type;
@@ -155,6 +175,19 @@ private:
             maxSize = std::max(maxSize, cmdParamSize);
         }
 
+        if (data.contains("settings")) {
+            for (const auto &setting: data["settings"]) {
+                const std::string type = setting["type"].get<std::string>();
+                size_t settingParamSize = 0;
+                if (type == "STRING") {
+                    settingParamSize = 1 + 15; // typeAndSize + max string length
+                } else {
+                    settingParamSize = sizeofForTypeValue(type);
+                }
+                maxSize = std::max(maxSize, settingParamSize);
+            }
+        }
+
         return maxSize;
     }
 
@@ -198,7 +231,8 @@ private:
             out << "namespace " << deviceName << "CommandType {\n\n";
             for (const auto &cmd: data["commands"]) {
                 const std::string name = cmd["name"].get<std::string>();
-                const uint16_t id = shiftedId(data, cmd["id"].get<uint16_t>());
+                const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+                const uint16_t id = buildCommandID(typeShift, CATEGORY_COMMAND, cmd["id"].get<uint16_t>());
                 if (cmd.contains("description") && !cmd["description"].get<std::string>().empty())
                     out << "    // " << cmd["description"].get<std::string>() << "\n";
                 out << "    constexpr uint16_t " << name << " = " << toHex(id) << ";\n\n";
@@ -210,12 +244,27 @@ private:
                 const uint16_t typeShift = data["typeShift"].get<uint16_t>();
                 for (const auto &src: data["telemetry"]) {
                     const std::string name = src["name"].get<std::string>();
-                    const uint16_t sourceID = src["id"].get<uint16_t>();
-                    // ID = (typeShift << 8) | (0x80 | sourceID)
-                    const uint16_t getID = static_cast<uint16_t>((typeShift << 8) | (TELEMETRY_REQUEST_BASE | sourceID));
+                    const uint16_t getID = buildCommandID(typeShift, CATEGORY_TELEMETRY, src["id"].get<uint16_t>());
                     if (src.contains("description") && !src["description"].get<std::string>().empty())
                         out << "    // Request current value of: " << src["description"].get<std::string>() << "\n";
                     out << "    constexpr uint16_t GET_" << name << " = " << toHex(getID) << ";\n\n";
+                }
+            }
+
+            if (data.contains("settings") && !data["settings"].empty()) {
+                out << "    // --- Auto-generated setting request and set commands ---\n\n";
+                const uint16_t typeShift = data["typeShift"].get<uint16_t>();
+                for (const auto &setting: data["settings"]) {
+                    const std::string name = setting["name"].get<std::string>();
+                    const uint16_t localID = setting["id"].get<uint16_t>();
+                    const uint16_t getID = buildCommandID(typeShift, CATEGORY_SETTING_GET, localID);
+                    const uint16_t setID = buildCommandID(typeShift, CATEGORY_SETTING_SET, localID);
+                    if (setting.contains("description") && !setting["description"].get<std::string>().empty())
+                        out << "    // Get current value of: " << setting["description"].get<std::string>() << "\n";
+                    out << "    constexpr uint16_t GET_SETTING_" << name << " = " << toHex(getID) << ";\n\n";
+                    if (setting.contains("description") && !setting["description"].get<std::string>().empty())
+                        out << "    // Set value of: " << setting["description"].get<std::string>() << "\n";
+                    out << "    constexpr uint16_t SET_SETTING_" << name << " = " << toHex(setID) << ";\n\n";
                 }
             }
 
@@ -252,6 +301,67 @@ private:
         return out.str();
     }
 
+    static std::string generateSettingIDsContent(const std::vector<json> &allData) {
+        std::ostringstream out;
+        out << "//\n// SettingIDs.h\n// AUTO-GENERATED BY SmartDrive CommandGenerator - DO NOT EDIT\n//\n\n";
+        out << "#ifndef SMARTDRIVE_SETTINGIDS_H\n#define SMARTDRIVE_SETTINGIDS_H\n\n";
+        out << "#include \"opx/core/platform.h\"\n\n";
+        out << "namespace SettingID {\n\n";
+
+        for (const auto &data: allData) {
+            if (!data.contains("settings") || data["settings"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            out << "namespace " << deviceName << "Setting {\n\n";
+            for (const auto &setting: data["settings"]) {
+                const std::string name = setting["name"].get<std::string>();
+                const uint16_t id = shiftedId(data, setting["id"].get<uint16_t>());
+                if (setting.contains("description") && !setting["description"].get<std::string>().empty())
+                    out << "    // " << setting["description"].get<std::string>() << "\n";
+                out << "    constexpr uint16_t " << name << " = " << toHex(id) << ";\n\n";
+            }
+            out << "} // namespace " << deviceName << "Setting\n\n";
+        }
+
+        out << "} // namespace SettingID\n\n";
+        out << "#endif // SMARTDRIVE_SETTINGIDS_H\n";
+        return out.str();
+    }
+
+    static std::string generateRegisterAllContent(const json &data) {
+        const std::string deviceName = data["device"].get<std::string>();
+        const std::string guardName = "SMARTDRIVE_" + [&]() {
+            std::string upper = deviceName + "REGISTERALL";
+            for (char &c: upper) c = static_cast<char>(std::toupper(c));
+            return upper;
+        }() + "_H";
+
+        std::ostringstream out;
+        out << "//\n// " << deviceName << "RegisterAll.h\n";
+        out << "// AUTO-GENERATED BY SmartDrive CommandGenerator - DO NOT EDIT\n//\n\n";
+        out << "#ifndef " << guardName << "\n";
+        out << "#define " << guardName << "\n\n";
+        out << "#include \"opx/core/platform.h\"\n";
+        out << "#include \"opx/core/OpxDevice.h\"\n";
+        out << "#include \"SettingIDs.h\"\n\n";
+
+        out << "inline void register" << deviceName << "Settings(OpxDevice& device) {\n";
+
+        if (!data.contains("settings") || data["settings"].empty()) {
+            out << "    // No settings defined for " << deviceName << "\n";
+        } else {
+            for (const auto &setting: data["settings"]) {
+                const std::string name = setting["name"].get<std::string>();
+                const std::string type = setting["type"].get<std::string>();
+                out << "    device.registerSetting(SettingID::" << deviceName << "Setting::"
+                        << name << ", " << valueTypeEnum(type) << ");\n";
+            }
+        }
+
+        out << "}\n\n";
+        out << "#endif // " << guardName << "\n";
+        return out.str();
+    }
+
     static std::string generateCommandPackerContent(const std::vector<json> &allData) {
         std::ostringstream out;
 
@@ -276,6 +386,11 @@ private:
         out << "        buffer[offset++] = cmd.commandType & 0xFF;\n";
         out << "        buffer[offset++] = (cmd.commandType >> 8) & 0xFF;\n\n";
         out << "        switch(cmd.commandType) {\n\n";
+
+        out << "            case 0xFF00: {\n";
+        out << "                // Protocol-level GET_ALL_SETTINGS — no parameters\n";
+        out << "                return offset;\n";
+        out << "            }\n\n";
 
         for (const auto &data: allData) {
             const std::string deviceName = data["device"].get<std::string>();
@@ -350,6 +465,37 @@ private:
             }
         }
 
+        for (const auto &data: allData) {
+            if (!data.contains("settings") || data["settings"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            for (const auto &setting: data["settings"]) {
+                const std::string name = setting["name"].get<std::string>();
+                const std::string type = setting["type"].get<std::string>();
+
+                // GET — no parameters
+                out << "            case " << deviceName << "CommandType::GET_SETTING_" << name << ": {\n";
+                out << "                // Auto-generated setting GET — no parameters\n";
+                out << "                return offset;\n";
+                out << "            }\n\n";
+
+                // SET — one parameter of the setting's type
+                out << "            case " << deviceName << "CommandType::SET_SETTING_" << name << ": {\n";
+                out << "                // Auto-generated setting SET — one parameter\n";
+                if (type == "STRING") {
+                    out << "                buffer[offset++] = cmd.params[0].getTypeAndSize();\n";
+                    out << "                const size_t strDataSize = cmd.params[0].getDataSize();\n";
+                    out << "                memcpy(&buffer[offset], cmd.params[0].getData(), strDataSize);\n";
+                    out << "                offset += strDataSize;\n";
+                } else {
+                    out << "                memcpy(&buffer[offset], cmd.params[0].getData(), " << sizeofForType(type) <<
+                            ");\n";
+                    out << "                offset += " << sizeofForType(type) << ";\n";
+                }
+                out << "                return offset;\n";
+                out << "            }\n\n";
+            }
+        }
+
         out << "            default:\n";
         out << "                return 0; // Unknown command type\n";
         out << "        }\n";
@@ -368,6 +514,11 @@ private:
         out << "        offset += 2;\n";
         out << "        cmdOut.commandType = cmdType;\n\n";
         out << "        switch(cmdType) {\n\n";
+
+        out << "            case 0xFF00: {\n";
+        out << "                // Protocol-level GET_ALL_SETTINGS — no parameters\n";
+        out << "                return true;\n";
+        out << "            }\n\n";
 
         for (const auto &data: allData) {
             const std::string deviceName = data["device"].get<std::string>();
@@ -512,6 +663,43 @@ private:
             }
         }
 
+        for (const auto &data: allData) {
+            if (!data.contains("settings") || data["settings"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            for (const auto &setting: data["settings"]) {
+                const std::string name = setting["name"].get<std::string>();
+                const std::string type = setting["type"].get<std::string>();
+                const std::string defVal = defaultForType(type);
+
+                // GET — no parameters
+                out << "            case " << deviceName << "CommandType::GET_SETTING_" << name << ": {\n";
+                out << "                // Auto-generated setting GET — no parameters\n";
+                out << "                return true;\n";
+                out << "            }\n\n";
+
+                // SET — one parameter
+                out << "            case " << deviceName << "CommandType::SET_SETTING_" << name << ": {\n";
+                out << "                if (bufferSize < 2 + " << sizeofForType(type) << ") return false;\n";
+                out << "                cmdOut.params[0] = " << defVal << ";\n";
+                if (type == "STRING") {
+                    out << "                if (bufferSize < 3) return false;\n";
+                    out << "                const uint8_t typeAndSize = buffer[offset++];\n";
+                    out << "                cmdOut.params[0].setTypeAndSizeRaw(typeAndSize);\n";
+                    out << "                const size_t strSize = cmdOut.params[0].getDataSize();\n";
+                    out << "                if (bufferSize - offset < strSize) return false;\n";
+                    out << "                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], strSize);\n";
+                    out << "                offset += strSize;\n";
+                } else {
+                    out << "                if (bufferSize - offset < " << sizeofForType(type) << ") return false;\n";
+                    out << "                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], " <<
+                            sizeofForType(type) << ");\n";
+                    out << "                offset += " << sizeofForType(type) << ";\n";
+                }
+                out << "                return true;\n";
+                out << "            }\n\n";
+            }
+        }
+
         out << "            default:\n";
         out << "                return false; // Unknown command type\n";
         out << "        }\n";
@@ -527,6 +715,8 @@ private:
         out << "    // Returns 0 for unknown command types.\n";
         out << "    static uint8_t packedSize(uint16_t commandType) {\n";
         out << "        switch (commandType) {\n";
+
+        out << "            case 0xFF00: return 2;\n";
 
         for (const auto &data: allData) {
             const std::string deviceName = data["device"].get<std::string>();
@@ -578,6 +768,23 @@ private:
             }
         }
 
+        for (const auto &data: allData) {
+            if (!data.contains("settings") || data["settings"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            for (const auto &setting: data["settings"]) {
+                const std::string name = setting["name"].get<std::string>();
+                const std::string type = setting["type"].get<std::string>();
+                out << "            case " << deviceName << "CommandType::GET_SETTING_" << name << ": return 2;\n";
+                if (type == "STRING") {
+                    out << "            case " << deviceName << "CommandType::SET_SETTING_" << name <<
+                            ": return 0xFF;\n";
+                } else {
+                    out << "            case " << deviceName << "CommandType::SET_SETTING_" << name
+                            << ": return " << (COMMAND_TYPE_SIZE + sizeofForTypeValue(type)) << ";\n";
+                }
+            }
+        }
+
 
         out << "            default: return 0;\n";
         out << "        }\n";
@@ -591,9 +798,9 @@ private:
         out << "    static uint8_t stringParamOffset(uint16_t commandType) {\n";
         out << "        switch (commandType) {\n";
 
-        for (const auto &data : allData) {
+        for (const auto &data: allData) {
             const std::string deviceName = data["device"].get<std::string>();
-            for (const auto &cmd : data["commands"]) {
+            for (const auto &cmd: data["commands"]) {
                 const std::string name = cmd["name"].get<std::string>();
                 if (!cmd.contains("params")) continue;
 
@@ -602,41 +809,41 @@ private:
                 bool hasString = false;
                 size_t offset = 3; // seqNum(1) + commandType(2) — always present before params
 
-                for (const auto &param : cmd["params"]) {
+                for (const auto &param: cmd["params"]) {
                     const std::string type = param["type"].get<std::string>();
                     if (type == "STRING") {
                         hasString = true;
                         break;
                     }
                     // Accumulate fixed-size params that come before the string
-                    if (type == "FLOAT")  offset += sizeof(float);
-                    else if (type == "INT8")   offset += sizeof(int8_t);
-                    else if (type == "UINT8")  offset += sizeof(uint8_t);
-                    else if (type == "INT16")  offset += sizeof(int16_t);
+                    if (type == "FLOAT") offset += sizeof(float);
+                    else if (type == "INT8") offset += sizeof(int8_t);
+                    else if (type == "UINT8") offset += sizeof(uint8_t);
+                    else if (type == "INT16") offset += sizeof(int16_t);
                     else if (type == "UINT16") offset += sizeof(uint16_t);
-                    else if (type == "INT32")  offset += sizeof(int32_t);
+                    else if (type == "INT32") offset += sizeof(int32_t);
                     else if (type == "UINT32") offset += sizeof(uint32_t);
                 }
 
                 if (!hasString) continue;
 
                 out << "            case " << deviceName << "CommandType::" << name << ": "
-                    << "return " << offset << "; "
-                    << "// seqNum(1) + commandType(2)";
+                        << "return " << offset << "; "
+                        << "// seqNum(1) + commandType(2)";
 
                 // Add breakdown comment for fixed params before the string
                 size_t commentOffset = 3;
-                for (const auto &param : cmd["params"]) {
+                for (const auto &param: cmd["params"]) {
                     const std::string type = param["type"].get<std::string>();
                     if (type == "STRING") break;
                     const std::string pname = param["name"].get<std::string>();
                     size_t psz = 0;
-                    if (type == "FLOAT")  psz = sizeof(float);
-                    else if (type == "INT8")   psz = sizeof(int8_t);
-                    else if (type == "UINT8")  psz = sizeof(uint8_t);
-                    else if (type == "INT16")  psz = sizeof(int16_t);
+                    if (type == "FLOAT") psz = sizeof(float);
+                    else if (type == "INT8") psz = sizeof(int8_t);
+                    else if (type == "UINT8") psz = sizeof(uint8_t);
+                    else if (type == "INT16") psz = sizeof(int16_t);
                     else if (type == "UINT16") psz = sizeof(uint16_t);
-                    else if (type == "INT32")  psz = sizeof(int32_t);
+                    else if (type == "INT32") psz = sizeof(int32_t);
                     else if (type == "UINT32") psz = sizeof(uint32_t);
                     out << " + " << pname << "(" << psz << ")";
                     commentOffset += psz;
@@ -717,15 +924,42 @@ private:
             for (const auto &src: data["telemetry"]) {
                 const std::string name = src["name"].get<std::string>();
                 const std::string desc = src.contains("description")
-                    ? "Request current value of: " + src["description"].get<std::string>()
-                    : "Request current value of " + name;
+                                             ? "Request current value of: " + src["description"].get<std::string>()
+                                             : "Request current value of " + name;
 
                 out << "    // GET_" << name << " (auto-generated telemetry request)\n";
                 out << "    registerCommand({\n";
                 out << "        " << deviceName << "CommandType::GET_" << name << ",\n";
                 out << "        \"GET_" << name << "\",\n";
                 out << "        \"" << desc << "\",\n";
-                out << "        {}\n";  // no parameters
+                out << "        {}\n"; // no parameters
+                out << "    });\n\n";
+            }
+        }
+
+        for (const auto &data: allData) {
+            if (!data.contains("settings") || data["settings"].empty()) continue;
+            const std::string deviceName = data["device"].get<std::string>();
+            for (const auto &setting: data["settings"]) {
+                const std::string name = setting["name"].get<std::string>();
+                const std::string desc = setting.contains("description")
+                                             ? setting["description"].get<std::string>()
+                                             : "";
+
+                out << "    // GET_SETTING_" << name << " (auto-generated setting GET)\n";
+                out << "    registerCommand({\n";
+                out << "        " << deviceName << "CommandType::GET_SETTING_" << name << ",\n";
+                out << "        \"GET_SETTING_" << name << "\",\n";
+                out << "        \"Get current value of: " << desc << "\",\n";
+                out << "        {}\n";
+                out << "    });\n\n";
+
+                out << "    // SET_SETTING_" << name << " (auto-generated setting SET)\n";
+                out << "    registerCommand({\n";
+                out << "        " << deviceName << "CommandType::SET_SETTING_" << name << ",\n";
+                out << "        \"SET_SETTING_" << name << "\",\n";
+                out << "        \"Set value of: " << desc << "\",\n";
+                out << "        {}\n";
                 out << "    });\n\n";
             }
         }
@@ -865,10 +1099,11 @@ private:
                     // Convert UPPER_SNAKE_CASE to PascalCase for the method name
                     std::string pascal;
                     bool capitalizeNext = true;
-                    for (char c : srcName) {
-                        if (c == '_') { capitalizeNext = true; }
-                        else if (capitalizeNext) { pascal += static_cast<char>(std::toupper(c)); capitalizeNext = false; }
-                        else { pascal += static_cast<char>(std::tolower(c)); }
+                    for (char c: srcName) {
+                        if (c == '_') { capitalizeNext = true; } else if (capitalizeNext) {
+                            pascal += static_cast<char>(std::toupper(c));
+                            capitalizeNext = false;
+                        } else { pascal += static_cast<char>(std::tolower(c)); }
                     }
                     return pascal;
                 }();
@@ -877,10 +1112,55 @@ private:
                     out << "    // Request current value of: " << src["description"].get<std::string>() << "\n";
                 }
                 out << "    bool " << methodName
-                    << "(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {\n";
+                        << "(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {\n";
                 out << "        Command cmd;\n";
                 out << "        cmd.commandType = " << deviceName << "CommandType::GET_" << srcName << ";\n";
                 out << "        return comms.dispatch(cmd, transportID, false);\n";
+                out << "    }\n\n";
+            }
+        }
+
+        if (data.contains("settings") && !data["settings"].empty()) {
+            out << "    // --- Setting request and set methods ---\n\n";
+            for (const auto &setting: data["settings"]) {
+                const std::string settingName = setting["name"].get<std::string>();
+                const std::string type = setting["type"].get<std::string>();
+                const std::string cppType = cppTypeForJsonType(type);
+
+                // toPascalCase for method name
+                const std::string pascal = [&]() {
+                    std::string result;
+                    bool capitalizeNext = true;
+                    for (char c: settingName) {
+                        if (c == '_') { capitalizeNext = true; } else if (capitalizeNext) {
+                            result += static_cast<char>(std::toupper(c));
+                            capitalizeNext = false;
+                        } else { result += static_cast<char>(std::tolower(c)); }
+                    }
+                    return result;
+                }();
+
+                if (setting.contains("description") && !setting["description"].get<std::string>().empty()) {
+                    out << "    // Get current value of: " << setting["description"].get<std::string>() << "\n";
+                }
+                out << "    bool get" << pascal
+                        << "(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {\n";
+                out << "        Command cmd;\n";
+                out << "        cmd.commandType = " << deviceName << "CommandType::GET_SETTING_" << settingName <<
+                        ";\n";
+                out << "        return comms.dispatch(cmd, transportID, false);\n";
+                out << "    }\n\n";
+
+                if (setting.contains("description") && !setting["description"].get<std::string>().empty()) {
+                    out << "    // Set value of: " << setting["description"].get<std::string>() << "\n";
+                }
+                out << "    bool set" << pascal << "(" << cppType
+                        << " value, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {\n";
+                out << "        Command cmd;\n";
+                out << "        cmd.commandType = " << deviceName << "CommandType::SET_SETTING_" << settingName <<
+                        ";\n";
+                out << "        cmd.params[0] = value;\n";
+                out << "        return comms.dispatch(cmd, transportID, true);\n";
                 out << "    }\n\n";
             }
         }
@@ -966,6 +1246,27 @@ public:
             const std::string telemetrySourceIDsPath = headerDir + "TelemetrySourceIDs.h";
             writeFile(telemetrySourceIDsPath, generateTelemetrySourceIDsContent(allData));
             std::cout << "  ✓ Generated: " << telemetrySourceIDsPath << "\n";
+        }
+
+        bool anySettings = false;
+        for (const auto &d: allData)
+            if (d.contains("settings") && !d["settings"].empty()) {
+                anySettings = true;
+                break;
+            }
+
+        if (anySettings) {
+            const std::string settingIDsPath = headerDir + "SettingIDs.h";
+            writeFile(settingIDsPath, generateSettingIDsContent(allData));
+            std::cout << "  ✓ Generated: " << settingIDsPath << "\n";
+        }
+
+        // Generate <DeviceName>RegisterAll.h for each device
+        for (const auto &data: allData) {
+            const std::string deviceName = data["device"].get<std::string>();
+            const std::string registerAllPath = headerDir + deviceName + "RegisterAll.h";
+            writeFile(registerAllPath, generateRegisterAllContent(data));
+            std::cout << "  ✓ Generated: " << registerAllPath << "\n";
         }
     }
 };

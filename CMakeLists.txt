@@ -60,6 +60,7 @@ add_library(OmniPlexus
         src/generated/CommandRegistry.cpp
         src/OpxSession.cpp
         src/OpxDevice.cpp
+        include/opx/core/SettingsManager.h
 )
 
 add_custom_target(SyncArduinoLibrary

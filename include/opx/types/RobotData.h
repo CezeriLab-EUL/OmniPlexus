@@ -20,5 +20,6 @@ struct Telemetry : public ValueSource
 };
 #pragma pack(pop)
 
-static_assert(sizeof(Telemetry) == 19, "TelemetryData must be exactly 23 bytes");
+static_assert(sizeof(Telemetry) == 19, "TelemetryData must be exactly 19 bytes");
+static_assert(sizeof(SettingsData) == 19, "SettingsData must be exactly 19 bytes");
 #endif // SMARTDRIVE_ROBOTDATA_H

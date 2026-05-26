@@ -225,6 +225,134 @@ void CommandRegistry::initialize() {
         {}
     });
 
+    // GET_SETTING_WIFI_CHANNEL (auto-generated setting GET)
+    registerCommand({
+        EspCommandType::GET_SETTING_WIFI_CHANNEL,
+        "GET_SETTING_WIFI_CHANNEL",
+        "Get current value of: WiFi channel to use for communication (1-13)",
+        {}
+    });
+
+    // SET_SETTING_WIFI_CHANNEL (auto-generated setting SET)
+    registerCommand({
+        EspCommandType::SET_SETTING_WIFI_CHANNEL,
+        "SET_SETTING_WIFI_CHANNEL",
+        "Set value of: WiFi channel to use for communication (1-13)",
+        {}
+    });
+
+    // GET_SETTING_TELEMETRY_INTERVAL_MS (auto-generated setting GET)
+    registerCommand({
+        EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS,
+        "GET_SETTING_TELEMETRY_INTERVAL_MS",
+        "Get current value of: Interval in milliseconds between periodic telemetry sends",
+        {}
+    });
+
+    // SET_SETTING_TELEMETRY_INTERVAL_MS (auto-generated setting SET)
+    registerCommand({
+        EspCommandType::SET_SETTING_TELEMETRY_INTERVAL_MS,
+        "SET_SETTING_TELEMETRY_INTERVAL_MS",
+        "Set value of: Interval in milliseconds between periodic telemetry sends",
+        {}
+    });
+
+    // GET_SETTING_DEVICE_NAME (auto-generated setting GET)
+    registerCommand({
+        EspCommandType::GET_SETTING_DEVICE_NAME,
+        "GET_SETTING_DEVICE_NAME",
+        "Get current value of: Human-readable name for this ESP device",
+        {}
+    });
+
+    // SET_SETTING_DEVICE_NAME (auto-generated setting SET)
+    registerCommand({
+        EspCommandType::SET_SETTING_DEVICE_NAME,
+        "SET_SETTING_DEVICE_NAME",
+        "Set value of: Human-readable name for this ESP device",
+        {}
+    });
+
+    // GET_SETTING_OLED_BRIGHTNESS (auto-generated setting GET)
+    registerCommand({
+        IndicatorBoardCommandType::GET_SETTING_OLED_BRIGHTNESS,
+        "GET_SETTING_OLED_BRIGHTNESS",
+        "Get current value of: Default OLED brightness on startup (0-255)",
+        {}
+    });
+
+    // SET_SETTING_OLED_BRIGHTNESS (auto-generated setting SET)
+    registerCommand({
+        IndicatorBoardCommandType::SET_SETTING_OLED_BRIGHTNESS,
+        "SET_SETTING_OLED_BRIGHTNESS",
+        "Set value of: Default OLED brightness on startup (0-255)",
+        {}
+    });
+
+    // GET_SETTING_OLED_CONTRAST (auto-generated setting GET)
+    registerCommand({
+        IndicatorBoardCommandType::GET_SETTING_OLED_CONTRAST,
+        "GET_SETTING_OLED_CONTRAST",
+        "Get current value of: Default OLED contrast on startup (0-255)",
+        {}
+    });
+
+    // SET_SETTING_OLED_CONTRAST (auto-generated setting SET)
+    registerCommand({
+        IndicatorBoardCommandType::SET_SETTING_OLED_CONTRAST,
+        "SET_SETTING_OLED_CONTRAST",
+        "Set value of: Default OLED contrast on startup (0-255)",
+        {}
+    });
+
+    // GET_SETTING_DEFAULT_FONT (auto-generated setting GET)
+    registerCommand({
+        IndicatorBoardCommandType::GET_SETTING_DEFAULT_FONT,
+        "GET_SETTING_DEFAULT_FONT",
+        "Get current value of: Default font preset on startup (0=small, 1=medium, 2=large)",
+        {}
+    });
+
+    // SET_SETTING_DEFAULT_FONT (auto-generated setting SET)
+    registerCommand({
+        IndicatorBoardCommandType::SET_SETTING_DEFAULT_FONT,
+        "SET_SETTING_DEFAULT_FONT",
+        "Set value of: Default font preset on startup (0=small, 1=medium, 2=large)",
+        {}
+    });
+
+    // GET_SETTING_LED_DEFAULT_COLOR (auto-generated setting GET)
+    registerCommand({
+        IndicatorBoardCommandType::GET_SETTING_LED_DEFAULT_COLOR,
+        "GET_SETTING_LED_DEFAULT_COLOR",
+        "Get current value of: Default LED color on startup (RGB565 format)",
+        {}
+    });
+
+    // SET_SETTING_LED_DEFAULT_COLOR (auto-generated setting SET)
+    registerCommand({
+        IndicatorBoardCommandType::SET_SETTING_LED_DEFAULT_COLOR,
+        "SET_SETTING_LED_DEFAULT_COLOR",
+        "Set value of: Default LED color on startup (RGB565 format)",
+        {}
+    });
+
+    // GET_SETTING_BUZZER_ENABLED (auto-generated setting GET)
+    registerCommand({
+        IndicatorBoardCommandType::GET_SETTING_BUZZER_ENABLED,
+        "GET_SETTING_BUZZER_ENABLED",
+        "Get current value of: Whether the buzzer is enabled (0=disabled, 1=enabled)",
+        {}
+    });
+
+    // SET_SETTING_BUZZER_ENABLED (auto-generated setting SET)
+    registerCommand({
+        IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED,
+        "SET_SETTING_BUZZER_ENABLED",
+        "Set value of: Whether the buzzer is enabled (0=disabled, 1=enabled)",
+        {}
+    });
+
 } // CommandRegistry::initialize()
 
 #endif // EMBEDDED_BUILD

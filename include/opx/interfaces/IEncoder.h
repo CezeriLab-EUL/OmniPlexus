@@ -25,6 +25,10 @@ public:
     virtual  SerializedData serializeTelemetry(const Telemetry& telemetry) = 0;
     virtual bool deserializeTelemetry(const RawData& rawData, Telemetry& telemetryOut) = 0;
 
+    //Setting Serialization & Deserialization
+    virtual SerializedData serializeSetting(const SettingsData& setting) = 0;
+    virtual bool deserializeSetting(const RawData& rawData, SettingsData& settingOut) = 0;
+
     virtual uint8_t computeIntegrityCode(const RawData& rawData) = 0;
 };
 

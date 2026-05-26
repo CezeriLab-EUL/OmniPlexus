@@ -253,6 +253,56 @@ public:
         return true;
     }
 
+    SerializedData serializeSetting(const SettingsData &setting) override {
+        uint8_t payload[ProtocolConstants::MAX_PAYLOAD_SIZE];
+        size_t offset = 0;
+
+        writeUint16LE(&payload[offset], setting.settingsID);
+        offset += 2;
+
+        payload[offset++] = setting.getTypeAndSize();
+
+        const size_t dataSize = setting.getDataSize();
+        memcpy(&payload[offset], setting.getData(), dataSize);
+        offset += dataSize;
+
+        if (SerializedData result; buildFrame(ProtocolConstants::FrameType::SETTING, payload, offset, result)) {
+            return result;
+        }
+
+        return SerializedData{};
+    }
+
+    bool deserializeSetting(const RawData &rawData, SettingsData &settingOut) override {
+        auto frameInfo = validateFrameHeader(rawData, ProtocolConstants::FrameType::SETTING);
+        if (!frameInfo.valid) { return false; }
+
+        const size_t payloadSize = rawData.size - ProtocolConstants::PROTOCOL_OVERHEAD;
+        if (payloadSize < 3) {
+            // minimum: settingsID(2) + typeAndSize(1)
+            LOG(LogLevel::OP_ERROR, "Invalid setting payload size");
+            return false;
+        }
+
+        const size_t crcOffset = rawData.size - ProtocolConstants::CRC_SIZE;
+        if (!verifyCRC(rawData, crcOffset)) { return false; }
+
+        const uint8_t* p = &rawData.data[frameInfo.payloadStart];
+
+        settingOut.settingsID = readUint16LE(p);
+        settingOut.setTypeAndSizeRaw(p[2]);
+
+        const size_t dataSize = settingOut.getDataSize();
+        if (dataSize + 3 > payloadSize) {
+            LOG(LogLevel::OP_ERROR, "Invalid setting data size");
+            return false;
+        }
+
+        memcpy(settingOut.getDataMutable(), &p[3], dataSize);
+
+        return true;
+    }
+
     uint8_t computeIntegrityCode(const RawData &rawData) override {
         return CRC8::compute(rawData);
     }

@@ -268,5 +268,37 @@
       "description": "Number of active LEDs currently lit",
       "type": "UINT16"
     }
+  ],
+  "settings": [
+    {
+      "id": 1,
+      "name": "OLED_BRIGHTNESS",
+      "description": "Default OLED brightness on startup (0-255)",
+      "type": "UINT8"
+    },
+    {
+      "id": 2,
+      "name": "OLED_CONTRAST",
+      "description": "Default OLED contrast on startup (0-255)",
+      "type": "UINT8"
+    },
+    {
+      "id": 3,
+      "name": "DEFAULT_FONT",
+      "description": "Default font preset on startup (0=small, 1=medium, 2=large)",
+      "type": "UINT8"
+    },
+    {
+      "id": 4,
+      "name": "LED_DEFAULT_COLOR",
+      "description": "Default LED color on startup (RGB565 format)",
+      "type": "UINT16"
+    },
+    {
+      "id": 5,
+      "name": "BUZZER_ENABLED",
+      "description": "Whether the buzzer is enabled (0=disabled, 1=enabled)",
+      "type": "UINT8"
+    }
   ]
 }

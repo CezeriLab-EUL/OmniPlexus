@@ -12,18 +12,38 @@
 namespace EspCommandType {
 
     // Turn on the built-in LED on the ESP board
-    constexpr uint16_t TURNON_BUILTIN_LED = 0x0101;
+    constexpr uint16_t TURNON_BUILTIN_LED = 0x0801;
 
     // Turn off the built-in LED on the ESP board
-    constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0102;
+    constexpr uint16_t TURNOFF_BUILTIN_LED = 0x0802;
 
     // --- Auto-generated telemetry request commands ---
 
     // Request current value of: Current board voltage in volts
-    constexpr uint16_t GET_BOARD_VOLTAGE = 0x0181;
+    constexpr uint16_t GET_BOARD_VOLTAGE = 0x0901;
 
     // Request current value of: ESP board temperature in celsius
-    constexpr uint16_t GET_BOARD_TEMPERATURE = 0x0182;
+    constexpr uint16_t GET_BOARD_TEMPERATURE = 0x0902;
+
+    // --- Auto-generated setting request and set commands ---
+
+    // Get current value of: WiFi channel to use for communication (1-13)
+    constexpr uint16_t GET_SETTING_WIFI_CHANNEL = 0x0A01;
+
+    // Set value of: WiFi channel to use for communication (1-13)
+    constexpr uint16_t SET_SETTING_WIFI_CHANNEL = 0x0B01;
+
+    // Get current value of: Interval in milliseconds between periodic telemetry sends
+    constexpr uint16_t GET_SETTING_TELEMETRY_INTERVAL_MS = 0x0A02;
+
+    // Set value of: Interval in milliseconds between periodic telemetry sends
+    constexpr uint16_t SET_SETTING_TELEMETRY_INTERVAL_MS = 0x0B02;
+
+    // Get current value of: Human-readable name for this ESP device
+    constexpr uint16_t GET_SETTING_DEVICE_NAME = 0x0A03;
+
+    // Set value of: Human-readable name for this ESP device
+    constexpr uint16_t SET_SETTING_DEVICE_NAME = 0x0B03;
 
 } // namespace EspCommandType
 
@@ -81,10 +101,42 @@ namespace IndicatorBoardCommandType {
     // --- Auto-generated telemetry request commands ---
 
     // Request current value of: Current OLED brightness level (0-255)
-    constexpr uint16_t GET_DISPLAY_BRIGHTNESS = 0x0081;
+    constexpr uint16_t GET_DISPLAY_BRIGHTNESS = 0x0101;
 
     // Request current value of: Number of active LEDs currently lit
-    constexpr uint16_t GET_LED_COUNT = 0x0082;
+    constexpr uint16_t GET_LED_COUNT = 0x0102;
+
+    // --- Auto-generated setting request and set commands ---
+
+    // Get current value of: Default OLED brightness on startup (0-255)
+    constexpr uint16_t GET_SETTING_OLED_BRIGHTNESS = 0x0201;
+
+    // Set value of: Default OLED brightness on startup (0-255)
+    constexpr uint16_t SET_SETTING_OLED_BRIGHTNESS = 0x0301;
+
+    // Get current value of: Default OLED contrast on startup (0-255)
+    constexpr uint16_t GET_SETTING_OLED_CONTRAST = 0x0202;
+
+    // Set value of: Default OLED contrast on startup (0-255)
+    constexpr uint16_t SET_SETTING_OLED_CONTRAST = 0x0302;
+
+    // Get current value of: Default font preset on startup (0=small, 1=medium, 2=large)
+    constexpr uint16_t GET_SETTING_DEFAULT_FONT = 0x0203;
+
+    // Set value of: Default font preset on startup (0=small, 1=medium, 2=large)
+    constexpr uint16_t SET_SETTING_DEFAULT_FONT = 0x0303;
+
+    // Get current value of: Default LED color on startup (RGB565 format)
+    constexpr uint16_t GET_SETTING_LED_DEFAULT_COLOR = 0x0204;
+
+    // Set value of: Default LED color on startup (RGB565 format)
+    constexpr uint16_t SET_SETTING_LED_DEFAULT_COLOR = 0x0304;
+
+    // Get current value of: Whether the buzzer is enabled (0=disabled, 1=enabled)
+    constexpr uint16_t GET_SETTING_BUZZER_ENABLED = 0x0205;
+
+    // Set value of: Whether the buzzer is enabled (0=disabled, 1=enabled)
+    constexpr uint16_t SET_SETTING_BUZZER_ENABLED = 0x0305;
 
 } // namespace IndicatorBoardCommandType
 

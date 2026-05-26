@@ -24,6 +24,11 @@ public:
 
         switch(cmd.commandType) {
 
+            case 0xFF00: {
+                // Protocol-level GET_ALL_SETTINGS — no parameters
+                return offset;
+            }
+
             case EspCommandType::TURNON_BUILTIN_LED: {
                 // No parameters
                 return offset;
@@ -188,6 +193,104 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case EspCommandType::GET_SETTING_WIFI_CHANNEL: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case EspCommandType::SET_SETTING_WIFI_CHANNEL: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case EspCommandType::SET_SETTING_TELEMETRY_INTERVAL_MS: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint32_t));
+                offset += sizeof(uint32_t);
+                return offset;
+            }
+
+            case EspCommandType::GET_SETTING_DEVICE_NAME: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case EspCommandType::SET_SETTING_DEVICE_NAME: {
+                // Auto-generated setting SET — one parameter
+                buffer[offset++] = cmd.params[0].getTypeAndSize();
+                const size_t strDataSize = cmd.params[0].getDataSize();
+                memcpy(&buffer[offset], cmd.params[0].getData(), strDataSize);
+                offset += strDataSize;
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_OLED_BRIGHTNESS: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_OLED_BRIGHTNESS: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_OLED_CONTRAST: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_OLED_CONTRAST: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_DEFAULT_FONT: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_DEFAULT_FONT: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_LED_DEFAULT_COLOR: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_LED_DEFAULT_COLOR: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_BUZZER_ENABLED: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
             default:
                 return 0; // Unknown command type
         }
@@ -208,6 +311,11 @@ offset += sizeof(uint16_t);
         cmdOut.commandType = cmdType;
 
         switch(cmdType) {
+
+            case 0xFF00: {
+                // Protocol-level GET_ALL_SETTINGS — no parameters
+                return true;
+            }
 
             case EspCommandType::TURNON_BUILTIN_LED: {
                 // No parameters
@@ -498,6 +606,122 @@ offset += sizeof(uint16_t);
                 return true;
             }
 
+            case EspCommandType::GET_SETTING_WIFI_CHANNEL: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case EspCommandType::SET_SETTING_WIFI_CHANNEL: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
+            case EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case EspCommandType::SET_SETTING_TELEMETRY_INTERVAL_MS: {
+                if (bufferSize < 2 + sizeof(uint32_t)) return false;
+                cmdOut.params[0] = uint32_t(0);
+                if (bufferSize - offset < sizeof(uint32_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint32_t));
+                offset += sizeof(uint32_t);
+                return true;
+            }
+
+            case EspCommandType::GET_SETTING_DEVICE_NAME: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case EspCommandType::SET_SETTING_DEVICE_NAME: {
+                if (bufferSize < 2 + 0) return false;
+                cmdOut.params[0] = "";
+                if (bufferSize < 3) return false;
+                const uint8_t typeAndSize = buffer[offset++];
+                cmdOut.params[0].setTypeAndSizeRaw(typeAndSize);
+                const size_t strSize = cmdOut.params[0].getDataSize();
+                if (bufferSize - offset < strSize) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], strSize);
+                offset += strSize;
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_OLED_BRIGHTNESS: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_OLED_BRIGHTNESS: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_OLED_CONTRAST: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_OLED_CONTRAST: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_DEFAULT_FONT: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_DEFAULT_FONT: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_LED_DEFAULT_COLOR: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_LED_DEFAULT_COLOR: {
+                if (bufferSize < 2 + sizeof(uint16_t)) return false;
+                cmdOut.params[0] = uint16_t(0);
+                if (bufferSize - offset < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                return true;
+            }
+
+            case IndicatorBoardCommandType::GET_SETTING_BUZZER_ENABLED: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
             default:
                 return false; // Unknown command type
         }
@@ -513,6 +737,7 @@ offset += sizeof(uint16_t);
     // Returns 0 for unknown command types.
     static uint8_t packedSize(uint16_t commandType) {
         switch (commandType) {
+            case 0xFF00: return 2;
             case EspCommandType::TURNON_BUILTIN_LED: return 2;
             case EspCommandType::TURNOFF_BUILTIN_LED: return 2;
             case IndicatorBoardCommandType::OLED_PRINT_STR: return 0xFF; // string param — variable length
@@ -535,6 +760,22 @@ offset += sizeof(uint16_t);
             case EspCommandType::GET_BOARD_TEMPERATURE: return 2;
             case IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS: return 2;
             case IndicatorBoardCommandType::GET_LED_COUNT: return 2;
+            case EspCommandType::GET_SETTING_WIFI_CHANNEL: return 2;
+            case EspCommandType::SET_SETTING_WIFI_CHANNEL: return 3;
+            case EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS: return 2;
+            case EspCommandType::SET_SETTING_TELEMETRY_INTERVAL_MS: return 6;
+            case EspCommandType::GET_SETTING_DEVICE_NAME: return 2;
+            case EspCommandType::SET_SETTING_DEVICE_NAME: return 0xFF;
+            case IndicatorBoardCommandType::GET_SETTING_OLED_BRIGHTNESS: return 2;
+            case IndicatorBoardCommandType::SET_SETTING_OLED_BRIGHTNESS: return 3;
+            case IndicatorBoardCommandType::GET_SETTING_OLED_CONTRAST: return 2;
+            case IndicatorBoardCommandType::SET_SETTING_OLED_CONTRAST: return 3;
+            case IndicatorBoardCommandType::GET_SETTING_DEFAULT_FONT: return 2;
+            case IndicatorBoardCommandType::SET_SETTING_DEFAULT_FONT: return 3;
+            case IndicatorBoardCommandType::GET_SETTING_LED_DEFAULT_COLOR: return 2;
+            case IndicatorBoardCommandType::SET_SETTING_LED_DEFAULT_COLOR: return 4;
+            case IndicatorBoardCommandType::GET_SETTING_BUZZER_ENABLED: return 2;
+            case IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED: return 3;
             default: return 0;
         }
     }
