@@ -11,6 +11,7 @@
 #include "opx/core/TransportManager.h"
 #include "opx/core/TelemetryManager.h"
 #include "opx/core/SettingsManager.h"
+#include "opx/core/DeviceRegistry.h"
 #include "opx/core/TriggerConfig.h"
 #include "opx/core/PlatformClock.h"
 #include "opx/protocol/BinaryEncoder.h"
@@ -85,6 +86,14 @@ void onResponse(ResponseHandler handler, void *context = nullptr);
 void onIncomingTelemetry(TelemetryHandler handler, void *context = nullptr);
 void update();
 
+    //Discovery methods
+    void announce();
+    void discover();
+    void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context = nullptr);
+    void onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context = nullptr);
+    bool isDeviceConnected(uint8_t typeShift) const;
+    uint8_t transportIDFor(uint8_t typeShift) const;
+
 #ifdef CDNC_ENABLED
 void exchangeCDnC();
 #endif
@@ -157,6 +166,7 @@ static uint8_t extractTypeShift(const RawData &frame);
 BinaryEncoder encoder;
 PlatformClock clock;
 TransportManager tm;
+DeviceRegistry deviceRegistry;
 
 #ifdef ESP32
 // FreeRTOS mutexes for thread safety between the listen task

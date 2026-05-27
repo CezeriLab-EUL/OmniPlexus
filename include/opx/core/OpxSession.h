@@ -17,6 +17,7 @@
 
 #include "opx/core/CommunicationManager.h"
 #include "opx/core/TransportManager.h"
+#include "opx/core/DeviceRegistry.h"
 #include "opx/interfaces/ITransport.h"
 #include "opx/protocol/BinaryEncoder.h"
 #include "opx/mutex/StdMutex.h"
@@ -73,6 +74,12 @@ public:
     void onCommandResponse(ResponseHandler handler);
 
     void onSetting(SettingHandler handler);
+
+    void discover();
+    void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context = nullptr);
+    void onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context = nullptr);
+    bool isDeviceConnected(uint8_t typeShift) const;
+    uint8_t transportIDFor(uint8_t typeShift) const;
 
     bool dispatch(const Command& cmd, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         if (!cm.has_value()) return false;
@@ -137,6 +144,7 @@ private:
     ResponseHandler responseHandler;
     SettingHandler settingHandler;
 
+    DeviceRegistry deviceRegistry;
     CommandRegistry reg;
 
     using ControllerDeleter = void(*)(void *);

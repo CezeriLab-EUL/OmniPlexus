@@ -75,6 +75,7 @@ bool OpxSession::connectHttp(const char *host, uint16_t port) {
 }
 
 void OpxSession::disconnect(OpxTransportID id) {
+    deviceRegistry.removeByTransport(static_cast<uint8_t>(id));
     removeTransport(id);
     // controllerMap intentionally not cleared — controllers survive
     // individual transport disconnections and are reusable on reconnect
@@ -99,6 +100,7 @@ void OpxSession::disconnectAll() {
     // because their destructors may reference cm internals.
     cm.reset();
     controllerMap.clear();
+    deviceRegistry.clear();
 }
 
 bool OpxSession::isConnected(OpxTransportID id) const {
@@ -143,11 +145,31 @@ void OpxSession::onSetting(SettingHandler handler) {
     }
 }
 
+void OpxSession::discover() {
+    if (!cm.has_value()) return;
+    Command cmd;
+    cmd.commandType = ProtocolConstants::DISCOVER_COMMAND;
+    cm->dispatchCommandToAll(cmd);
+}
+
+void OpxSession::onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context) {
+    deviceRegistry.onDeviceConnected(cb, context);
+}
+
+void OpxSession::onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context) {
+    deviceRegistry.onDeviceDisconnected(cb, context);
+}
+
+bool OpxSession::isDeviceConnected(uint8_t typeShift) const {
+    return deviceRegistry.isConnected(typeShift);
+}
+
+uint8_t OpxSession::transportIDFor(uint8_t typeShift) const {
+    return deviceRegistry.transportIDFor(typeShift);
+}
+
 void OpxSession::onCommand(CommandHandler handler) {
     commandHandler = std::move(handler);
-    if (cm.has_value()) {
-        cm->onCommandReceived(commandBridge, this);
-    }
 }
 
 void OpxSession::onCommandResponse(ResponseHandler handler) {
@@ -258,8 +280,8 @@ void OpxSession::removeTransport(OpxTransportID id) {
 void OpxSession::rewireHandlers() {
     if (!cm.has_value()) return;
 
+    cm->onCommandReceived(commandBridge, this);
     if (telemetryHandler) cm->onTelemetryReceived(telemetryBridge, this);
-    if (commandHandler) cm->onCommandReceived(commandBridge, this);
     if (responseHandler) cm->onResponseReceived(responseBridge, this);
     if (settingHandler) cm->onSettingReceived(settingBridge, this);
 }
@@ -318,6 +340,18 @@ void OpxSession::commandBridge(const Command &cmd,
                                uint8_t sourceTransportID,
                                void *context) {
     auto *session = static_cast<OpxSession *>(context);
+    // Handle protocol-level commands
+    if (cmd.commandType == ProtocolConstants::ANNOUNCE_COMMAND) {
+        const uint8_t peerTypeShift = static_cast<uint8_t>(cmd.params[0]);
+        session->deviceRegistry.handleAnnounce(peerTypeShift, sourceTransportID);
+        return;
+    }
+
+    if (cmd.commandType == ProtocolConstants::DISCOVER_COMMAND) {
+        // PC doesn't respond to discover for now — device role only
+        return;
+    }
+
     if (session->commandHandler) {
         session->commandHandler(cmd, seqNum, sourceTransportID);
     }

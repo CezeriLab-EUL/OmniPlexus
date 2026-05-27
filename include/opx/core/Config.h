@@ -61,6 +61,14 @@
 #endif
 #endif
 
+#ifndef MAX_DISCOVERED_DEVICES
+#ifdef __AVR__
+#define MAX_DISCOVERED_DEVICES 4
+#else
+#define MAX_DISCOVERED_DEVICES 16
+#endif
+#endif
+
 
 
 #endif //SMARTDRIVE_CONFIG_H

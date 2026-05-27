@@ -7,12 +7,11 @@
 
 #include "opx/core/platform.h"
 
-namespace ProtocolConstants
-{
+namespace ProtocolConstants {
     constexpr uint8_t STX_PATTERN = 0x02;
-    constexpr uint8_t STX_MASK = 0x1F;        // Lower 5 bits
-    constexpr uint8_t TYPE_SHIFT = 5;         // Upper 3 bits for type
-    constexpr uint8_t CRC_SIZE = 1;           // 1 byte is used for CRC
+    constexpr uint8_t STX_MASK = 0x1F; // Lower 5 bits
+    constexpr uint8_t TYPE_SHIFT = 5; // Upper 3 bits for type
+    constexpr uint8_t CRC_SIZE = 1; // 1 byte is used for CRC
     constexpr uint8_t TYPE_AND_SIZE_BYTE = 1; // 1 byte for ValueSource type and size
 
     constexpr uint16_t MAX_PAYLOAD_SIZE = 64;
@@ -32,21 +31,22 @@ namespace ProtocolConstants
     constexpr uint8_t SETTING_PREAMBLE_SIZE = 3; // settingID(2) + typeAndSize(1)
 
     constexpr uint16_t GET_ALL_SETTINGS_COMMAND = 0xFF00;
-    constexpr uint8_t STRING_SENTINEL = 0xFF; //returned by the command packer for commands that have string params (don't forget to update the generator if this value is modified)
+    constexpr uint16_t DISCOVER_COMMAND = 0xFD00;
+    constexpr uint16_t ANNOUNCE_COMMAND = 0xFD01;
+    constexpr uint8_t STRING_SENTINEL = 0xFF;
+    //returned by the command packer for commands that have string params (don't forget to update the generator if this value is modified)
 
 
     static constexpr uint8_t TRANSPORT_ID_DEFAULT = 0xFF;
 
-    enum class FrameType : uint8_t
-    {
+    enum class FrameType : uint8_t {
         COMMAND = 0x00,
         RESPONSE = 0x01,
         TELEMETRY = 0x02,
         SETTING = 0x03,
     };
 
-    enum class ResponseStatus : uint8_t
-    {
+    enum class ResponseStatus : uint8_t {
         OK = 0x00,
         UNKNOWN_COMMAND_TYPE = 0X01,
         INVALID_PARAMS = 0X02,
@@ -55,24 +55,24 @@ namespace ProtocolConstants
         NOT_SUPPORTED = 0X05,
     };
 
-    constexpr uint8_t encodeHeader(FrameType type)
-    {
+    constexpr uint8_t encodeHeader(FrameType type) {
         return (static_cast<uint8_t>(type) << TYPE_SHIFT) | STX_PATTERN;
     }
 
-    constexpr FrameType decodeType(const uint8_t header)
-    {
+    constexpr FrameType decodeType(const uint8_t header) {
         return static_cast<FrameType>(header >> TYPE_SHIFT);
     }
 
-    constexpr bool isValidHeader(const uint8_t header)
-    {
+    constexpr bool isValidHeader(const uint8_t header) {
         return (header & STX_MASK) == STX_PATTERN;
     }
 
-    constexpr bool isValidFrameType(const uint8_t header)
-    {
+    constexpr bool isValidFrameType(const uint8_t header) {
         return (header >> TYPE_SHIFT) <= static_cast<uint8_t>(FrameType::SETTING);
+    }
+
+    constexpr bool isProtocolLevelCommand(uint16_t cmdType) {
+        return cmdType == GET_ALL_SETTINGS_COMMAND || cmdType == DISCOVER_COMMAND || cmdType == ANNOUNCE_COMMAND;
     }
 }
 

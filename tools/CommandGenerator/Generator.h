@@ -422,6 +422,18 @@ private:
         out << "                return offset;\n";
         out << "            }\n\n";
 
+        out << "            case 0xFD00: {\n";
+        out << "                // Protocol-level DISCOVER — no parameters\n";
+        out << "                return offset;\n";
+        out << "            }\n\n";
+
+        out << "            case 0xFD01: {\n";
+        out << "                // Protocol-level ANNOUNCE — one uint8_t (typeShift)\n";
+        out << "                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));\n";
+        out << "                offset += sizeof(uint8_t);\n";
+        out << "                return offset;\n";
+        out << "            }\n\n";
+
         for (const auto &data: allData) {
             const std::string deviceName = data["device"].get<std::string>();
             for (const auto &cmd: data["commands"]) {
@@ -547,6 +559,20 @@ private:
 
         out << "            case 0xFF00: {\n";
         out << "                // Protocol-level GET_ALL_SETTINGS — no parameters\n";
+        out << "                return true;\n";
+        out << "            }\n\n";
+
+        out << "            case 0xFD00: {\n";
+        out << "                // Protocol-level DISCOVER — no parameters\n";
+        out << "                return true;\n";
+        out << "            }\n\n";
+
+        out << "            case 0xFD01: {\n";
+        out << "                // Protocol-level ANNOUNCE — one uint8_t (typeShift)\n";
+        out << "                if (bufferSize - offset < sizeof(uint8_t)) return false;\n";
+        out << "                cmdOut.params[0] = uint8_t(0);\n";
+        out << "                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));\n";
+        out << "                offset += sizeof(uint8_t);\n";
         out << "                return true;\n";
         out << "            }\n\n";
 
@@ -747,6 +773,8 @@ private:
         out << "        switch (commandType) {\n";
 
         out << "            case 0xFF00: return 2;\n";
+        out << "            case 0xFD00: return 2;\n";
+        out << "            case 0xFD01: return 3;\n"; // 2 (cmdType) + 1 (typeShift)
 
         for (const auto &data: allData) {
             const std::string deviceName = data["device"].get<std::string>();

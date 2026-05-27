@@ -9,6 +9,8 @@
 
 #include "opx/core/OpxDevice.h"
 
+#include "opx/constants/ProtocolConstants.h"
+
 #ifdef ARDUINO
 #ifdef ESP32
 void opxListenTask(void *param) {
@@ -409,11 +411,28 @@ uint8_t OpxDevice::extractTypeShift(const RawData &frame) {
 
 void OpxDevice::handleForwarding(const TaggedFrame &frame) {
     const uint8_t frameTypeShift = extractTypeShift(frame.frame);
-    const bool isProtocolLevel = (frameTypeShift == 0xFF);
+    bool isProtocolLevel = (frameTypeShift == 0xFF);
+    if (!isProtocolLevel &&
+        ProtocolConstants::decodeType(frame.frame.data[0]) == ProtocolConstants::FrameType::COMMAND &&
+        frame.frame.size >= 4) {
+        const uint16_t cmdType =
+            static_cast<uint16_t>(frame.frame.data[2]) |
+            (static_cast<uint16_t>(frame.frame.data[3]) << 8);
+        isProtocolLevel = ProtocolConstants::isProtocolLevelCommand(cmdType);
+        }
     const bool isForMe = (ownTypeShift != 0xFF) && (frameTypeShift == ownTypeShift);
 
     // Forward if not for me, or if protocol-level (broadcast — forward AND process)
     if (!isForMe || isProtocolLevel) {
+        // Convert RawData → SerializedData before forwarding
+        SerializedData toForward;
+        if (frame.frame.size > ProtocolConstants::MAX_FRAME_SIZE) {
+            LOG(LogLevel::OP_ERROR, "OpxDevice: frame too large to forward");
+            return;
+        }
+        memcpy(toForward.data, frame.frame.data, frame.frame.size);
+        toForward.size = frame.frame.size;
+
         for (uint8_t i = 0; i < MAX_FORWARDING_PAIRS; i++) {
             if (!forwardingPairs[i].active) continue;
 
@@ -422,9 +441,9 @@ void OpxDevice::handleForwarding(const TaggedFrame &frame) {
             const uint8_t b = forwardingPairs[i].transportB;
 
             if (src == a) {
-                tm.send(frame.frame, b);
+                tm.send(toForward, b);
             } else if (src == b) {
-                tm.send(frame.frame, a);
+                tm.send(toForward, a);
             }
         }
     }
@@ -433,6 +452,44 @@ void OpxDevice::handleForwarding(const TaggedFrame &frame) {
 void OpxDevice::forwardBridge(const TaggedFrame &frame, void *context) {
     auto *device = static_cast<OpxDevice *>(context);
     device->handleForwarding(frame);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISCOVERY
+// ─────────────────────────────────────────────────────────────────────────────
+void OpxDevice::announce() {
+    if (!cm) return;
+    if (ownTypeShift == 0xFF) {
+        LOG(LogLevel::OP_WARNING, "OpxDevice: announce() called but typeShift not set");
+        return;
+    }
+    Command cmd;
+    cmd.commandType = ProtocolConstants::ANNOUNCE_COMMAND;
+    cmd.params[0] = ownTypeShift;
+    cm->dispatch(cmd);
+}
+
+void OpxDevice::discover() {
+    if (!cm) return;
+    Command cmd;
+    cmd.commandType = ProtocolConstants::DISCOVER_COMMAND;
+    cm->dispatchCommandToAll(cmd);
+}
+
+void OpxDevice::onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context) {
+    deviceRegistry.onDeviceConnected(cb, context);
+}
+
+void OpxDevice::onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context) {
+    deviceRegistry.onDeviceDisconnected(cb, context);
+}
+
+bool OpxDevice::isDeviceConnected(uint8_t typeShift) const {
+    return deviceRegistry.isConnected(typeShift);
+}
+
+uint8_t OpxDevice::transportIDFor(uint8_t typeShift) const {
+    return deviceRegistry.transportIDFor(typeShift);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -632,6 +689,11 @@ bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id) {
     slot->active = true;
     activeSlotCount++;
 
+    // Auto-announce if typeShift is set
+    if (ownTypeShift != 0xFF) {
+        announce();
+    }
+
     return true;
 }
 
@@ -685,13 +747,26 @@ void OpxDevice::commandBridge(const Command &cmd,
 
     // Extract typeShift from command ID
     const uint8_t cmdTypeShift = (cmd.commandType >> 11) & 0x1F;
-    const bool isProtocolLevel = cmd.commandType >= 0xFE00;
+    const bool isProtocolLevel = ProtocolConstants::isProtocolLevelCommand(cmd.commandType);
     const bool isForMe = isProtocolLevel ||
                          (device->ownTypeShift == 0xFF) || // typeShift not set — process everything
                          (cmdTypeShift == device->ownTypeShift);
 
     if (!isForMe) {
         // Frame was already forwarded by forwardBridge — nothing to do here
+        return;
+    }
+
+    if (cmd.commandType == ProtocolConstants::DISCOVER_COMMAND) {
+        // Respond with our own announce
+        device->announce();
+        return;
+    }
+
+    if (cmd.commandType == ProtocolConstants::ANNOUNCE_COMMAND) {
+        // A peer is announcing itself — register it
+        const uint8_t peerTypeShift = static_cast<uint8_t>(cmd.params[0]);
+        device->deviceRegistry.handleAnnounce(peerTypeShift, sourceTransportID);
         return;
     }
 
@@ -719,7 +794,7 @@ void OpxDevice::responseBridge(const CommandResponse& response,
 
     // Check ownership — typeShift encoded in commandType
     const uint8_t responseTypeShift = (response.commandType >> 11) & 0x1F;
-    const bool isProtocolLevel = response.commandType >= 0xFE00;
+    const bool isProtocolLevel = ProtocolConstants::isProtocolLevelCommand(response.commandType);
     const bool isForMe = isProtocolLevel ||
                          (device->ownTypeShift == 0xFF) ||
                          (responseTypeShift == device->ownTypeShift);

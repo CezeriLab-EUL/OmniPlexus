@@ -281,6 +281,20 @@ public:
         return doDispatchTelemetry(value, ProtocolConstants::TRANSPORT_ID_DEFAULT, true);
     }
 
+    bool dispatchCommandToAll(const Command &cmd) {
+        MutexGuard guard(sendMutex);
+        if (!encoder || !transportManager) {
+            LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
+            return false;
+        }
+        const SerializedData frame = encoder->serializeCommand(cmd, ProtocolConstants::SEQ_NUM_FIRE_AND_FORGET);
+        if (frame.size == 0) {
+            LOG(LogLevel::OP_ERROR, "Failed to serialize command");
+            return false;
+        }
+        return transportManager->sendToAll(frame);
+    }
+
 
     bool dispatchSetting(const SettingsData &setting, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         MutexGuard guard(sendMutex);
