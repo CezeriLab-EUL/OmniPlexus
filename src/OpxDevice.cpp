@@ -221,6 +221,7 @@ if (activeSlotCount== 0) {
 
 void OpxDevice::endAll() {
 
+
 #ifdef ESP32
 stopListenTask();
 #endif
@@ -311,6 +312,18 @@ cm->processResponses();
     if (telemetryManager) {
     telemetryManager->send();
 }
+
+// Check heartbeat timeout
+    if (heartbeatReceived &&!connectionLost) {
+        const uint32_t now = clock.millis();
+        const uint32_t elapsed = now - lastHeartbeatMs;
+        if (elapsed >= heartbeatTimeoutMs) {
+            connectionLost = true;
+            if (connectionLostCallback) {
+                connectionLostCallback();
+            }
+        }
+    }
 }
 
 #ifdef CDNC_ENABLED
@@ -416,10 +429,10 @@ void OpxDevice::handleForwarding(const TaggedFrame &frame) {
         ProtocolConstants::decodeType(frame.frame.data[0]) == ProtocolConstants::FrameType::COMMAND &&
         frame.frame.size >= 4) {
         const uint16_t cmdType =
-            static_cast<uint16_t>(frame.frame.data[2]) |
-            (static_cast<uint16_t>(frame.frame.data[3]) << 8);
+                static_cast<uint16_t>(frame.frame.data[2]) |
+                (static_cast<uint16_t>(frame.frame.data[3]) << 8);
         isProtocolLevel = ProtocolConstants::isProtocolLevelCommand(cmdType);
-        }
+    }
     const bool isForMe = (ownTypeShift != 0xFF) && (frameTypeShift == ownTypeShift);
 
     // Forward if not for me, or if protocol-level (broadcast — forward AND process)
@@ -484,12 +497,26 @@ void OpxDevice::onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback 
     deviceRegistry.onDeviceDisconnected(cb, context);
 }
 
+
 bool OpxDevice::isDeviceConnected(uint8_t typeShift) const {
     return deviceRegistry.isConnected(typeShift);
 }
 
 uint8_t OpxDevice::transportIDFor(uint8_t typeShift) const {
     return deviceRegistry.transportIDFor(typeShift);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HeartBeat
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+void OpxDevice::onConnectionLost(ConnectionLostHandler callback) {
+    connectionLostCallback = callback;
+}
+
+void OpxDevice::setHeartbeatTimeout(uint32_t timeoutMs) {
+    heartbeatTimeoutMs = timeoutMs;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -770,6 +797,29 @@ void OpxDevice::commandBridge(const Command &cmd,
         return;
     }
 
+    if (cmd.commandType == ProtocolConstants::HEARTBEAT_COMMAND) {
+        // Reset timeout timer
+        device->lastHeartbeatMs = device->clock.millis();
+        device->heartbeatReceived = true;
+        device->connectionLost = false;
+
+        // Send ACK back to whoever sent the heartbeat
+        Command ack;
+        ack.commandType = ProtocolConstants::HEARTBEAT_ACK;
+        ack.params[0] = device->ownTypeShift; // identify ourselves
+        if (device->cm) {
+            device->cm->dispatch(ack, sourceTransportID);
+        }
+        return;
+    }
+
+    if (cmd.commandType == ProtocolConstants::HEARTBEAT_ACK) {
+        const uint8_t peerTypeShift = static_cast<uint8_t>(cmd.params[0]);
+        device->deviceRegistry.markAlive(peerTypeShift);
+        device->connectionLost = false;
+        return;
+    }
+
     // Auto-route setting commands to SettingsManager
     if (device->settingsManager) {
         const uint8_t category = (cmd.commandType >> 8) & 0x07;
@@ -787,10 +837,10 @@ void OpxDevice::commandBridge(const Command &cmd,
     }
 }
 
-void OpxDevice::responseBridge(const CommandResponse& response,
-                                uint8_t               sourceTransportID,
-                                void*                 context) {
-    auto* device = static_cast<OpxDevice*>(context);
+void OpxDevice::responseBridge(const CommandResponse &response,
+                               uint8_t sourceTransportID,
+                               void *context) {
+    auto *device = static_cast<OpxDevice *>(context);
 
     // Check ownership — typeShift encoded in commandType
     const uint8_t responseTypeShift = (response.commandType >> 11) & 0x1F;
@@ -807,10 +857,10 @@ void OpxDevice::responseBridge(const CommandResponse& response,
     }
 }
 
-void OpxDevice::telemetryBridge(const Telemetry& telemetry,
-                                 uint8_t          sourceTransportID,
-                                 void*            context) {
-    auto* device = static_cast<OpxDevice*>(context);
+void OpxDevice::telemetryBridge(const Telemetry &telemetry,
+                                uint8_t sourceTransportID,
+                                void *context) {
+    auto *device = static_cast<OpxDevice *>(context);
 
     // Check ownership — typeShift is upper byte of sourceID
     const uint8_t telemetryTypeShift = (telemetry.sourceID >> 8) & 0xFF;
@@ -826,8 +876,8 @@ void OpxDevice::telemetryBridge(const Telemetry& telemetry,
 }
 
 void OpxDevice::settingBridge(const SettingsData &setting,
-                               uint8_t sourceTransportID,
-                               void *context) {
+                              uint8_t sourceTransportID,
+                              void *context) {
     auto *device = static_cast<OpxDevice *>(context);
 
     // Check ownership — typeShift is upper byte of settingsID

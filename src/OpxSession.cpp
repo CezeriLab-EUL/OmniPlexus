@@ -17,6 +17,7 @@ OpxSession::OpxSession() {
         slots[i].active = false;
         slots[i].transport = nullptr;
     }
+    deviceRegistry.setClock(&clock);
 }
 
 OpxSession::~OpxSession() {
@@ -216,6 +217,14 @@ void OpxSession::ensureCommunicationManager() {
     rewireHandlers();
 }
 
+void OpxSession::setHeartbeatInterval(uint32_t intervalMs) {
+    heartbeatIntervalMs = intervalMs;
+}
+
+void OpxSession::setDeviceTimeout(uint32_t timeoutMs) {
+    deviceRegistry.setDeviceTimeout(timeoutMs);
+}
+
 bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
     // Find an inactive slot to store this transport
     TransportSlot *slot = nullptr;
@@ -302,6 +311,18 @@ void OpxSession::startThreads() {
         while (running) {
             cm->processCommands();
             cm->processResponses();
+
+            // Send heartbeat if interval has elapsed
+            const uint32_t now = clock.millis();
+            if (now - lastHeartbeatSentMs >= heartbeatIntervalMs) {
+                Command hb;
+                hb.commandType = ProtocolConstants::HEARTBEAT_COMMAND;
+                cm->dispatchCommandToAll(hb);
+                lastHeartbeatSentMs = now;
+            }
+
+            deviceRegistry.checkTimeouts();
+
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
@@ -326,8 +347,8 @@ void OpxSession::telemetryBridge(const Telemetry &telemetry,
 }
 
 void OpxSession::settingBridge(const SettingsData &setting,
-                                uint8_t sourceTransportID,
-                                void *context) {
+                               uint8_t sourceTransportID,
+                               void *context) {
     auto *session = static_cast<OpxSession *>(context);
     if (session->settingHandler) {
         session->settingHandler(setting, sourceTransportID);
@@ -351,6 +372,18 @@ void OpxSession::commandBridge(const Command &cmd,
         // PC doesn't respond to discover for now — device role only
         return;
     }
+
+    if (cmd.commandType == ProtocolConstants::HEARTBEAT_COMMAND) {
+        // PC doesn't respond to heartbeat commands for now — device role only
+        return;
+    }
+
+    if (cmd.commandType == ProtocolConstants::HEARTBEAT_ACK) {
+        const uint8_t peerTypeShift = static_cast<uint8_t>(cmd.params[0]);
+        session->deviceRegistry.markAlive(peerTypeShift);
+        return;
+    }
+
 
     if (session->commandHandler) {
         session->commandHandler(cmd, seqNum, sourceTransportID);

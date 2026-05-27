@@ -18,6 +18,7 @@
 #include "opx/types/ProtocolTypes.h"
 #include "opx/utils/Logger.h"
 #include "opx/interfaces/ITransport.h"
+#include "opx/interfaces/IPlatformClock.h"
 
 #ifdef ESP32
 #include "opx/transport/wifi/EspWiFiTransport.h"
@@ -48,6 +49,8 @@ public:
     using TelemetryHandler = void (*)(const Telemetry &,
                                       uint8_t sourceTransportID, void *context);
     using SettingChangedHandler = void (*)(uint16_t settingID, const ValueSource &newValue, void *context);
+
+    using ConnectionLostHandler = void (*)();
 
     OpxDevice();
 
@@ -84,15 +87,19 @@ void endAll();
 void onCommand(CommandHandler handler, void *context = nullptr);
 void onResponse(ResponseHandler handler, void *context = nullptr);
 void onIncomingTelemetry(TelemetryHandler handler, void *context = nullptr);
+void onConnectionLost(ConnectionLostHandler callback);
 void update();
 
-    //Discovery methods
-    void announce();
-    void discover();
-    void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context = nullptr);
-    void onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context = nullptr);
-    bool isDeviceConnected(uint8_t typeShift) const;
-    uint8_t transportIDFor(uint8_t typeShift) const;
+//Discovery methods
+void announce();
+void discover();
+void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context = nullptr);
+void onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context = nullptr);
+bool isDeviceConnected(uint8_t typeShift) const;
+uint8_t transportIDFor(uint8_t typeShift) const;
+
+//Heartbeat methods
+void setHeartbeatTimeout(uint32_t timeoutMs);
 
 #ifdef CDNC_ENABLED
 void exchangeCDnC();
@@ -168,6 +175,11 @@ PlatformClock clock;
 TransportManager tm;
 DeviceRegistry deviceRegistry;
 
+uint32_t heartbeatTimeoutMs = 3000;
+uint32_t lastHeartbeatMs = 0;
+bool heartbeatReceived = false;
+bool connectionLost = false;
+
 #ifdef ESP32
 // FreeRTOS mutexes for thread safety between the listen task
 // and the main loop's processCommands() / processResponses() calls.
@@ -206,6 +218,7 @@ ResponseHandler responseHandler = nullptr;
 void *responseHandlerContext = nullptr;
 TelemetryHandler telemetryHandler = nullptr;
 void *telemetryHandlerContext = nullptr;
+ConnectionLostHandler connectionLostCallback = nullptr;
 
 };
 

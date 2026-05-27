@@ -8,6 +8,7 @@
 #include "opx/core/platform.h"
 #include "opx/core/Config.h"
 #include "opx/utils/Logger.h"
+#include "opx/interfaces/IPlatformClock.h"
 
 class DeviceRegistry {
 public:
@@ -18,6 +19,7 @@ private:
     struct DeviceEntry {
         uint8_t typeShift = 0;
         uint8_t transportID = 0;
+        uint32_t lastSeenMs = 0;
         bool active = false;
     };
 
@@ -29,6 +31,9 @@ private:
     void *connectedCallbackContext = nullptr;
     void *disconnectedCallbackContext = nullptr;
 
+    IPlatformClock *clock = nullptr;
+    uint32_t deviceTimeoutMs = 5000;
+
     int16_t findIndex(uint8_t typeShift) const {
         for (uint8_t i = 0; i < MAX_DISCOVERED_DEVICES; i++) {
             if (entries[i].active && entries[i].typeShift == typeShift) {
@@ -39,10 +44,19 @@ private:
     }
 
 public:
-    DeviceRegistry() {
+    DeviceRegistry(IPlatformClock *clock = nullptr) : clock(clock) {
         for (uint8_t i = 0; i < MAX_DISCOVERED_DEVICES; i++) {
             entries[i].active = false;
         }
+    }
+
+    void setClock(IPlatformClock *c) { clock = c; }
+    void setDeviceTimeout(uint32_t timeoutMs) { deviceTimeoutMs = timeoutMs; }
+    void markAlive(uint8_t typeShift) {
+        if (!clock) return;
+        const int16_t idx = findIndex(typeShift);
+        if (idx < 0) return;
+        entries[idx].lastSeenMs = clock->millis();
     }
 
     void handleAnnounce(uint8_t typeShift, uint8_t transportID) {
@@ -50,6 +64,8 @@ public:
 
         if (idx >= 0) {
             entries[idx].transportID = transportID;
+            // Update lastSeenMs on re-announce
+            if (clock) entries[idx].lastSeenMs = clock->millis();
             return;
         }
 
@@ -63,6 +79,7 @@ public:
                 entries[i].active = true;
                 entries[i].typeShift = typeShift;
                 entries[i].transportID = transportID;
+                entries[i].lastSeenMs  = clock ? clock->millis() : 0;
                 count++;
                 if (connectedCallback) {
                     connectedCallback(typeShift, transportID, connectedCallbackContext);
@@ -86,6 +103,28 @@ public:
         count--;
         if (disconnectedCallback) {
             disconnectedCallback(typeShift, transportID, disconnectedCallbackContext);
+        }
+    }
+
+    void checkTimeouts() {
+        if (!clock) return;
+        const uint32_t now = clock->millis();
+        for (uint8_t i = 0; i < MAX_DISCOVERED_DEVICES; i++) {
+            if (!entries[i].active) continue;
+            if (entries[i].lastSeenMs == 0) continue; // never seen yet — skip
+
+            const uint32_t elapsed = now - entries[i].lastSeenMs;
+            if (elapsed >= deviceTimeoutMs) {
+                const uint8_t typeShift   = entries[i].typeShift;
+                const uint8_t transportID = entries[i].transportID;
+                entries[i].active         = false;
+                entries[i].typeShift      = 0;
+                entries[i].transportID    = 0;
+                count--;
+                if (disconnectedCallback) {
+                    disconnectedCallback(typeShift, transportID, disconnectedCallbackContext);
+                }
+            }
         }
     }
 

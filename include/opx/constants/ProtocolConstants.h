@@ -33,6 +33,9 @@ namespace ProtocolConstants {
     constexpr uint16_t GET_ALL_SETTINGS_COMMAND = 0xFF00;
     constexpr uint16_t DISCOVER_COMMAND = 0xFD00;
     constexpr uint16_t ANNOUNCE_COMMAND = 0xFD01;
+    constexpr uint16_t HEARTBEAT_COMMAND = 0xFC00;
+    constexpr uint16_t HEARTBEAT_ACK = 0xFC01;
+
     constexpr uint8_t STRING_SENTINEL = 0xFF;
     //returned by the command packer for commands that have string params (don't forget to update the generator if this value is modified)
 
@@ -72,7 +75,11 @@ namespace ProtocolConstants {
     }
 
     constexpr bool isProtocolLevelCommand(uint16_t cmdType) {
-        return cmdType == GET_ALL_SETTINGS_COMMAND || cmdType == DISCOVER_COMMAND || cmdType == ANNOUNCE_COMMAND;
+        return cmdType == GET_ALL_SETTINGS_COMMAND ||
+               cmdType == DISCOVER_COMMAND ||
+               cmdType == ANNOUNCE_COMMAND ||
+               cmdType == HEARTBEAT_COMMAND ||
+               cmdType == HEARTBEAT_ACK;
     }
 }
 

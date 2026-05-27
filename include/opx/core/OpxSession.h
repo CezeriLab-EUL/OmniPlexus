@@ -23,6 +23,7 @@
 #include "opx/mutex/StdMutex.h"
 #include "opx/registry/CommandRegistry.h"
 #include "opx/types/ProtocolTypes.h"
+#include "opx/core/PlatformClock.h"
 #include "opx/utils/Logger.h"
 
 enum class OpxTransportID: uint8_t {
@@ -80,6 +81,9 @@ public:
     void onDeviceDisconnected(DeviceRegistry::DeviceDisconnectedCallback cb, void *context = nullptr);
     bool isDeviceConnected(uint8_t typeShift) const;
     uint8_t transportIDFor(uint8_t typeShift) const;
+
+    void setHeartbeatInterval(uint32_t intervalMs);
+    void setDeviceTimeout(uint32_t timeoutMs);
 
     bool dispatch(const Command& cmd, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         if (!cm.has_value()) return false;
@@ -153,6 +157,10 @@ private:
     std::atomic<bool> running{false};
     std::thread listenerThread;
     std::thread processingThread;
+
+    PlatformClock clock;
+    uint32_t heartbeatIntervalMs = 1000;
+    uint32_t lastHeartbeatSentMs = 0;
 };
 
 template<typename TController>
