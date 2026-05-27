@@ -8,12 +8,19 @@
 
 #include "opx/core/platform.h"
 #include "opx/core/OpxDevice.h"
+#include "opx/core/TriggerConfig.h"
 #include "SettingIDs.h"
+#include "TelemetrySourceIDs.h"
 
 inline void registerEspSettings(OpxDevice& device) {
     device.registerSetting(SettingID::EspSetting::WIFI_CHANNEL, ValueType::UINT8);
     device.registerSetting(SettingID::EspSetting::TELEMETRY_INTERVAL_MS, ValueType::UINT32);
     device.registerSetting(SettingID::EspSetting::DEVICE_NAME, ValueType::STRING);
+}
+
+inline void registerEspTelemetry(OpxDevice& device) {
+    device.registerTelemetry(TelemetrySource::EspTelemetrySource::BOARD_VOLTAGE, TriggerConfig::periodic(5000UL));
+    device.registerTelemetry(TelemetrySource::EspTelemetrySource::BOARD_TEMPERATURE, TriggerConfig::periodic(10000UL));
 }
 
 #endif // SMARTDRIVE_ESPREGISTERALL_H

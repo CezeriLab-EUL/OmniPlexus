@@ -8,7 +8,9 @@
 
 #include "opx/core/platform.h"
 #include "opx/core/OpxDevice.h"
+#include "opx/core/TriggerConfig.h"
 #include "SettingIDs.h"
+#include "TelemetrySourceIDs.h"
 
 inline void registerIndicatorBoardSettings(OpxDevice& device) {
     device.registerSetting(SettingID::IndicatorBoardSetting::OLED_BRIGHTNESS, ValueType::UINT8);
@@ -16,6 +18,11 @@ inline void registerIndicatorBoardSettings(OpxDevice& device) {
     device.registerSetting(SettingID::IndicatorBoardSetting::DEFAULT_FONT, ValueType::UINT8);
     device.registerSetting(SettingID::IndicatorBoardSetting::LED_DEFAULT_COLOR, ValueType::UINT16);
     device.registerSetting(SettingID::IndicatorBoardSetting::BUZZER_ENABLED, ValueType::UINT8);
+}
+
+inline void registerIndicatorBoardTelemetry(OpxDevice& device) {
+    device.registerTelemetry(TelemetrySource::IndicatorBoardTelemetrySource::DISPLAY_BRIGHTNESS, TriggerConfig::onChange(1f));
+    device.registerTelemetry(TelemetrySource::IndicatorBoardTelemetrySource::LED_COUNT, TriggerConfig::onChange(1f));
 }
 
 #endif // SMARTDRIVE_INDICATORBOARDREGISTERALL_H

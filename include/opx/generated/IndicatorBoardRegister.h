@@ -12,10 +12,11 @@
 #include "IndicatorBoardRegisterAll.h"
 
 // Single call to fully register this device with OpxDevice.
-// Sets typeShift and registers all settings.
+// Sets typeShift, registers all settings and telemetry sources.
 inline void registerIndicatorBoard(OpxDevice& device) {
     device.setTypeShift(IndicatorBoardController::TYPE_ID);
     registerIndicatorBoardSettings(device);
+    registerIndicatorBoardTelemetry(device);
 }
 
 #endif // SMARTDRIVE_INDICATORBOARDREGISTER_H

@@ -260,13 +260,15 @@
       "id": 1,
       "name": "DISPLAY_BRIGHTNESS",
       "description": "Current OLED brightness level (0-255)",
-      "type": "UINT8"
+      "type": "UINT8",
+      "trigger": { "type": "onChange", "threshold": 1.0 }
     },
     {
       "id": 2,
       "name": "LED_COUNT",
       "description": "Number of active LEDs currently lit",
-      "type": "UINT16"
+      "type": "UINT16",
+      "trigger": { "type": "onChange", "threshold": 1.0 }
     }
   ],
   "settings": [

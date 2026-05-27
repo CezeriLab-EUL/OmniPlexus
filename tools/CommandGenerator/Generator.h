@@ -128,6 +128,31 @@ private:
         return "ValueType::" + type;
     }
 
+    static std::string triggerConfigExpression(const json &src) {
+        if (!src.contains("trigger")) {
+            return "TriggerConfig::onChange(0.0f)"; // default
+        }
+        const auto &trigger = src["trigger"];
+        const std::string type = trigger["type"].get<std::string>();
+
+        if (type == "onChange") {
+            const float threshold = trigger.contains("threshold")
+                                        ? trigger["threshold"].get<float>()
+                                        : 0.0f;
+            std::ostringstream oss;
+            oss << "TriggerConfig::onChange(" << threshold << "f)";
+            return oss.str();
+        }
+        if (type == "periodic") {
+            const uint32_t ms = trigger["intervalMs"].get<uint32_t>();
+            return "TriggerConfig::periodic(" + std::to_string(ms) + "UL)";
+        }
+        if (type == "onRequest") {
+            return "TriggerConfig::onRequest()";
+        }
+        return "TriggerConfig::onChange(0.0f)"; // fallback
+    }
+
     // Compute the minimum expected payload size for a command (required params only)
     static size_t minPayloadSize(const json &cmd) {
         size_t size = COMMAND_TYPE_SIZE;
@@ -342,10 +367,12 @@ private:
         out << "#define " << guardName << "\n\n";
         out << "#include \"opx/core/platform.h\"\n";
         out << "#include \"opx/core/OpxDevice.h\"\n";
-        out << "#include \"SettingIDs.h\"\n\n";
+        out << "#include \"opx/core/TriggerConfig.h\"\n";
+        out << "#include \"SettingIDs.h\"\n";
+        out << "#include \"TelemetrySourceIDs.h\"\n\n";
 
+        // ── Settings registration ─────────────────────────────────────────────
         out << "inline void register" << deviceName << "Settings(OpxDevice& device) {\n";
-
         if (!data.contains("settings") || data["settings"].empty()) {
             out << "    // No settings defined for " << deviceName << "\n";
         } else {
@@ -356,8 +383,23 @@ private:
                         << name << ", " << valueTypeEnum(type) << ");\n";
             }
         }
-
         out << "}\n\n";
+
+        // ── Telemetry registration ────────────────────────────────────────────
+        out << "inline void register" << deviceName << "Telemetry(OpxDevice& device) {\n";
+        if (!data.contains("telemetry") || data["telemetry"].empty()) {
+            out << "    // No telemetry defined for " << deviceName << "\n";
+        } else {
+            for (const auto &src: data["telemetry"]) {
+                const std::string name = src["name"].get<std::string>();
+                const std::string trigger = triggerConfigExpression(src);
+                out << "    device.registerTelemetry("
+                        << "TelemetrySource::" << deviceName << "TelemetrySource::" << name
+                        << ", " << trigger << ");\n";
+            }
+        }
+        out << "}\n\n";
+
         out << "#endif // " << guardName << "\n";
         return out.str();
     }
@@ -382,10 +424,11 @@ private:
         out << "#include \"" << deviceName << "RegisterAll.h\"\n\n";
 
         out << "// Single call to fully register this device with OpxDevice.\n";
-        out << "// Sets typeShift and registers all settings.\n";
+        out << "// Sets typeShift, registers all settings and telemetry sources.\n";
         out << "inline void register" << deviceName << "(OpxDevice& device) {\n";
         out << "    device.setTypeShift(" << deviceName << "Controller::TYPE_ID);\n";
         out << "    register" << deviceName << "Settings(device);\n";
+        out << "    register" << deviceName << "Telemetry(device);\n";
         out << "}\n\n";
 
         out << "#endif // " << guardName << "\n";

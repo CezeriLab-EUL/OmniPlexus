@@ -12,10 +12,11 @@
 #include "EspRegisterAll.h"
 
 // Single call to fully register this device with OpxDevice.
-// Sets typeShift and registers all settings.
+// Sets typeShift, registers all settings and telemetry sources.
 inline void registerEsp(OpxDevice& device) {
     device.setTypeShift(EspController::TYPE_ID);
     registerEspSettings(device);
+    registerEspTelemetry(device);
 }
 
 #endif // SMARTDRIVE_ESPREGISTER_H

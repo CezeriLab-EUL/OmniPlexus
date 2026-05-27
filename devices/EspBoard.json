@@ -24,13 +24,15 @@
       "id": 1,
       "name": "BOARD_VOLTAGE",
       "description": "Current board voltage in volts",
-      "type": "UINT8"
+      "type": "UINT8",
+      "trigger": { "type": "periodic", "intervalMs": 5000 }
     },
     {
       "id": 2,
       "name": "BOARD_TEMPERATURE",
       "description": "ESP board temperature in celsius",
-      "type": "FLOAT"
+      "type": "FLOAT",
+      "trigger": { "type": "periodic", "intervalMs": 10000 }
     }
   ],
   "settings": [

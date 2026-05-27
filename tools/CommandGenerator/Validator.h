@@ -230,9 +230,97 @@ private:
             }
         }
 
-        if (!source.contains("description") || !source["description"].is_string() || source["description"].get<
-                std::string>().empty()) {
+        if (!source.contains("description") || !source["description"].is_string() ||
+            source["description"].get<std::string>().empty()) {
             result.addWarning(label + " is missing a 'description' field");
+        }
+
+        // ── Trigger validation ────────────────────────────────────────────────
+        if (source.contains("trigger")) {
+            const auto &trigger = source["trigger"];
+
+            if (!trigger.is_object()) {
+                result.addError(label + " 'trigger' field must be a JSON object");
+                return;
+            }
+
+            if (!trigger.contains("type") || !trigger["type"].is_string()) {
+                result.addError(label + " 'trigger' is missing the 'type' field");
+                return;
+            }
+
+            const std::string triggerType = trigger["type"].get<std::string>();
+
+            if (triggerType != "onChange" && triggerType != "periodic" && triggerType != "onRequest") {
+                result.addError(
+                    label + " 'trigger.type' has invalid value '" + triggerType +
+                    "'. Must be one of: onChange, periodic, onRequest"
+                );
+                return;
+            }
+
+            if (triggerType == "periodic") {
+                if (!trigger.contains("intervalMs")) {
+                    result.addError(
+                        label + " 'trigger.type' is 'periodic' but 'intervalMs' is missing"
+                    );
+                } else if (!trigger["intervalMs"].is_number_unsigned()) {
+                    result.addError(
+                        label + " 'trigger.intervalMs' must be a positive integer"
+                    );
+                } else {
+                    const uint32_t intervalMs = trigger["intervalMs"].get<uint32_t>();
+                    if (intervalMs < 10) {
+                        result.addError(
+                            label + " 'trigger.intervalMs' must be at least 10ms (got " +
+                            std::to_string(intervalMs) + ")"
+                        );
+                    }
+                    if (intervalMs > 65535) {
+                        result.addError(
+                            label + " 'trigger.intervalMs' must be <= 65535ms (got " +
+                            std::to_string(intervalMs) + ")"
+                        );
+                    }
+                }
+                if (trigger.contains("threshold")) {
+                    result.addError(
+                        label + " 'trigger.threshold' is not valid for 'periodic' triggers"
+                    );
+                }
+            }
+
+            if (triggerType == "onChange") {
+                if (trigger.contains("threshold")) {
+                    if (!trigger["threshold"].is_number()) {
+                        result.addError(
+                            label + " 'trigger.threshold' must be a number"
+                        );
+                    } else if (trigger["threshold"].get<float>() < 0.0f) {
+                        result.addError(
+                            label + " 'trigger.threshold' must be >= 0"
+                        );
+                    }
+                }
+                if (trigger.contains("intervalMs")) {
+                    result.addError(
+                        label + " 'trigger.intervalMs' is not valid for 'onChange' triggers"
+                    );
+                }
+            }
+
+            if (triggerType == "onRequest") {
+                if (trigger.contains("intervalMs")) {
+                    result.addError(
+                        label + " 'trigger.intervalMs' is not valid for 'onRequest' triggers"
+                    );
+                }
+                if (trigger.contains("threshold")) {
+                    result.addError(
+                        label + " 'trigger.threshold' is not valid for 'onRequest' triggers"
+                    );
+                }
+            }
         }
     }
 
@@ -292,86 +380,86 @@ private:
     }
 
     static void validateSettings(const json &data, ValidationResult &result) {
-    if (!data.contains("settings")) return; // settings is optional
+        if (!data.contains("settings")) return; // settings is optional
 
-    if (!data["settings"].is_array()) {
-        result.addError("'settings' field must be an array");
-        return;
+        if (!data["settings"].is_array()) {
+            result.addError("'settings' field must be an array");
+            return;
+        }
+
+        if (data["settings"].empty()) {
+            result.addWarning("'settings' array is empty — nothing to generate");
+            return;
+        }
+
+        std::set<uint16_t> seenIDs;
+        std::set<std::string> seenNames;
+        uint16_t prevID = 0;
+
+        for (size_t i = 0; i < data["settings"].size(); ++i) {
+            const auto &setting = data["settings"][i];
+            const std::string label = "settings[" + std::to_string(i) + "]";
+
+            if (!setting.contains("name") || !setting["name"].is_string() ||
+                setting["name"].get<std::string>().empty()) {
+                result.addError(label + " is missing a valid 'name' field");
+            } else {
+                const std::string name = setting["name"].get<std::string>();
+                if (!isValidCommandName(name)) {
+                    result.addError(
+                        "Setting '" + name + "' has invalid name format. "
+                        "Names must start with a letter or underscore, and contain only "
+                        "alphanumeric characters and underscores"
+                    );
+                }
+                if (seenNames.count(name)) {
+                    result.addError(label + " has duplicate 'name' value (" + name + ")");
+                }
+                seenNames.insert(name);
+            }
+
+            if (!setting.contains("id") || !setting["id"].is_number_unsigned()) {
+                result.addError(label + " is missing a valid 'id' field");
+            } else {
+                const uint16_t id = setting["id"].get<uint16_t>();
+                if (id < MIN_ID) {
+                    result.addError(
+                        label + " has invalid 'id' value (" + toHex(id) +
+                        "). Must be >= " + toHex(MIN_ID)
+                    );
+                }
+                if (seenIDs.count(id)) {
+                    result.addError(label + " has duplicate 'id' value (" + toHex(id) + ")");
+                }
+                seenIDs.insert(id);
+
+                if (prevID > 0 && id != prevID + 1) {
+                    result.addWarning(
+                        "Settings ID gap detected between " + toHex(prevID) +
+                        " and " + toHex(id) + " (this may be intentional)"
+                    );
+                }
+                prevID = id;
+            }
+
+            if (!setting.contains("type") || !setting["type"].is_string()) {
+                result.addError(label + " is missing the 'type' field");
+            } else {
+                const std::string type = setting["type"].get<std::string>();
+                if (!VALID_TYPES.count(type)) {
+                    result.addError(
+                        label + " has unsupported type '" + type + "'. "
+                        "Valid types are: UINT8, INT8, FLOAT, UINT16, INT16, UINT32, INT32, STRING"
+                    );
+                }
+            }
+
+            if (!setting.contains("description") || !setting["description"].is_string() ||
+                setting["description"].get<std::string>().empty()) {
+                result.addWarning(label + " is missing a 'description' field");
+            }
+        }
     }
-
-    if (data["settings"].empty()) {
-        result.addWarning("'settings' array is empty — nothing to generate");
-        return;
-    }
-
-    std::set<uint16_t> seenIDs;
-    std::set<std::string> seenNames;
-    uint16_t prevID = 0;
-
-    for (size_t i = 0; i < data["settings"].size(); ++i) {
-        const auto &setting = data["settings"][i];
-        const std::string label = "settings[" + std::to_string(i) + "]";
-
-        if (!setting.contains("name") || !setting["name"].is_string() ||
-            setting["name"].get<std::string>().empty()) {
-            result.addError(label + " is missing a valid 'name' field");
-        } else {
-            const std::string name = setting["name"].get<std::string>();
-            if (!isValidCommandName(name)) {
-                result.addError(
-                    "Setting '" + name + "' has invalid name format. "
-                    "Names must start with a letter or underscore, and contain only "
-                    "alphanumeric characters and underscores"
-                );
-            }
-            if (seenNames.count(name)) {
-                result.addError(label + " has duplicate 'name' value (" + name + ")");
-            }
-            seenNames.insert(name);
-        }
-
-        if (!setting.contains("id") || !setting["id"].is_number_unsigned()) {
-            result.addError(label + " is missing a valid 'id' field");
-        } else {
-            const uint16_t id = setting["id"].get<uint16_t>();
-            if (id < MIN_ID) {
-                result.addError(
-                    label + " has invalid 'id' value (" + toHex(id) +
-                    "). Must be >= " + toHex(MIN_ID)
-                );
-            }
-            if (seenIDs.count(id)) {
-                result.addError(label + " has duplicate 'id' value (" + toHex(id) + ")");
-            }
-            seenIDs.insert(id);
-
-            if (prevID > 0 && id != prevID + 1) {
-                result.addWarning(
-                    "Settings ID gap detected between " + toHex(prevID) +
-                    " and " + toHex(id) + " (this may be intentional)"
-                );
-            }
-            prevID = id;
-        }
-
-        if (!setting.contains("type") || !setting["type"].is_string()) {
-            result.addError(label + " is missing the 'type' field");
-        } else {
-            const std::string type = setting["type"].get<std::string>();
-            if (!VALID_TYPES.count(type)) {
-                result.addError(
-                    label + " has unsupported type '" + type + "'. "
-                    "Valid types are: UINT8, INT8, FLOAT, UINT16, INT16, UINT32, INT32, STRING"
-                );
-            }
-        }
-
-        if (!setting.contains("description") || !setting["description"].is_string() ||
-            setting["description"].get<std::string>().empty()) {
-            result.addWarning(label + " is missing a 'description' field");
-        }
-    }
-}
 
 public:
     static ValidationResult validate(const json &data) {
