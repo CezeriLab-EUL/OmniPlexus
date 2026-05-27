@@ -11,8 +11,8 @@
 
 #ifdef ARDUINO
 #ifdef ESP32
-void opxListenTask(void* param) {
-    OpxDevice* device = static_cast<OpxDevice*>(param);
+void opxListenTask(void *param) {
+    OpxDevice *device = static_cast<OpxDevice *>(param);
 
     for (;;) {
         // Check stop flag before acquiring any mutex — ensures we never
@@ -39,19 +39,23 @@ void opxListenTask(void* param) {
 
 OpxDevice::OpxDevice() {
     for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
-        slots[i].active    = false;
+        slots[i].active = false;
         slots[i].transport = nullptr;
     }
 
+    for (uint8_t i = 0; i < MAX_FORWARDING_PAIRS; i++) {
+        forwardingPairs[i].active = false;
+    }
+
 #ifdef ESP32
-    // Semaphore is created once at construction and reused across
-    // begin/end cycles — avoids repeated heap allocation.
-    listenTaskDoneSem = xSemaphoreCreateBinary();
+// Semaphore is created once at construction and reused across
+// begin/end cycles — avoids repeated heap allocation.
+listenTaskDoneSem= xSemaphoreCreateBinary();
 #endif
 
 #ifdef CDNC_ENABLED
-    cdncActive  = false;
-    cdncManager = nullptr;
+cdncActive=false;
+cdncManager=nullptr;
 #endif
 }
 
@@ -59,10 +63,10 @@ OpxDevice::~OpxDevice() {
     endAll();
 
 #ifdef ESP32
-    if (listenTaskDoneSem) {
-        vSemaphoreDelete(listenTaskDoneSem);
-        listenTaskDoneSem = nullptr;
-    }
+if (listenTaskDoneSem) {
+    vSemaphoreDelete(listenTaskDoneSem);
+    listenTaskDoneSem = nullptr;
+}
 #endif
 }
 
@@ -79,7 +83,7 @@ bool OpxDevice::beginWiFi(uint16_t port, uint32_t stackSize) {
         return false;
     }
 
-    auto* transport = new EspWiFiTransport(port);
+    auto *transport = new EspWiFiTransport(port);
     if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI)) {
         // addTransport deletes transport on failure
         return false;
@@ -108,7 +112,7 @@ bool OpxDevice::beginHttpServer(uint16_t port, uint32_t stackSize) {
         return false;
     }
 
-    auto* transport = new EspHttpTransport(port);
+    auto *transport = new EspHttpTransport(port);
     if (!addTransport(transport, OpxDeviceTransportID::OPX_HTTP)) {
         return false;
     }
@@ -129,13 +133,13 @@ bool OpxDevice::beginHttpServer(uint16_t port, uint32_t stackSize) {
     return true;
 }
 
-bool OpxDevice::beginHttpClient(const char* host, uint16_t port) {
+bool OpxDevice::beginHttpClient(const char *host, uint16_t port) {
     if (slotOccupied(OpxDeviceTransportID::OPX_HTTP)) {
         LOG(LogLevel::OP_WARNING, "OpxDevice: HTTP slot already occupied. Call end(HTTP) first.");
         return false;
     }
 
-    auto* transport = new EspHttpTransport(host, port);
+    auto *transport = new EspHttpTransport(host, port);
     if (!addTransport(transport, OpxDeviceTransportID::OPX_HTTP)) {
         return false;
     }
@@ -178,14 +182,14 @@ void OpxDevice::end(OpxDeviceTransportID id) {
     removeTransport(id);
 
 #ifdef ESP32
-    // If no non-CDnC transports remain active and CDnC is also inactive,
-    // stop the listen task. Otherwise keep it running for remaining transports.
+// If no non-CDnC transports remain active and CDnC is also inactive,
+// stop the listen task. Otherwise keep it running for remaining transports.
 #ifdef CDNC_ENABLED
-    if (activeSlotCount == 0 && !cdncActive) {
+if (activeSlotCount== 0 && !cdncActive) {
 #else
-    if (activeSlotCount == 0) {
+if (activeSlotCount== 0) {
 #endif
-        stopListenTask();
+stopListenTask();
     }
 #endif
 }
@@ -203,10 +207,10 @@ void OpxDevice::endCDnC() {
 
     delete cdncManager;
     cdncManager = nullptr;
-    cdncActive  = false;
+    cdncActive = false;
 
 #ifdef ESP32
-    if (activeSlotCount == 0) {
+if (activeSlotCount== 0) {
         stopListenTask();
     }
 #endif
@@ -214,12 +218,13 @@ void OpxDevice::endCDnC() {
 #endif // CDNC_ENABLED
 
 void OpxDevice::endAll() {
+
 #ifdef ESP32
-    stopListenTask();
+stopListenTask();
 #endif
 
-    // Remove and delete all non-CDnC transport slots
-    for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+// Remove and delete all non-CDnC transport slots
+for (uint8_t i =0; i<MAX_DEVICE_TRANSPORTS; i++) {
         if (slots[i].active) {
             tm.remove(static_cast<uint8_t>(slots[i].id));
             delete slots[i].transport;
@@ -227,52 +232,52 @@ void OpxDevice::endAll() {
             slots[i].active    = false;
         }
     }
-    activeSlotCount = 0;
+activeSlotCount=0;
 
 #ifdef CDNC_ENABLED
-    // Tear down CDnC without calling endCDnC() to avoid double stopListenTask()
-    if (cdncActive) {
-        for (uint8_t i = 0; i < CDNC_MAX_SLAVES; i++) {
-            tm.remove(i);
-        }
-        tm.remove(CDNC_TRANSPORT_ID_BROADCAST);
-        delete cdncManager;
-        cdncManager = nullptr;
-        cdncActive  = false;
+// Tear down CDnC without calling endCDnC() to avoid double stopListenTask()
+if (cdncActive) {
+    for (uint8_t i = 0; i < CDNC_MAX_SLAVES; i++) {
+        tm.remove(i);
     }
+    tm.remove(CDNC_TRANSPORT_ID_BROADCAST);
+    delete cdncManager;
+    cdncManager = nullptr;
+    cdncActive = false;
+}
 #endif
 
-    delete settingsManager;
-    settingsManager = nullptr;
+delete settingsManager;
+settingsManager=nullptr;
 
-    // Destroy telemetryManager before cm — it holds a pointer to cm internally
+// Destroy telemetryManager before cm — it holds a pointer to cm internally
     delete telemetryManager;
-    telemetryManager = nullptr;
+telemetryManager=nullptr;
 
-    // Safe to destroy now — listen task is stopped and no callbacks are in flight
+// Safe to destroy now — listen task is stopped and no callbacks are in flight
     delete cm;
-    cm = nullptr;
+cm=nullptr;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Event Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
-void OpxDevice::onCommand(CommandHandler handler, void* context) {
-    commandHandler        = handler;
+void OpxDevice::onCommand(CommandHandler handler, void *context) {
+    commandHandler = handler;
     commandHandlerContext = context;
     // If cm already exists, register immediately.
     // If not, rewireHandlers() will register when cm is constructed.
 }
 
-void OpxDevice::onResponse(ResponseHandler handler, void* context) {
-    responseHandler        = handler;
+void OpxDevice::onResponse(ResponseHandler handler, void *context) {
+    responseHandler = handler;
     responseHandlerContext = context;
     if (cm) cm->onResponseReceived(responseBridge, this);
 }
 
-void OpxDevice::onIncomingTelemetry(TelemetryHandler handler, void* context) {
-    telemetryHandler        = handler;
+void OpxDevice::onIncomingTelemetry(TelemetryHandler handler, void *context) {
+    telemetryHandler = handler;
     telemetryHandlerContext = context;
     if (cm) cm->onTelemetryReceived(telemetryBridge, this);
 }
@@ -285,25 +290,25 @@ void OpxDevice::update() {
     if (!cm) return;
 
 #ifdef ESP32
-    // On ESP32, the listen task handles cm->listen() for WiFi and HTTP transports
-    // in the background. However if only a serial or CDnC transport is active
-    // (no listen task was started), we must call listen() here on the main thread.
-    if (listenTaskHandle == nullptr) {
+// On ESP32, the listen task handles cm->listen() for WiFi and HTTP transports
+// in the background. However if only a serial or CDnC transport is active
+// (no listen task was started), we must call listen() here on the main thread.
+if (listenTaskHandle== nullptr) {
         cm->listen();
     }
 #else
-    // On all non-ESP32 platforms, everything runs on the main thread sequentially.
-    cm->listen();
+// On all non-ESP32 platforms, everything runs on the main thread sequentially.
+cm->listen();
 #endif
 
-    cm->processCommands();
-    cm->processResponses();
+cm->processCommands();
+cm->processResponses();
 
-    // TelemetryManager::send() is always safe to call — if no sources are
-    // registered it returns immediately with zero overhead.
+// TelemetryManager::send() is always safe to call — if no sources are
+// registered it returns immediately with zero overhead.
     if (telemetryManager) {
-        telemetryManager->send();
-    }
+    telemetryManager->send();
+}
 }
 
 #ifdef CDNC_ENABLED
@@ -317,7 +322,7 @@ void OpxDevice::exchangeCDnC() {
 // Sending
 // ─────────────────────────────────────────────────────────────────────────────
 
-bool OpxDevice::sendCommand(const Command& cmd, uint8_t transportID) {
+bool OpxDevice::sendCommand(const Command &cmd, uint8_t transportID) {
     if (!cm) {
         LOG(LogLevel::OP_ERROR, "OpxDevice: sendCommand() called before begin*().");
         return false;
@@ -325,7 +330,7 @@ bool OpxDevice::sendCommand(const Command& cmd, uint8_t transportID) {
     return cm->dispatch(cmd, transportID);
 }
 
-bool OpxDevice::sendResponse(const CommandResponse& response) {
+bool OpxDevice::sendResponse(const CommandResponse &response) {
     if (!cm) {
         LOG(LogLevel::OP_ERROR, "OpxDevice: sendResponse() called before begin*().");
         return false;
@@ -334,7 +339,7 @@ bool OpxDevice::sendResponse(const CommandResponse& response) {
 }
 
 bool OpxDevice::sendResponse(uint8_t seqNum, uint16_t commandType,
-                              ProtocolConstants::ResponseStatus status) {
+                             ProtocolConstants::ResponseStatus status) {
     if (!cm) {
         LOG(LogLevel::OP_ERROR, "OpxDevice: sendResponse() called before begin*().");
         return false;
@@ -342,12 +347,92 @@ bool OpxDevice::sendResponse(uint8_t seqNum, uint16_t commandType,
     return cm->sendResponse(seqNum, commandType, status);
 }
 
-bool OpxDevice::sendTelemetry(const Telemetry& telemetry) {
+bool OpxDevice::sendTelemetry(const Telemetry &telemetry) {
     if (!cm) {
         LOG(LogLevel::OP_ERROR, "OpxDevice: sendTelemetry() called before begin*().");
         return false;
     }
     return cm->dispatchTelemetry(telemetry);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Forwarding
+// ─────────────────────────────────────────────────────────────────────────────
+void OpxDevice::setTypeShift(uint8_t typeShift) {
+    ownTypeShift = typeShift;
+}
+
+bool OpxDevice::forwardBetween(uint8_t transportA, uint8_t transportB) {
+    for (uint8_t i = 0; i < MAX_FORWARDING_PAIRS; i++) {
+        if (!forwardingPairs[i].active) {
+            forwardingPairs[i].transportA = transportA;
+            forwardingPairs[i].transportB = transportB;
+            forwardingPairs[i].active = true;
+            // wire up forwarding bridge if cm exists
+            if (cm) cm->onForwardFrame(forwardBridge, this);
+            return true;
+        }
+    }
+    LOG(LogLevel::OP_ERROR, "OpxDevice: max forwarding pairs reached");
+    return false;
+}
+
+uint8_t OpxDevice::extractTypeShift(const RawData &frame) {
+    if (frame.size < 2) return 0xFF;
+
+    const ProtocolConstants::FrameType type =
+            ProtocolConstants::decodeType(frame.data[0]);
+
+    switch (type) {
+        case ProtocolConstants::FrameType::COMMAND:
+        case ProtocolConstants::FrameType::RESPONSE: {
+            // layout: [header][seqNum][cmdType_lo][cmdType_hi]
+            if (frame.size < 4) return 0xFF;
+            const uint16_t cmdType =
+                    static_cast<uint16_t>(frame.data[2]) |
+                    (static_cast<uint16_t>(frame.data[3]) << 8);
+            return (cmdType >> 11) & 0x1F;
+        }
+        case ProtocolConstants::FrameType::TELEMETRY:
+        case ProtocolConstants::FrameType::SETTING: {
+            // layout: [header][id_lo][id_hi]
+            if (frame.size < 3) return 0xFF;
+            const uint16_t id =
+                    static_cast<uint16_t>(frame.data[1]) |
+                    (static_cast<uint16_t>(frame.data[2]) << 8);
+            return (id >> 8) & 0xFF;
+        }
+        default:
+            return 0xFF; // protocol-level — broadcast, process and forward
+    }
+}
+
+void OpxDevice::handleForwarding(const TaggedFrame &frame) {
+    const uint8_t frameTypeShift = extractTypeShift(frame.frame);
+    const bool isProtocolLevel = (frameTypeShift == 0xFF);
+    const bool isForMe = (ownTypeShift != 0xFF) && (frameTypeShift == ownTypeShift);
+
+    // Forward if not for me, or if protocol-level (broadcast — forward AND process)
+    if (!isForMe || isProtocolLevel) {
+        for (uint8_t i = 0; i < MAX_FORWARDING_PAIRS; i++) {
+            if (!forwardingPairs[i].active) continue;
+
+            const uint8_t src = frame.transportID;
+            const uint8_t a = forwardingPairs[i].transportA;
+            const uint8_t b = forwardingPairs[i].transportB;
+
+            if (src == a) {
+                tm.send(frame.frame, b);
+            } else if (src == b) {
+                tm.send(frame.frame, a);
+            }
+        }
+    }
+}
+
+void OpxDevice::forwardBridge(const TaggedFrame &frame, void *context) {
+    auto *device = static_cast<OpxDevice *>(context);
+    device->handleForwarding(frame);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -359,7 +444,7 @@ bool OpxDevice::registerTelemetry(uint16_t sourceID, TriggerConfig trigger) {
     return telemetryManager->registerSource(sourceID, trigger);
 }
 
-bool OpxDevice::updateTelemetry(uint16_t sourceID, const ValueSource& value) {
+bool OpxDevice::updateTelemetry(uint16_t sourceID, const ValueSource &value) {
     if (!telemetryManager) {
         LOG(LogLevel::OP_WARNING, "OpxDevice: updateTelemetry() called before registerTelemetry().");
         return false;
@@ -412,16 +497,16 @@ bool OpxDevice::updateSetting(uint16_t settingID, const ValueSource &value, bool
 
 
 bool OpxDevice::attachSettingCallback(uint16_t settingID,
-                                       SettingsManager::SettingChangedCallback cb,
-                                       void *context) {
+                                      SettingsManager::SettingChangedCallback cb,
+                                      void *context) {
     if (!settingsManager) {
         LOG(LogLevel::OP_WARNING, "OpxDevice: attachSettingCallback() called before registerSetting().");
         return false;
     }
 #ifndef OPX_PLATFORM_AVR
-    return settingsManager->attachCallback(settingID, cb, context);
+return settingsManager->attachCallback(settingID, cb, context);
 #else
-    return false;
+return false;
 #endif
 }
 
@@ -449,7 +534,7 @@ const SettingsData *OpxDevice::getSetting(uint16_t settingID) const {
 // Escape Hatch
 // ─────────────────────────────────────────────────────────────────────────────
 
-CommunicationManager* OpxDevice::comms() {
+CommunicationManager *OpxDevice::comms() {
     return cm;
 }
 
@@ -457,7 +542,7 @@ CommunicationManager* OpxDevice::comms() {
 // Internal Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-OpxDevice::TransportSlot* OpxDevice::findSlot(OpxDeviceTransportID id) {
+OpxDevice::TransportSlot *OpxDevice::findSlot(OpxDeviceTransportID id) {
     for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
         if (slots[i].active && slots[i].id == id) return &slots[i];
     }
@@ -501,15 +586,23 @@ void OpxDevice::ensureSettingsManager() {
 void OpxDevice::rewireHandlers() {
     if (!cm) return;
 
-    cm->onCommandReceived(commandBridge, this); // always register, not conditional
+    cm->onCommandReceived(commandBridge, this);
     if (responseHandler) cm->onResponseReceived(responseBridge, this);
     if (telemetryHandler) cm->onTelemetryReceived(telemetryBridge, this);
-    if (settingsManager)  cm->onSettingReceived(settingBridge, this);
+    if (settingsManager) cm->onSettingReceived(settingBridge, this);
+
+    // Wire forwarding bridge if any pairs are configured
+    for (uint8_t i = 0; i < MAX_FORWARDING_PAIRS; i++) {
+        if (forwardingPairs[i].active) {
+            cm->onForwardFrame(forwardBridge, this);
+            break; // only one registration needed
+        }
+    }
 }
 
-bool OpxDevice::addTransport(ITransport* transport, OpxDeviceTransportID id) {
+bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id) {
     // Find a free slot
-    TransportSlot* slot = nullptr;
+    TransportSlot *slot = nullptr;
     for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
         if (!slots[i].active) {
             slot = &slots[i];
@@ -535,15 +628,15 @@ bool OpxDevice::addTransport(ITransport* transport, OpxDeviceTransportID id) {
     }
 
     slot->transport = transport;
-    slot->id        = id;
-    slot->active    = true;
+    slot->id = id;
+    slot->active = true;
     activeSlotCount++;
 
     return true;
 }
 
 void OpxDevice::removeTransport(OpxDeviceTransportID id) {
-    TransportSlot* slot = findSlot(id);
+    TransportSlot *slot = findSlot(id);
     if (slot == nullptr) {
         LOG(LogLevel::OP_WARNING, "OpxDevice: end() called for inactive slot.");
         return;
@@ -552,7 +645,7 @@ void OpxDevice::removeTransport(OpxDeviceTransportID id) {
     tm.remove(static_cast<uint8_t>(id));
     delete slot->transport;
     slot->transport = nullptr;
-    slot->active    = false;
+    slot->active = false;
     activeSlotCount--;
 }
 
@@ -570,7 +663,7 @@ void OpxDevice::stopListenTask() {
     // within one loop iteration (at most ~2ms given the vTaskDelay(1)).
     xSemaphoreTake(listenTaskDoneSem, portMAX_DELAY);
 
-    listenTaskHandle     = nullptr;
+    listenTaskHandle = nullptr;
     listenTaskShouldStop = false;
 }
 #endif // ESP32
@@ -585,11 +678,22 @@ void OpxDevice::stopListenTask() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 void OpxDevice::commandBridge(const Command &cmd,
-                               const uint8_t &seqNum,
-                               uint8_t sourceTransportID,
-                               void *context) {
+                              const uint8_t &seqNum,
+                              uint8_t sourceTransportID,
+                              void *context) {
     auto *device = static_cast<OpxDevice *>(context);
-    Serial.println(cmd.commandType, HEX);
+
+    // Extract typeShift from command ID
+    const uint8_t cmdTypeShift = (cmd.commandType >> 11) & 0x1F;
+    const bool isProtocolLevel = cmd.commandType >= 0xFE00;
+    const bool isForMe = isProtocolLevel ||
+                         (device->ownTypeShift == 0xFF) || // typeShift not set — process everything
+                         (cmdTypeShift == device->ownTypeShift);
+
+    if (!isForMe) {
+        // Frame was already forwarded by forwardBridge — nothing to do here
+        return;
+    }
 
     // Auto-route setting commands to SettingsManager
     if (device->settingsManager) {
@@ -598,7 +702,7 @@ void OpxDevice::commandBridge(const Command &cmd,
                                   || cmd.commandType == ProtocolConstants::GET_ALL_SETTINGS_COMMAND;
         if (isSettingCmd) {
             device->settingsManager->handleCommand(cmd, sourceTransportID);
-            return; // setting commands don't reach the user callback
+            return;
         }
     }
 
@@ -612,6 +716,16 @@ void OpxDevice::responseBridge(const CommandResponse& response,
                                 uint8_t               sourceTransportID,
                                 void*                 context) {
     auto* device = static_cast<OpxDevice*>(context);
+
+    // Check ownership — typeShift encoded in commandType
+    const uint8_t responseTypeShift = (response.commandType >> 11) & 0x1F;
+    const bool isProtocolLevel = response.commandType >= 0xFE00;
+    const bool isForMe = isProtocolLevel ||
+                         (device->ownTypeShift == 0xFF) ||
+                         (responseTypeShift == device->ownTypeShift);
+
+    if (!isForMe) return;
+
     if (device->responseHandler) {
         device->responseHandler(response, sourceTransportID,
                                 device->responseHandlerContext);
@@ -622,6 +736,14 @@ void OpxDevice::telemetryBridge(const Telemetry& telemetry,
                                  uint8_t          sourceTransportID,
                                  void*            context) {
     auto* device = static_cast<OpxDevice*>(context);
+
+    // Check ownership — typeShift is upper byte of sourceID
+    const uint8_t telemetryTypeShift = (telemetry.sourceID >> 8) & 0xFF;
+    const bool isForMe = (device->ownTypeShift == 0xFF) ||
+                         (telemetryTypeShift == device->ownTypeShift);
+
+    if (!isForMe) return;
+
     if (device->telemetryHandler) {
         device->telemetryHandler(telemetry, sourceTransportID,
                                  device->telemetryHandlerContext);
@@ -631,11 +753,16 @@ void OpxDevice::telemetryBridge(const Telemetry& telemetry,
 void OpxDevice::settingBridge(const SettingsData &setting,
                                uint8_t sourceTransportID,
                                void *context) {
-    // Setting frames received from peers — currently just stored via
-    // SettingsManager. Future: could fire a user callback here if needed.
-    // OpxDevice doesn't expose an onIncomingSetting() hook yet since
-    // the device is typically the one that owns and serves settings,
-    // not receives them. This can be extended in the discovery phase.
+    auto *device = static_cast<OpxDevice *>(context);
+
+    // Check ownership — typeShift is upper byte of settingsID
+    const uint8_t settingTypeShift = (setting.settingsID >> 8) & 0xFF;
+    const bool isForMe = (device->ownTypeShift == 0xFF) ||
+                         (settingTypeShift == device->ownTypeShift);
+
+    if (!isForMe) return;
+
+    // Future: fire user callback for incoming setting frames from peers
 }
 
 #endif // ARDUINO

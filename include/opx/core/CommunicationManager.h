@@ -18,10 +18,12 @@
 
 class CommunicationManager {
 public:
-    using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, uint8_t sourceTransportID, void *context);
-    using CommandResponseCallback = void (*)(const CommandResponse &response,uint8_t sourceTransportID,  void *context);
+    using CommandCallback = void (*)(const Command &cmd, const uint8_t &seqNum, uint8_t sourceTransportID,
+                                     void *context);
+    using CommandResponseCallback = void (*)(const CommandResponse &response, uint8_t sourceTransportID, void *context);
     using TelemetryCallback = void (*)(const Telemetry &telemetry, uint8_t sourceTransportID, void *context);
     using SettingCallback = void (*)(const SettingsData &setting, uint8_t sourceTransportID, void *context);
+    using ForwardCallback = void (*)(const TaggedFrame &frame, void *context);
 
 private:
     IEncoder *encoder;
@@ -35,29 +37,37 @@ private:
     CommandResponseCallback responseCallback = nullptr;
     TelemetryCallback telemetryCallback = nullptr;
     SettingCallback settingCallback = nullptr;
+    ForwardCallback forwardCallback = nullptr;
     void *callbackContext = nullptr;
     void *responseCallbackContext = nullptr;
     void *telemetryCallbackContext = nullptr;
     void *settingCallbackContext = nullptr;
+    void *forwardCallbackContext = nullptr;
     IMutex *sendMutex = nullptr;
     IMutex *listenMutex = nullptr;
 
     struct MutexGuard {
-        IMutex* mutex;
-        explicit MutexGuard(IMutex* m) : mutex(m) {
+        IMutex *mutex;
+
+        explicit MutexGuard(IMutex *m) : mutex(m) {
             if (mutex) mutex->lock();
         }
+
         ~MutexGuard() {
             if (mutex) mutex->unlock();
         }
     };
 
-    static void onFrameReceivedStatic(const TaggedFrame& tagged, void* context) {
-        static_cast<CommunicationManager*>(context)->onFrameReceived(tagged);
+    static void onFrameReceivedStatic(const TaggedFrame &tagged, void *context) {
+        static_cast<CommunicationManager *>(context)->onFrameReceived(tagged);
     }
 
-    void onFrameReceived(const TaggedFrame& tagged) {
-        const RawData& frame = tagged.frame;
+    void onFrameReceived(const TaggedFrame &tagged) {
+        if (forwardCallback) {
+            forwardCallback(tagged, forwardCallbackContext);
+        }
+
+        const RawData &frame = tagged.frame;
 
         if (!ProtocolConstants::isValidFrameType(frame.data[0])) {
             LOG(LogLevel::OP_WARNING, "Received frame with invalid type, discarding");
@@ -65,7 +75,7 @@ private:
         }
 
         const ProtocolConstants::FrameType frameType =
-            ProtocolConstants::decodeType(frame.data[0]);
+                ProtocolConstants::decodeType(frame.data[0]);
 
         if (frameType == ProtocolConstants::FrameType::COMMAND) {
             PackedCommand packed;
@@ -97,7 +107,6 @@ private:
                 LOG(LogLevel::OP_ERROR, "Failed to deserialize telemetry");
             }
         } else if (frameType == ProtocolConstants::FrameType::SETTING) {
-            LOG(LogLevel::OP_WARNING, "SETTING frame received on PC");
             SettingsData setting;
             if (encoder->deserializeSetting(tagged.frame, setting)) {
                 if (settingCallback) {
@@ -114,15 +123,14 @@ private:
     }
 
     bool doDispatchCommand(const Command &cmd, uint8_t transportID, bool requiresAck) {
-
         if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
             return false;
         }
 
-         uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
-                                ? lastSourceTransportID
-                                : transportID;
+        uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
+                                 ? lastSourceTransportID
+                                 : transportID;
 
         if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
             resolvedID = transportManager->firstActiveID();
@@ -164,8 +172,8 @@ private:
         }
 
         uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
-                                ? lastSourceTransportID
-                                : transportID;
+                                 ? lastSourceTransportID
+                                 : transportID;
 
         if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
             resolvedID = transportManager->firstActiveID();
@@ -195,8 +203,8 @@ private:
         }
 
         uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
-                                ? lastSourceTransportID
-                                : transportID;
+                                 ? lastSourceTransportID
+                                 : transportID;
         if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
             resolvedID = transportManager->firstActiveID();
             if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
@@ -217,7 +225,8 @@ private:
 
 public:
     CommunicationManager(IEncoder *encoder, TransportManager *transportManager, IMutex *sendMutex = nullptr,
-                         IMutex *listenMutex = nullptr) : encoder(encoder), transportManager(transportManager), sendMutex(sendMutex),
+                         IMutex *listenMutex = nullptr) : encoder(encoder), transportManager(transportManager),
+                                                          sendMutex(sendMutex),
                                                           listenMutex(listenMutex) {
         transportManager->onFrameReceived(onFrameReceivedStatic, this);
     }
@@ -242,12 +251,17 @@ public:
         settingCallbackContext = context;
     }
 
+    void onForwardFrame(ForwardCallback cb, void *context = nullptr) {
+        forwardCallback = cb;
+        forwardCallbackContext = context;
+    }
+
     bool dispatch(const Command &cmd, bool requiresAck = false) {
         MutexGuard guard(sendMutex);
         return doDispatchCommand(cmd, ProtocolConstants::TRANSPORT_ID_DEFAULT, requiresAck);
     }
 
-    bool dispatch(const Command &cmd, uint8_t transportID,  bool requiresAck = false) {
+    bool dispatch(const Command &cmd, uint8_t transportID, bool requiresAck = false) {
         MutexGuard guard(sendMutex);
         return doDispatchCommand(cmd, transportID, requiresAck);
     }
@@ -268,7 +282,7 @@ public:
     }
 
 
-    bool dispatchSetting(const SettingsData& setting, uint8_t transportID=ProtocolConstants::TRANSPORT_ID_DEFAULT) {
+    bool dispatchSetting(const SettingsData &setting, uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
         MutexGuard guard(sendMutex);
         if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
@@ -276,8 +290,8 @@ public:
         }
 
         uint8_t resolvedID = (transportID == ProtocolConstants::TRANSPORT_ID_DEFAULT)
-                                ? lastSourceTransportID
-                                : transportID;
+                                 ? lastSourceTransportID
+                                 : transportID;
 
         if (resolvedID == ProtocolConstants::TRANSPORT_ID_DEFAULT) {
             resolvedID = transportManager->firstActiveID();
@@ -296,7 +310,7 @@ public:
         return transportManager->send(frame, resolvedID);
     }
 
-    bool dispatchSettingToAll(const SettingsData& setting) {
+    bool dispatchSettingToAll(const SettingsData &setting) {
         MutexGuard guard(sendMutex);
         if (!encoder || !transportManager) {
             LOG(LogLevel::OP_ERROR, "Communication manager not initialized");
@@ -353,7 +367,6 @@ public:
                 LOG(LogLevel::OP_ERROR, "Failed to unpack command from queue");
                 continue;
             }
-            LOG(LogLevel::OP_WARNING, "processCommands: dispatching cmdType");
             lastSourceTransportID = packed.sourceTransportID;
             callback(cmd, packed.seqNum, packed.sourceTransportID, callbackContext);
         }
@@ -369,7 +382,7 @@ public:
         QueuedResponse queued;
         while (responseQueue.pop(queued)) {
             lastSourceTransportID = queued.sourceTransportID;
-            responseCallback(queued.response, queued.sourceTransportID , responseCallbackContext);
+            responseCallback(queued.response, queued.sourceTransportID, responseCallbackContext);
         }
     }
 

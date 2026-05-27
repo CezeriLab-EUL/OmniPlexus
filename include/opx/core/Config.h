@@ -53,5 +53,14 @@
 #endif
 #endif
 
+#ifndef MAX_FORWARDING_PAIRS
+#ifdef __AVR__
+#define MAX_FORWARDING_PAIRS 2
+#else
+#define MAX_FORWARDING_PAIRS 4
+#endif
+#endif
+
+
 
 #endif //SMARTDRIVE_CONFIG_H

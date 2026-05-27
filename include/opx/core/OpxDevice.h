@@ -59,6 +59,10 @@ public:
     template<typename SerialType>
     bool beginSerial(SerialType &serial, uint32_t baud);
 
+    void setTypeShift(uint8_t typeShift);
+
+    bool forwardBetween(uint8_t transportA, uint8_t transportB);
+
 #ifdef ESP32
 bool beginWiFi(uint16_t port, uint32_t stackSize = 4096);
 bool beginHttpServer(uint16_t port, uint32_t stackSize = 4096);
@@ -114,6 +118,15 @@ struct TransportSlot {
     bool active = false;
 };
 
+struct ForwardingPair {
+    uint8_t transportA = 0;
+    uint8_t transportB = 0;
+    bool active = false;
+};
+
+ForwardingPair forwardingPairs[MAX_FORWARDING_PAIRS];
+uint8_t ownTypeShift = 0xFF; // 0xFF = unset
+
 static constexpr uint8_t MAX_DEVICE_TRANSPORTS = 3; // SERIAL, WIFI, HTTP
 TransportSlot *findSlot(OpxDeviceTransportID id);
 bool slotOccupied(OpxDeviceTransportID id) const;
@@ -137,6 +150,9 @@ static void telemetryBridge(const Telemetry &telemetry,
                             uint8_t sourceTransportID,
                             void *context);
 static void settingBridge(const SettingsData &setting, uint8_t sourceTransportID, void *context);
+static void forwardBridge(const TaggedFrame &frame, void *context);
+void handleForwarding(const TaggedFrame &frame);
+static uint8_t extractTypeShift(const RawData &frame);
 
 BinaryEncoder encoder;
 PlatformClock clock;
