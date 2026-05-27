@@ -152,6 +152,44 @@ bool OpxDevice::beginHttpClient(const char *host, uint16_t port) {
 
     return true;
 }
+
+bool OpxDevice::connectWiFi(const char *host, uint16_t port,
+                             uint8_t maxReconnectAttempts,
+                             uint32_t reconnectDelayMs) {
+    if (slotOccupied(OpxDeviceTransportID::OPX_WIFI)) {
+        LOG(LogLevel::OP_WARNING, "OpxDevice: WIFI slot already occupied. Call end(WIFI) first.");
+        return false;
+    }
+
+    auto *transport = new EspWiFiTransport(host, port,
+                                           maxReconnectAttempts,
+                                           reconnectDelayMs);
+
+    if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI)) {
+        // addTransport deletes transport on failure
+        return false;
+    }
+
+    // Start the shared listen task if not already running.
+    // Same task serves both beginWiFi and connectWiFi — only one is ever needed.
+    if (listenTaskHandle == nullptr) {
+        listenTaskShouldStop = false;
+        xTaskCreate(
+            opxListenTask,
+            "OpxListen",
+            4096,
+            this,
+            1,
+            &listenTaskHandle
+        );
+    }
+
+    return true;
+}
+
+bool OpxDevice::connectHttp(const char *host, uint16_t port) {
+return beginHttpClient(host, port);
+}
 #endif // ESP32
 
 #ifdef CDNC_ENABLED

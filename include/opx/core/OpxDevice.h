@@ -63,6 +63,16 @@ public:
     template<typename SerialType>
     bool beginSerial(SerialType &serial, uint32_t baud);
 
+    template<typename SerialType>
+    bool connectSerial(SerialType &serial, uint32_t baud) {
+        // Serial communication has no client/server distinction at the physical
+        // layer — both sides call begin() and start reading/writing. connectSerial
+        // is provided purely for API symmetry with OpxSession::connectSerial and
+        // to make the intent clear when OpxDevice is used as the initiating side
+        // in a micro-to-micro topology.
+        return beginSerial(serial, baud);
+    }
+
     void setTypeShift(uint8_t typeShift);
 
     bool forwardBetween(uint8_t transportA, uint8_t transportB);
@@ -71,6 +81,10 @@ public:
 bool beginWiFi(uint16_t port, uint32_t stackSize = 4096);
 bool beginHttpServer(uint16_t port, uint32_t stackSize = 4096);
 bool beginHttpClient(const char *host, uint16_t port);
+bool connectWiFi(const char *host, uint16_t port, // ← add
+                 uint8_t maxReconnectAttempts = 5,
+                 uint32_t reconnectDelayMs = 2000);
+bool connectHttp(const char *host, uint16_t port);
 #endif
 
 #ifdef CDNC_ENABLED
@@ -236,6 +250,7 @@ bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud) {
 
     return addTransport(transport, OpxDeviceTransportID::OPX_SERIAL);
 }
+
 
 #endif
 #endif //SMARTDRIVE_OPXDEVICE_H
