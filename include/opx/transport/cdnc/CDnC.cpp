@@ -1,12 +1,12 @@
 // CDnC.cpp
 // Implementation of the CDnC half-duplex parallel transport layer.
 
-#ifdef STM32F4xx 
+#ifdef STM32F4xx
 
 #include "CDnC.h"
 #include <Arduino.h>
 
-//  Internal constants 
+//  Internal constants
 
 #define CDNC_BUF_MASK        (CDNC_TX_BUF_SIZE - 1)
 #define CDNC_RX_BUF_MASK     (CDNC_RX_BUF_SIZE - 1)
@@ -36,16 +36,26 @@ static bool              saw_silent[CDNC_MAX_SLAVES]     = {false};
 static uint16_t          valid_history[CDNC_MAX_SLAVES]  = {0};
 static cdnc_slave_state_t slave_state[CDNC_MAX_SLAVES];
 
-//  GPIO helpers (unchanged from .ino) 
+//  GPIO helpers (unchanged from .ino)
 
 static void cdnc_gpio_tx_mode(void) {
-    GPIOE->MODER   = 0x55555555;   // all 16 pins → output
-    GPIOE->OSPEEDR = 0xAAAAAAAA;   // high speed
+    // GPIOE->MODER   = 0x55555555;   // all 16 pins → output
+    // GPIOE->OSPEEDR = 0xAAAAAAAA;   // high speed
+
+    // Configure all 16 data pins as open-drain outputs
+    GPIOE->MODER = 0x55555555;   // Output mode
+    GPIOE->OTYPER = 0xFFFF;      // Open-drain on ALL pins
+    // GPIOE->PUPDR = 0x00000000;   // No pull-up/down
+    GPIOE->OSPEEDR = 0xAAAAAAAA; // High speed
 }
 
 static void cdnc_gpio_rx_mode(void) {
-    GPIOE->MODER = 0x00000000;     // all 16 → input
-    GPIOE->PUPDR = 0xAAAAAAAA;     // pull-down on all 16
+    // GPIOE->MODER = 0x00000000;     // all 16 → input
+    // GPIOE->PUPDR = 0xAAAAAAAA;     // pull-down on all 16
+
+    GPIOE->MODER = 0x00000000;   // Input mode
+    GPIOE->PUPDR = 0x00000000;   // No pull-up/down
+    // OTYPER doesn't matter in input modes
 }
 
 static void cdnc_clock_pulse(void) {
@@ -55,7 +65,7 @@ static void cdnc_clock_pulse(void) {
     delayMicroseconds(CLK_HALF_US);
 }
 
-//  Detection helpers (unchanged from .ino) 
+//  Detection helpers (unchanged from .ino)
 
 static uint8_t popcount_window(uint16_t v) {
     uint16_t masked = v & ((1U << DETECT_WINDOW) - 1);
@@ -92,7 +102,7 @@ static void cdnc_update_detection(uint16_t valid_mask) {
     }
 }
 
-//  RX enqueue (internal, unchanged from .ino) 
+//  RX enqueue (internal, unchanged from .ino)
 
 static void cdnc_rx_enqueue(uint8_t slave, uint8_t b) {
     uint32_t w = rxWritePtr[slave];
@@ -107,7 +117,7 @@ static void cdnc_rx_enqueue(uint8_t slave, uint8_t b) {
     rxWritePtr[slave] = w + 1;
 }
 
-//  TX pad (internal, unchanged from .ino) 
+//  TX pad (internal, unchanged from .ino)
 
 static void cdnc_post_exchange_pad(void) {
     uint32_t r = readPtr;
@@ -126,11 +136,12 @@ static void cdnc_post_exchange_pad(void) {
 uint32_t cdnc_write_ptr(uint8_t slave) { return writePtr[slave];}
 uint32_t cdnc_read_ptr(void) { return readPtr; }
 
-//  Public API 
+//  Public API
 
     void cdnc_init(void) {
-        pinMode(clkPin, OUTPUT);
+    pinMode(clkPin, OUTPUT_OPEN_DRAIN);
     digitalWrite(clkPin, LOW);
+
 
     __HAL_RCC_GPIOE_CLK_ENABLE();
 
