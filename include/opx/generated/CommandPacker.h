@@ -197,6 +197,51 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case TempBoardCommandType::LED_SET: {
+                // params[0]: state (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case TempBoardCommandType::LED_RED_ON: {
+                // No parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::LED_RED_OFF: {
+                // No parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::LED_GREEN_ON: {
+                // No parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::LED_GREEN_OFF: {
+                // No parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::SEND_ID: {
+                // params[0]: id (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[1]: protocol_revision (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[2]: slave_capabilities (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case TempBoardCommandType::DISCOVERY: {
+                // No parameters
+                return offset;
+            }
+
             case EspCommandType::GET_BOARD_VOLTAGE: {
                 // Auto-generated telemetry request — no parameters
                 return offset;
@@ -213,6 +258,11 @@ offset += sizeof(uint16_t);
             }
 
             case IndicatorBoardCommandType::GET_LED_COUNT: {
+                // Auto-generated telemetry request — no parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::GET_TEMPERATURE: {
                 // Auto-generated telemetry request — no parameters
                 return offset;
             }
@@ -309,6 +359,42 @@ offset += sizeof(uint16_t);
             }
 
             case IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case TempBoardCommandType::GET_SETTING_TEMP_INTERVAL_MS: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::SET_SETTING_TEMP_INTERVAL_MS: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case TempBoardCommandType::GET_SETTING_TEMP_THRESHOLD_HIGH: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::SET_SETTING_TEMP_THRESHOLD_HIGH: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(int16_t));
+                offset += sizeof(int16_t);
+                return offset;
+            }
+
+            case TempBoardCommandType::GET_SETTING_AUTO_LED_MODE: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case TempBoardCommandType::SET_SETTING_AUTO_LED_MODE: {
                 // Auto-generated setting SET — one parameter
                 memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
                 offset += sizeof(uint8_t);
@@ -638,6 +724,73 @@ offset += sizeof(uint16_t);
                 return true;
             }
 
+            case TempBoardCommandType::LED_SET: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: state (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case TempBoardCommandType::LED_RED_ON: {
+                // No parameters
+                return true;
+            }
+
+            case TempBoardCommandType::LED_RED_OFF: {
+                // No parameters
+                return true;
+            }
+
+            case TempBoardCommandType::LED_GREEN_ON: {
+                // No parameters
+                return true;
+            }
+
+            case TempBoardCommandType::LED_GREEN_OFF: {
+                // No parameters
+                return true;
+            }
+
+            case TempBoardCommandType::SEND_ID: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: id (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[1]: protocol_revision (UINT8, required)
+                cmdOut.params[1] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[2]: slave_capabilities (UINT16, required)
+                cmdOut.params[2] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case TempBoardCommandType::DISCOVERY: {
+                // No parameters
+                return true;
+            }
+
             case EspCommandType::GET_BOARD_VOLTAGE: {
                 // Auto-generated telemetry request — no parameters
                 return true;
@@ -654,6 +807,11 @@ offset += sizeof(uint16_t);
             }
 
             case IndicatorBoardCommandType::GET_LED_COUNT: {
+                // Auto-generated telemetry request — no parameters
+                return true;
+            }
+
+            case TempBoardCommandType::GET_TEMPERATURE: {
                 // Auto-generated telemetry request — no parameters
                 return true;
             }
@@ -774,6 +932,48 @@ offset += sizeof(uint16_t);
                 return true;
             }
 
+            case TempBoardCommandType::GET_SETTING_TEMP_INTERVAL_MS: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case TempBoardCommandType::SET_SETTING_TEMP_INTERVAL_MS: {
+                if (bufferSize < 2 + sizeof(uint16_t)) return false;
+                cmdOut.params[0] = uint16_t(0);
+                if (bufferSize - offset < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                return true;
+            }
+
+            case TempBoardCommandType::GET_SETTING_TEMP_THRESHOLD_HIGH: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case TempBoardCommandType::SET_SETTING_TEMP_THRESHOLD_HIGH: {
+                if (bufferSize < 2 + sizeof(int16_t)) return false;
+                cmdOut.params[0] = int16_t(0);
+                if (bufferSize - offset < sizeof(int16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(int16_t));
+                offset += sizeof(int16_t);
+                return true;
+            }
+
+            case TempBoardCommandType::GET_SETTING_AUTO_LED_MODE: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case TempBoardCommandType::SET_SETTING_AUTO_LED_MODE: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
             default:
                 return false; // Unknown command type
         }
@@ -812,10 +1012,18 @@ offset += sizeof(uint16_t);
             case IndicatorBoardCommandType::DISCOVERY: return 2;
             case IndicatorBoardCommandType::TURNON_BUILTIN_LED: return 2;
             case IndicatorBoardCommandType::TURNOFF_BUILTIN_LED: return 2;
+            case TempBoardCommandType::LED_SET: return 3;
+            case TempBoardCommandType::LED_RED_ON: return 2;
+            case TempBoardCommandType::LED_RED_OFF: return 2;
+            case TempBoardCommandType::LED_GREEN_ON: return 2;
+            case TempBoardCommandType::LED_GREEN_OFF: return 2;
+            case TempBoardCommandType::SEND_ID: return 6;
+            case TempBoardCommandType::DISCOVERY: return 2;
             case EspCommandType::GET_BOARD_VOLTAGE: return 2;
             case EspCommandType::GET_BOARD_TEMPERATURE: return 2;
             case IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS: return 2;
             case IndicatorBoardCommandType::GET_LED_COUNT: return 2;
+            case TempBoardCommandType::GET_TEMPERATURE: return 2;
             case EspCommandType::GET_SETTING_WIFI_CHANNEL: return 2;
             case EspCommandType::SET_SETTING_WIFI_CHANNEL: return 3;
             case EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS: return 2;
@@ -832,6 +1040,12 @@ offset += sizeof(uint16_t);
             case IndicatorBoardCommandType::SET_SETTING_LED_DEFAULT_COLOR: return 4;
             case IndicatorBoardCommandType::GET_SETTING_BUZZER_ENABLED: return 2;
             case IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED: return 3;
+            case TempBoardCommandType::GET_SETTING_TEMP_INTERVAL_MS: return 2;
+            case TempBoardCommandType::SET_SETTING_TEMP_INTERVAL_MS: return 4;
+            case TempBoardCommandType::GET_SETTING_TEMP_THRESHOLD_HIGH: return 2;
+            case TempBoardCommandType::SET_SETTING_TEMP_THRESHOLD_HIGH: return 4;
+            case TempBoardCommandType::GET_SETTING_AUTO_LED_MODE: return 2;
+            case TempBoardCommandType::SET_SETTING_AUTO_LED_MODE: return 3;
             default: return 0;
         }
     }

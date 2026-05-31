@@ -42,6 +42,19 @@ namespace IndicatorBoardSetting {
 
 } // namespace IndicatorBoardSetting
 
+namespace TempBoardSetting {
+
+    // Telemetry interval for temperature in ms
+    constexpr uint16_t TEMP_INTERVAL_MS = 0x0201;
+
+    // High-temperature threshold in centidegrees (used in auto mode)
+    constexpr uint16_t TEMP_THRESHOLD_HIGH = 0x0202;
+
+    // 0 = manual LED control via commands; 1 = auto (green when below threshold, red when above)
+    constexpr uint16_t AUTO_LED_MODE = 0x0203;
+
+} // namespace TempBoardSetting
+
 } // namespace SettingID
 
 #endif // SMARTDRIVE_SETTINGIDS_H

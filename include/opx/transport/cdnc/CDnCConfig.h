@@ -6,6 +6,10 @@
 // independently of TransportManager::listen(). The exchange loop drives the
 // physical bus; listen() only drains the software RX ring buffers.
 
+#if defined(CDNC_MASTER) || defined(CDNC_SLAVE)
+#define CDNC_ENABLED
+#endif
+
 #pragma once
 #include <stdint.h>
 #include <stdbool.h>
@@ -66,7 +70,6 @@ uint8_t            cdnc_rx_available(uint8_t slave);
 // MUST be called from the main firmware loop, not from inside listen().
 // Typical call rate: once per ~5ms (GAP_US inter-frame gap).
 uint16_t           cdnc_exchange();
-static void               cdnc_post_exchange_pad();
 uint32_t cdnc_write_ptr(uint8_t slave);  // returns writePtr[slave]
 uint32_t cdnc_read_ptr();
 

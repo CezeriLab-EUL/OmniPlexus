@@ -25,7 +25,7 @@
 #ifndef SMARTDRIVE_CDNCMANAGER_H
 #define SMARTDRIVE_CDNCMANAGER_H
 
-#ifdef STM32F4xx
+#ifdef CDNC_MASTER
 
 #include "opx/core/TransportManager.h"
 #include "opx/utils/Logger.h"

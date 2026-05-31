@@ -193,6 +193,73 @@ void CommandRegistry::initialize() {
         }
     });
 
+    // LED_SET
+    registerCommand({
+        TempBoardCommandType::LED_SET,
+        "LED_SET",
+        "Set red/green LED state in one command (bitmask)",
+        {
+            {"state", ValueType::UINT8, true, "Bitmask: bit 0 = red, bit 1 = green", 0, ""},
+        }
+    });
+
+    // LED_RED_ON
+    registerCommand({
+        TempBoardCommandType::LED_RED_ON,
+        "LED_RED_ON",
+        "Turn on the red LED",
+        {
+        }
+    });
+
+    // LED_RED_OFF
+    registerCommand({
+        TempBoardCommandType::LED_RED_OFF,
+        "LED_RED_OFF",
+        "Turn off the red LED",
+        {
+        }
+    });
+
+    // LED_GREEN_ON
+    registerCommand({
+        TempBoardCommandType::LED_GREEN_ON,
+        "LED_GREEN_ON",
+        "Turn on the green LED",
+        {
+        }
+    });
+
+    // LED_GREEN_OFF
+    registerCommand({
+        TempBoardCommandType::LED_GREEN_OFF,
+        "LED_GREEN_OFF",
+        "Turn off the green LED",
+        {
+        }
+    });
+
+    // SEND_ID
+    registerCommand({
+        TempBoardCommandType::SEND_ID,
+        "SEND_ID",
+        "Send ID with protocol revision and slave capabilities to STM32",
+        {
+            {"id", ValueType::UINT8, true, "ID to send", 0, ""},
+            {"protocol_revision", ValueType::UINT8, true, "Protocol Revision", 0, ""},
+            {"slave_capabilities", ValueType::UINT16, true, "Slave capabilities", 0, ""},
+        }
+    });
+
+    // DISCOVERY
+    registerCommand({
+        TempBoardCommandType::DISCOVERY,
+        "DISCOVERY",
+        "Broadcast by master at startup. Slave replies with SEND_ID.",
+        {
+        }
+    });
+
     // GET_BOARD_VOLTAGE (auto-generated telemetry request)
     registerCommand({
         EspCommandType::GET_BOARD_VOLTAGE,
@@ -222,6 +289,14 @@ void CommandRegistry::initialize() {
         IndicatorBoardCommandType::GET_LED_COUNT,
         "GET_LED_COUNT",
         "Request current value of: Number of active LEDs currently lit",
+        {}
+    });
+
+    // GET_TEMPERATURE (auto-generated telemetry request)
+    registerCommand({
+        TempBoardCommandType::GET_TEMPERATURE,
+        "GET_TEMPERATURE",
+        "Request current value of: Current temperature reading in centidegrees Celsius (e.g. 2350 = 23.50°C)",
         {}
     });
 
@@ -350,6 +425,54 @@ void CommandRegistry::initialize() {
         IndicatorBoardCommandType::SET_SETTING_BUZZER_ENABLED,
         "SET_SETTING_BUZZER_ENABLED",
         "Set value of: Whether the buzzer is enabled (0=disabled, 1=enabled)",
+        {}
+    });
+
+    // GET_SETTING_TEMP_INTERVAL_MS (auto-generated setting GET)
+    registerCommand({
+        TempBoardCommandType::GET_SETTING_TEMP_INTERVAL_MS,
+        "GET_SETTING_TEMP_INTERVAL_MS",
+        "Get current value of: Telemetry interval for temperature in ms",
+        {}
+    });
+
+    // SET_SETTING_TEMP_INTERVAL_MS (auto-generated setting SET)
+    registerCommand({
+        TempBoardCommandType::SET_SETTING_TEMP_INTERVAL_MS,
+        "SET_SETTING_TEMP_INTERVAL_MS",
+        "Set value of: Telemetry interval for temperature in ms",
+        {}
+    });
+
+    // GET_SETTING_TEMP_THRESHOLD_HIGH (auto-generated setting GET)
+    registerCommand({
+        TempBoardCommandType::GET_SETTING_TEMP_THRESHOLD_HIGH,
+        "GET_SETTING_TEMP_THRESHOLD_HIGH",
+        "Get current value of: High-temperature threshold in centidegrees (used in auto mode)",
+        {}
+    });
+
+    // SET_SETTING_TEMP_THRESHOLD_HIGH (auto-generated setting SET)
+    registerCommand({
+        TempBoardCommandType::SET_SETTING_TEMP_THRESHOLD_HIGH,
+        "SET_SETTING_TEMP_THRESHOLD_HIGH",
+        "Set value of: High-temperature threshold in centidegrees (used in auto mode)",
+        {}
+    });
+
+    // GET_SETTING_AUTO_LED_MODE (auto-generated setting GET)
+    registerCommand({
+        TempBoardCommandType::GET_SETTING_AUTO_LED_MODE,
+        "GET_SETTING_AUTO_LED_MODE",
+        "Get current value of: 0 = manual LED control via commands; 1 = auto (green when below threshold, red when above)",
+        {}
+    });
+
+    // SET_SETTING_AUTO_LED_MODE (auto-generated setting SET)
+    registerCommand({
+        TempBoardCommandType::SET_SETTING_AUTO_LED_MODE,
+        "SET_SETTING_AUTO_LED_MODE",
+        "Set value of: 0 = manual LED control via commands; 1 = auto (green when below threshold, red when above)",
         {}
     });
 

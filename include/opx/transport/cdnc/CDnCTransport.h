@@ -10,11 +10,12 @@
 #ifndef SMARTDRIVE_CDNCTRANSPORT_H
 #define SMARTDRIVE_CDNCTRANSPORT_H
 
-#ifdef STM32F4xx
+#ifdef CDNC_MASTER
 
 #include "opx/interfaces/ITransport.h"
 #include "opx/constants/ProtocolConstants.h"
 #include "opx/utils/Logger.h"
+#include "opx/utils/CRC8.h"
 #include "CDnC.h"
 
 // Sentinel: pass to CDnCTransport constructor to create a TX-only broadcast
@@ -23,7 +24,7 @@
 class CDnCTransport : public ITransport {
 public:
     explicit CDnCTransport(uint8_t slaveIndex)
-        : _slaveIndex(slaveIndex)
+    : _slaveIndex(slaveIndex)
     {
         resetParser();
     }
@@ -39,7 +40,6 @@ public:
         if (_slaveIndex == CDNC_SLAVE_BROADCAST) {
             return sendBroadcast(data);
         }
-
         uint32_t slotsNeeded = (uint32_t)data.size * 8;
         uint32_t w = cdnc_write_ptr(_slaveIndex);
         uint32_t r = cdnc_read_ptr();
@@ -69,12 +69,12 @@ public:
     // No-op for the broadcast instance (it never receives).
     void accumulate() override {
         if (_slaveIndex == CDNC_SLAVE_BROADCAST) return;
-        if (_frameReady) return;    // hold frame until releaseFrame() is called
+        if (_frameReady) return;
 
         uint8_t byte;
         while (cdnc_recv_byte(_slaveIndex, &byte)) {
             if (parseByte(byte)) {
-                break;  // frame complete — stop draining until released
+                break;
             }
         }
     }
@@ -108,76 +108,87 @@ private:
     //   • 0x00 NOP/pad bytes  — silently dropped (cdnc_post_exchange_pad output)
     //   • Invalid header byte — logged and dropped; parser stays in WAIT_HEADER
     //
-    // Once a valid header is accepted the parser commits to that frame.
-    // A bad LENGTH (> MAX_PAYLOAD_SIZE) triggers a re-sync to WAIT_HEADER.
+
+
+    uint8_t    _slaveIndex;
+    uint8_t    _lastBadHeader = 0;
 
     enum class ParseState : uint8_t {
         WAIT_HEADER,
-        WAIT_LENGTH,
-        READING_PAYLOAD,
-        READING_CRC,
+        ACCUMULATING,  // replaces WAIT_LENGTH, READING_PAYLOAD, READING_CRC
     };
 
-    uint8_t    _slaveIndex;
-    ParseState _state              = ParseState::WAIT_HEADER;
+
+    ParseState _parseState = ParseState::WAIT_HEADER;
     uint8_t    _frameBuf[ProtocolConstants::MAX_FRAME_SIZE];
-    uint8_t    _expectedPayloadLen = 0;
-    uint8_t    _framePos           = 0;
-    bool       _frameReady         = false;
+    uint8_t    _framePos   = 0;
+    bool       _frameReady = false;
 
-    // Feed one byte. Returns true when a complete frame is in _frameBuf.
+
     bool parseByte(uint8_t byte) {
-        switch (_state) {
 
-        case ParseState::WAIT_HEADER:
-            if (byte == ProtocolConstants::NOP_BYTE) {
-                return false;   // pad — silently discard
-            }
-            if (!ProtocolConstants::isValidHeader(byte) ||
-                !ProtocolConstants::isValidFrameType(byte)) {
-                LOG(LogLevel::OP_WARNING, "CDnCTransport: bad header, resyncing");
+        switch (_parseState) {
+
+            case ParseState::WAIT_HEADER:
+                if (byte == ProtocolConstants::NOP_BYTE) return false;
+                if (byte == 0xFF) return false;
+                if (!ProtocolConstants::isValidHeader(byte) ||
+                    !ProtocolConstants::isValidFrameType(byte)) {
+
                 return false;
-            }
-            _frameBuf[0] = byte;
-            _framePos    = 1;
-            _state       = ParseState::WAIT_LENGTH;
-            return false;
+                    }
+                    _frameBuf[0] = byte;
+                    _framePos    = 1;
+                    _parseState  = ParseState::ACCUMULATING;
+                    return false;
 
-        case ParseState::WAIT_LENGTH:
-            _expectedPayloadLen = byte;
-            _frameBuf[_framePos++] = byte;
+            case ParseState::ACCUMULATING:
+                if (_framePos >= ProtocolConstants::MAX_FRAME_SIZE) {
+                    resetParser();
+                    return false;
+                }
+                _frameBuf[_framePos++] = byte;
 
-            if (_expectedPayloadLen > ProtocolConstants::MAX_PAYLOAD_SIZE) {
-                LOG(LogLevel::OP_WARNING, "CDnCTransport: payload length too large, resyncing");
-                resetParser();
+                {
+                    uint8_t minPayload = 0;
+                    ProtocolConstants::FrameType ft = ProtocolConstants::decodeType(_frameBuf[0]);
+                    switch (ft) {
+                        case ProtocolConstants::FrameType::COMMAND:
+                            minPayload = ProtocolConstants::COMMAND_PREAMBLE_SIZE;
+                            break;
+                        case ProtocolConstants::FrameType::RESPONSE:
+                            minPayload = sizeof(CommandResponse);
+                            break;
+                        case ProtocolConstants::FrameType::TELEMETRY:
+                            minPayload = ProtocolConstants::TELEMETRY_PREAMBLE_SIZE;
+                            break;
+                        case ProtocolConstants::FrameType::SETTING:
+                            minPayload = ProtocolConstants::SETTING_PREAMBLE_SIZE;
+                            break;
+                        default:
+                            minPayload = 1;
+                            break;
+                    }
+                    uint8_t minFrame = 1 + minPayload + 1;
+
+                    if (_framePos >= minFrame) {
+                        RawData candidate{_frameBuf, _framePos - 1};
+                        uint8_t expectedCRC = CRC8::compute(candidate);
+                        if (expectedCRC == byte) {
+                            _frameReady = true;
+                            return true;
+                        }
+                    }
+                }
                 return false;
-            }
-
-            _state = (_expectedPayloadLen == 0)
-                ? ParseState::READING_CRC
-                : ParseState::READING_PAYLOAD;
-            return false;
-
-        case ParseState::READING_PAYLOAD:
-            _frameBuf[_framePos++] = byte;
-            if (_framePos == static_cast<uint8_t>(2 + _expectedPayloadLen)) {
-                _state = ParseState::READING_CRC;
-            }
-            return false;
-
-        case ParseState::READING_CRC:
-            _frameBuf[_framePos++] = byte;
-            _frameReady = true;
-            return true;
         }
-
         return false;
     }
 
     void resetParser() {
-        _state              = ParseState::WAIT_HEADER;
-        _framePos           = 0;
-        _expectedPayloadLen = 0;
+        _parseState = ParseState::WAIT_HEADER;
+        _framePos   = 0;
+        _frameReady = false;
     }
 
     // Broadcast TX helper

@@ -21,8 +21,8 @@ inline void registerIndicatorBoardSettings(OpxDevice& device) {
 }
 
 inline void registerIndicatorBoardTelemetry(OpxDevice& device) {
-    device.registerTelemetry(TelemetrySource::IndicatorBoardTelemetrySource::DISPLAY_BRIGHTNESS, TriggerConfig::onChange(1f));
-    device.registerTelemetry(TelemetrySource::IndicatorBoardTelemetrySource::LED_COUNT, TriggerConfig::onChange(1f));
+    device.registerTelemetry(TelemetrySource::IndicatorBoardTelemetrySource::DISPLAY_BRIGHTNESS, TriggerConfig::onChange(1));
+    device.registerTelemetry(TelemetrySource::IndicatorBoardTelemetrySource::LED_COUNT, TriggerConfig::onChange(1));
 }
 
 #endif // SMARTDRIVE_INDICATORBOARDREGISTERALL_H

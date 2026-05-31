@@ -30,6 +30,13 @@ namespace IndicatorBoardTelemetrySource {
 
 } // namespace IndicatorBoardTelemetrySource
 
+namespace TempBoardTelemetrySource {
+
+    // Current temperature reading in centidegrees Celsius (e.g. 2350 = 23.50°C)
+    constexpr uint16_t TEMPERATURE = 0x0201;
+
+} // namespace TempBoardTelemetrySource
+
 } // namespace TelemetrySource
 
 #endif // SMARTDRIVE_TELEMETRYSOURCEIDS_H

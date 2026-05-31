@@ -30,19 +30,17 @@
 #include "opx/mutex/NullMutex.h"
 
 #ifdef CDNC_ENABLED
-#include "opx/transport/cdnc/CDnCTransport.h"
-#include "opx/transport/cdnc/CDnCManager.h"
+#include "smartdrive/transport/cdnc/CDnCTransport.h"
+#include "smartdrive/transport/cdnc/CDnCManager.h"
 #endif
 
-enum class OpxDeviceTransportID : uint8_t
-{
+enum class OpxDeviceTransportID : uint8_t {
     OPX_SERIAL = 0x30,
     OPX_WIFI = 0x31,
     OPX_HTTP = 0x32,
 };
 
-class OpxDevice
-{
+class OpxDevice {
 public:
     using CommandHandler = void (*)(const Command &, const uint8_t &,
                                     uint8_t sourceTransportID, void *context);
@@ -62,12 +60,11 @@ public:
 
     OpxDevice &operator=(const OpxDevice &) = delete;
 
-    template <typename SerialType>
+    template<typename SerialType>
     bool beginSerial(SerialType &serial, uint32_t baud);
 
-    template <typename SerialType>
-    bool connectSerial(SerialType &serial, uint32_t baud)
-    {
+    template<typename SerialType>
+    bool connectSerial(SerialType &serial, uint32_t baud) {
         // Serial communication has no client/server distinction at the physical
         // layer — both sides call begin() and start reading/writing. connectSerial
         // is provided purely for API symmetry with OpxSession::connectSerial and
@@ -80,7 +77,7 @@ public:
 
     bool forwardBetween(uint8_t transportA, uint8_t transportB);
 
-#ifdef ESP32
+    #ifdef ESP32
     bool beginWiFi(uint16_t port, uint32_t stackSize = 4096);
     bool beginHttpServer(uint16_t port, uint32_t stackSize = 4096);
     bool beginHttpClient(const char *host, uint16_t port);
@@ -88,17 +85,17 @@ public:
                      uint8_t maxReconnectAttempts = 5,
                      uint32_t reconnectDelayMs = 2000);
     bool connectHttp(const char *host, uint16_t port);
-#endif
+    #endif
 
-#ifdef CDNC_ENABLED
+    #ifdef CDNC_ENABLED
     bool beginCDnC();
-#endif
+    #endif
 
     void end(OpxDeviceTransportID id);
 
-#ifdef CDNC_ENABLED
+    #ifdef CDNC_ENABLED
     void endCDnC();
-#endif
+    #endif
 
     void endAll();
     void onCommand(CommandHandler handler, void *context = nullptr);
@@ -107,7 +104,7 @@ public:
     void onConnectionLost(ConnectionLostHandler callback);
     void update();
 
-    // Discovery methods
+    //Discovery methods
     void announce();
     void discover();
     void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb, void *context = nullptr);
@@ -115,12 +112,12 @@ public:
     bool isDeviceConnected(uint8_t typeShift) const;
     uint8_t transportIDFor(uint8_t typeShift) const;
 
-    // Heartbeat methods
+    //Heartbeat methods
     void setHeartbeatTimeout(uint32_t timeoutMs);
 
-#ifdef CDNC_ENABLED
+    #ifdef CDNC_ENABLED
     void exchangeCDnC();
-#endif
+    #endif
 
     bool sendCommand(const Command &cmd,
                      uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT);
@@ -145,15 +142,13 @@ public:
     CommunicationManager *comms();
 
 private:
-    struct TransportSlot
-    {
+    struct TransportSlot {
         ITransport *transport = nullptr; // heap-allocated, owned
         OpxDeviceTransportID id;
         bool active = false;
     };
 
-    struct ForwardingPair
-    {
+    struct ForwardingPair {
         uint8_t transportA = 0;
         uint8_t transportB = 0;
         bool active = false;
@@ -199,15 +194,15 @@ private:
     bool heartbeatReceived = false;
     bool connectionLost = false;
 
-#ifdef ESP32
+    #ifdef ESP32
     // FreeRTOS mutexes for thread safety between the listen task
     // and the main loop's processCommands() / processResponses() calls.
     FreeRtosMutex sendMutex;
     FreeRtosMutex listenMutex;
-#else
+    #else
     NullMutex sendMutex;
     NullMutex listenMutex;
-#endif
+    #endif
     CommunicationManager *cm = nullptr;
     TelemetryManager *telemetryManager = nullptr;
     SettingsManager *settingsManager = nullptr;
@@ -216,21 +211,21 @@ private:
     TransportSlot slots[MAX_DEVICE_TRANSPORTS];
     uint8_t activeSlotCount = 0;
 
-#ifdef ESP32
+    #ifdef ESP32
     // FreeRTOS task handles — stored so tasks can be deleted on end()
     TaskHandle_t listenTaskHandle = nullptr;
     volatile bool listenTaskShouldStop = false;
     SemaphoreHandle_t listenTaskDoneSem = nullptr;
     friend void opxListenTask(void *param);
     void stopListenTask();
-#endif
+    #endif
 
-#ifdef CDNC_ENABLED
+    #ifdef CDNC_ENABLED
     // Owns all 16 CDnCTransport instances + broadcast transport.
     // Constructed on beginCDnC(), nullptr otherwise.
     CDnCManager *cdncManager = nullptr;
     bool cdncActive = false;
-#endif
+    #endif
     CommandHandler commandHandler = nullptr;
     void *commandHandlerContext = nullptr;
     ResponseHandler responseHandler = nullptr;
@@ -238,13 +233,12 @@ private:
     TelemetryHandler telemetryHandler = nullptr;
     void *telemetryHandlerContext = nullptr;
     ConnectionLostHandler connectionLostCallback = nullptr;
+
 };
 
-template <typename SerialType>
-bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud)
-{
-    if (slotOccupied(OpxDeviceTransportID::OPX_SERIAL))
-    {
+template<typename SerialType>
+bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud) {
+    if (slotOccupied(OpxDeviceTransportID::OPX_SERIAL)) {
         LOG(LogLevel::OP_WARNING, "OpxDevice: SERIAL slot already occupied. Call end(SERIAL) first.");
         return false;
     }
@@ -257,5 +251,6 @@ bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud)
     return addTransport(transport, OpxDeviceTransportID::OPX_SERIAL);
 }
 
+
 #endif
-#endif // SMARTDRIVE_OPXDEVICE_H
+#endif //SMARTDRIVE_OPXDEVICE_H

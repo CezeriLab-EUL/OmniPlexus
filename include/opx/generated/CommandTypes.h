@@ -140,4 +140,55 @@ namespace IndicatorBoardCommandType {
 
 } // namespace IndicatorBoardCommandType
 
+// Device: TempBoard
+namespace TempBoardCommandType {
+
+    // Set red/green LED state in one command (bitmask)
+    constexpr uint16_t LED_SET = 0x1001;
+
+    // Turn on the red LED
+    constexpr uint16_t LED_RED_ON = 0x1002;
+
+    // Turn off the red LED
+    constexpr uint16_t LED_RED_OFF = 0x1003;
+
+    // Turn on the green LED
+    constexpr uint16_t LED_GREEN_ON = 0x1004;
+
+    // Turn off the green LED
+    constexpr uint16_t LED_GREEN_OFF = 0x1005;
+
+    // Send ID with protocol revision and slave capabilities to STM32
+    constexpr uint16_t SEND_ID = 0x100D;
+
+    // Broadcast by master at startup. Slave replies with SEND_ID.
+    constexpr uint16_t DISCOVERY = 0x100E;
+
+    // --- Auto-generated telemetry request commands ---
+
+    // Request current value of: Current temperature reading in centidegrees Celsius (e.g. 2350 = 23.50°C)
+    constexpr uint16_t GET_TEMPERATURE = 0x1101;
+
+    // --- Auto-generated setting request and set commands ---
+
+    // Get current value of: Telemetry interval for temperature in ms
+    constexpr uint16_t GET_SETTING_TEMP_INTERVAL_MS = 0x1201;
+
+    // Set value of: Telemetry interval for temperature in ms
+    constexpr uint16_t SET_SETTING_TEMP_INTERVAL_MS = 0x1301;
+
+    // Get current value of: High-temperature threshold in centidegrees (used in auto mode)
+    constexpr uint16_t GET_SETTING_TEMP_THRESHOLD_HIGH = 0x1202;
+
+    // Set value of: High-temperature threshold in centidegrees (used in auto mode)
+    constexpr uint16_t SET_SETTING_TEMP_THRESHOLD_HIGH = 0x1302;
+
+    // Get current value of: 0 = manual LED control via commands; 1 = auto (green when below threshold, red when above)
+    constexpr uint16_t GET_SETTING_AUTO_LED_MODE = 0x1203;
+
+    // Set value of: 0 = manual LED control via commands; 1 = auto (green when below threshold, red when above)
+    constexpr uint16_t SET_SETTING_AUTO_LED_MODE = 0x1303;
+
+} // namespace TempBoardCommandType
+
 #endif // SMARTDRIVE_COMMANDTYPES_H
