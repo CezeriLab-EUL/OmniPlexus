@@ -53,6 +53,77 @@ public:
                 return offset;
             }
 
+            case ChassisCommandType::MOVE: {
+                // params[0]: speedA (INT16, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(int16_t));
+offset += sizeof(int16_t);
+                // params[1]: speedB (INT16, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(int16_t));
+offset += sizeof(int16_t);
+                return offset;
+            }
+
+            case ChassisCommandType::STOP: {
+                // No parameters
+                return offset;
+            }
+
+            case ChassisCommandType::FORWARD: {
+                // params[0]: speed (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case ChassisCommandType::BACKWARD: {
+                // params[0]: speed (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case ChassisCommandType::TURN_LEFT: {
+                // params[0]: speed (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case ChassisCommandType::TURN_RIGHT: {
+                // params[0]: speed (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case ChassisCommandType::SET_SPEED: {
+                // params[0]: speedA (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[1]: speedB (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                return offset;
+            }
+
+            case ChassisCommandType::SEND_ID: {
+                // params[0]: id (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[1]: protocol_revision (UINT8, required)
+                memcpy(&buffer[offset], cmd.params[1].getData(), sizeof(uint8_t));
+offset += sizeof(uint8_t);
+                // params[2]: slave_capabilities (UINT16, required)
+                memcpy(&buffer[offset], cmd.params[2].getData(), sizeof(uint16_t));
+offset += sizeof(uint16_t);
+                return offset;
+            }
+
+            case ChassisCommandType::DISCOVERY: {
+                // No parameters
+                return offset;
+            }
+
             case EspCommandType::TURNON_BUILTIN_LED: {
                 // No parameters
                 return offset;
@@ -267,6 +338,18 @@ offset += sizeof(uint16_t);
                 return offset;
             }
 
+            case ChassisCommandType::GET_SETTING_MAX_SPEED: {
+                // Auto-generated setting GET — no parameters
+                return offset;
+            }
+
+            case ChassisCommandType::SET_SETTING_MAX_SPEED: {
+                // Auto-generated setting SET — one parameter
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return offset;
+            }
+
             case EspCommandType::GET_SETTING_WIFI_CHANNEL: {
                 // Auto-generated setting GET — no parameters
                 return offset;
@@ -452,6 +535,142 @@ offset += sizeof(uint16_t);
                 cmdOut.params[0] = uint8_t(0);
                 memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
                 offset += sizeof(uint8_t);
+                return true;
+            }
+
+            case ChassisCommandType::MOVE: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: speedA (INT16, required)
+                cmdOut.params[0] = int16_t(0);
+                if (remainingBytes < sizeof(int16_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(int16_t));
+                offset += sizeof(int16_t);
+                remainingBytes -= sizeof(int16_t);
+
+                // params[1]: speedB (INT16, required)
+                cmdOut.params[1] = int16_t(0);
+                if (remainingBytes < sizeof(int16_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(int16_t));
+                offset += sizeof(int16_t);
+                remainingBytes -= sizeof(int16_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::STOP: {
+                // No parameters
+                return true;
+            }
+
+            case ChassisCommandType::FORWARD: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: speed (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::BACKWARD: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: speed (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::TURN_LEFT: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: speed (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::TURN_RIGHT: {
+                if (bufferSize < 3) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: speed (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::SET_SPEED: {
+                if (bufferSize < 4) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: speedA (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[1]: speedB (UINT8, required)
+                cmdOut.params[1] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::SEND_ID: {
+                if (bufferSize < 6) return false;
+                size_t remainingBytes = bufferSize - offset;
+
+                // params[0]: id (UINT8, required)
+                cmdOut.params[0] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[1]: protocol_revision (UINT8, required)
+                cmdOut.params[1] = uint8_t(0);
+                if (remainingBytes < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[1].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                remainingBytes -= sizeof(uint8_t);
+
+                // params[2]: slave_capabilities (UINT16, required)
+                cmdOut.params[2] = uint16_t(0);
+                if (remainingBytes < sizeof(uint16_t)) return false;
+                memcpy(cmdOut.params[2].getDataMutable(), &buffer[offset], sizeof(uint16_t));
+                offset += sizeof(uint16_t);
+                remainingBytes -= sizeof(uint16_t);
+
+                return true;
+            }
+
+            case ChassisCommandType::DISCOVERY: {
+                // No parameters
                 return true;
             }
 
@@ -816,6 +1035,20 @@ offset += sizeof(uint16_t);
                 return true;
             }
 
+            case ChassisCommandType::GET_SETTING_MAX_SPEED: {
+                // Auto-generated setting GET — no parameters
+                return true;
+            }
+
+            case ChassisCommandType::SET_SETTING_MAX_SPEED: {
+                if (bufferSize < 2 + sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
+                return true;
+            }
+
             case EspCommandType::GET_SETTING_WIFI_CHANNEL: {
                 // Auto-generated setting GET — no parameters
                 return true;
@@ -994,6 +1227,15 @@ offset += sizeof(uint16_t);
             case 0xFD01: return 3;
             case 0xFC00: return 2;
             case 0xFC01: return 3;
+            case ChassisCommandType::MOVE: return 6;
+            case ChassisCommandType::STOP: return 2;
+            case ChassisCommandType::FORWARD: return 3;
+            case ChassisCommandType::BACKWARD: return 3;
+            case ChassisCommandType::TURN_LEFT: return 3;
+            case ChassisCommandType::TURN_RIGHT: return 3;
+            case ChassisCommandType::SET_SPEED: return 4;
+            case ChassisCommandType::SEND_ID: return 6;
+            case ChassisCommandType::DISCOVERY: return 2;
             case EspCommandType::TURNON_BUILTIN_LED: return 2;
             case EspCommandType::TURNOFF_BUILTIN_LED: return 2;
             case IndicatorBoardCommandType::OLED_PRINT_STR: return 0xFF; // string param — variable length
@@ -1024,6 +1266,8 @@ offset += sizeof(uint16_t);
             case IndicatorBoardCommandType::GET_DISPLAY_BRIGHTNESS: return 2;
             case IndicatorBoardCommandType::GET_LED_COUNT: return 2;
             case TempBoardCommandType::GET_TEMPERATURE: return 2;
+            case ChassisCommandType::GET_SETTING_MAX_SPEED: return 2;
+            case ChassisCommandType::SET_SETTING_MAX_SPEED: return 3;
             case EspCommandType::GET_SETTING_WIFI_CHANNEL: return 2;
             case EspCommandType::SET_SETTING_WIFI_CHANNEL: return 3;
             case EspCommandType::GET_SETTING_TELEMETRY_INTERVAL_MS: return 2;

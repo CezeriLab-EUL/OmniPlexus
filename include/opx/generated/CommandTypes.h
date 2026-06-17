@@ -8,6 +8,46 @@
 
 #include "opx/core/platform.h"
 
+// Device: Chassis
+namespace ChassisCommandType {
+
+    // Set motor A and B speeds. Positive = forward, negative = backward. Range -255 to 255.
+    constexpr uint16_t MOVE = 0x1801;
+
+    // Stop both motors immediately
+    constexpr uint16_t STOP = 0x1802;
+
+    // Move forward at specified speed
+    constexpr uint16_t FORWARD = 0x1803;
+
+    // Move backward at specified speed
+    constexpr uint16_t BACKWARD = 0x1804;
+
+    // Turn left at specified speed
+    constexpr uint16_t TURN_LEFT = 0x1805;
+
+    // Turn right at specified speed
+    constexpr uint16_t TURN_RIGHT = 0x1806;
+
+    // Set individual motor speeds without changing direction
+    constexpr uint16_t SET_SPEED = 0x1807;
+
+    // Send ID with protocol revision and slave capabilities to STM32
+    constexpr uint16_t SEND_ID = 0x180D;
+
+    // Broadcast by master at startup. Slave replies with SEND_ID.
+    constexpr uint16_t DISCOVERY = 0x180E;
+
+    // --- Auto-generated setting request and set commands ---
+
+    // Get current value of: Maximum PWM duty cycle (0-255)
+    constexpr uint16_t GET_SETTING_MAX_SPEED = 0x1A01;
+
+    // Set value of: Maximum PWM duty cycle (0-255)
+    constexpr uint16_t SET_SETTING_MAX_SPEED = 0x1B01;
+
+} // namespace ChassisCommandType
+
 // Device: Esp
 namespace EspCommandType {
 

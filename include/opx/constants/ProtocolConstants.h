@@ -36,6 +36,8 @@ namespace ProtocolConstants {
     constexpr uint16_t HEARTBEAT_COMMAND = 0xFC00;
     constexpr uint16_t HEARTBEAT_ACK = 0xFC01;
 
+    constexpr uint16_t ESTOP_COMMAND = 0xFE00;
+
     constexpr uint8_t STRING_SENTINEL = 0xFF;
     //returned by the command packer for commands that have string params (don't forget to update the generator if this value is modified)
 
@@ -79,7 +81,8 @@ namespace ProtocolConstants {
                cmdType == DISCOVER_COMMAND ||
                cmdType == ANNOUNCE_COMMAND ||
                cmdType == HEARTBEAT_COMMAND ||
-               cmdType == HEARTBEAT_ACK;
+               cmdType == HEARTBEAT_ACK  ||
+                   cmdType == ESTOP_COMMAND;
     }
 }
 

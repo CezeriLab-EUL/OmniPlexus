@@ -62,6 +62,12 @@ public:
     }
 
     void initialize();
+
+    const CommandMeta* getMeta(uint16_t commandType) const {
+        auto it = commands.find(commandType);
+        if (it != commands.end()) return &it->second;
+        return nullptr;
+    }`
 };
 #endif
 

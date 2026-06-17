@@ -153,7 +153,7 @@ private:
                              : nextSeqNum + 1;
 
             pendingAcks.push({seqNum, cmd.commandType});
-        }
+    }
 
         const SerializedData frame = encoder->serializeCommand(cmd, seqNum);
 

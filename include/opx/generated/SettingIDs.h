@@ -10,6 +10,13 @@
 
 namespace SettingID {
 
+namespace ChassisSetting {
+
+    // Maximum PWM duty cycle (0-255)
+    constexpr uint16_t MAX_SPEED = 0x0301;
+
+} // namespace ChassisSetting
+
 namespace EspSetting {
 
     // WiFi channel to use for communication (1-13)

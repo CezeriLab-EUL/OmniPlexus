@@ -10,6 +10,98 @@
 
 void CommandRegistry::initialize() {
 
+    // MOVE
+    registerCommand({
+        ChassisCommandType::MOVE,
+        "MOVE",
+        "Set motor A and B speeds. Positive = forward, negative = backward. Range -255 to 255.",
+        {
+            {"speedA", ValueType::INT16, true, "Motor A speed (-255 to 255)", 0, ""},
+            {"speedB", ValueType::INT16, true, "Motor B speed (-255 to 255)", 0, ""},
+        }
+    });
+
+    // STOP
+    registerCommand({
+        ChassisCommandType::STOP,
+        "STOP",
+        "Stop both motors immediately",
+        {
+        }
+    });
+
+    // FORWARD
+    registerCommand({
+        ChassisCommandType::FORWARD,
+        "FORWARD",
+        "Move forward at specified speed",
+        {
+            {"speed", ValueType::UINT8, true, "Speed 0-255", 0, ""},
+        }
+    });
+
+    // BACKWARD
+    registerCommand({
+        ChassisCommandType::BACKWARD,
+        "BACKWARD",
+        "Move backward at specified speed",
+        {
+            {"speed", ValueType::UINT8, true, "Speed 0-255", 0, ""},
+        }
+    });
+
+    // TURN_LEFT
+    registerCommand({
+        ChassisCommandType::TURN_LEFT,
+        "TURN_LEFT",
+        "Turn left at specified speed",
+        {
+            {"speed", ValueType::UINT8, true, "Speed 0-255", 0, ""},
+        }
+    });
+
+    // TURN_RIGHT
+    registerCommand({
+        ChassisCommandType::TURN_RIGHT,
+        "TURN_RIGHT",
+        "Turn right at specified speed",
+        {
+            {"speed", ValueType::UINT8, true, "Speed 0-255", 0, ""},
+        }
+    });
+
+    // SET_SPEED
+    registerCommand({
+        ChassisCommandType::SET_SPEED,
+        "SET_SPEED",
+        "Set individual motor speeds without changing direction",
+        {
+            {"speedA", ValueType::UINT8, true, "Motor A speed 0-255", 0, ""},
+            {"speedB", ValueType::UINT8, true, "Motor B speed 0-255", 0, ""},
+        }
+    });
+
+    // SEND_ID
+    registerCommand({
+        ChassisCommandType::SEND_ID,
+        "SEND_ID",
+        "Send ID with protocol revision and slave capabilities to STM32",
+        {
+            {"id", ValueType::UINT8, true, "ID to send", 0, ""},
+            {"protocol_revision", ValueType::UINT8, true, "Protocol Revision", 0, ""},
+            {"slave_capabilities", ValueType::UINT16, true, "Slave capabilities", 0, ""},
+        }
+    });
+
+    // DISCOVERY
+    registerCommand({
+        ChassisCommandType::DISCOVERY,
+        "DISCOVERY",
+        "Broadcast by master at startup. Slave replies with SEND_ID.",
+        {
+        }
+    });
+
     // TURNON_BUILTIN_LED
     registerCommand({
         EspCommandType::TURNON_BUILTIN_LED,
@@ -297,6 +389,22 @@ void CommandRegistry::initialize() {
         TempBoardCommandType::GET_TEMPERATURE,
         "GET_TEMPERATURE",
         "Request current value of: Current temperature reading in centidegrees Celsius (e.g. 2350 = 23.50°C)",
+        {}
+    });
+
+    // GET_SETTING_MAX_SPEED (auto-generated setting GET)
+    registerCommand({
+        ChassisCommandType::GET_SETTING_MAX_SPEED,
+        "GET_SETTING_MAX_SPEED",
+        "Get current value of: Maximum PWM duty cycle (0-255)",
+        {}
+    });
+
+    // SET_SETTING_MAX_SPEED (auto-generated setting SET)
+    registerCommand({
+        ChassisCommandType::SET_SETTING_MAX_SPEED,
+        "SET_SETTING_MAX_SPEED",
+        "Set value of: Maximum PWM duty cycle (0-255)",
         {}
     });
 
