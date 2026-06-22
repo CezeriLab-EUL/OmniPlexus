@@ -1,0 +1,115 @@
+{
+    "version": "1.0",
+    "description": "SmartDrive Commands for Temperature/Status Board",
+    "device": "TempBoard",
+    "typeShift": 2,
+    "commands": [
+        {
+            "id": 1,
+            "name": "LED_SET",
+            "description": "Set red/green LED state in one command (bitmask)",
+            "acknowledges": false,
+            "params": [
+                {
+                    "name": "state",
+                    "type": "UINT8",
+                    "required": true,
+                    "description": "Bitmask: bit 0 = red, bit 1 = green"
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "LED_RED_ON",
+            "description": "Turn on the red LED",
+            "acknowledges": false,
+            "params": []
+        },
+        {
+            "id": 3,
+            "name": "LED_RED_OFF",
+            "description": "Turn off the red LED",
+            "acknowledges": false,
+            "params": []
+        },
+        {
+            "id": 4,
+            "name": "LED_GREEN_ON",
+            "description": "Turn on the green LED",
+            "acknowledges": false,
+            "params": []
+        },
+        {
+            "id": 5,
+            "name": "LED_GREEN_OFF",
+            "description": "Turn off the green LED",
+            "acknowledges": false,
+            "params": []
+        },
+        {
+            "id": 13,
+            "name": "SEND_ID",
+            "description": "Send ID with protocol revision and slave capabilities to STM32",
+            "acknowledges": true,
+            "params": [
+                {
+                    "name": "id",
+                    "type": "UINT8",
+                    "required": true,
+                    "description": "ID to send"
+                },
+                {
+                    "name": "protocol_revision",
+                    "type": "UINT8",
+                    "required": true,
+                    "description": "Protocol Revision"
+                },
+                {
+                    "name": "slave_capabilities",
+                    "type": "UINT16",
+                    "required": true,
+                    "description": "Slave capabilities"
+                }
+            ]
+        },
+        {
+            "id": 14,
+            "name": "DISCOVERY",
+            "description": "Broadcast by master at startup. Slave replies with SEND_ID.",
+            "acknowledges": false,
+            "params": []
+        }
+    ],
+    "telemetry": [
+        {
+            "id": 1,
+            "name": "TEMPERATURE",
+            "description": "Current temperature reading in centidegrees Celsius (e.g. 2350 = 23.50°C)",
+            "type": "INT16",
+            "trigger": {
+                "type": "periodic",
+                "intervalMs": 2000
+            }
+        }
+    ],
+    "settings": [
+        {
+            "id": 1,
+            "name": "TEMP_INTERVAL_MS",
+            "description": "Telemetry interval for temperature in ms",
+            "type": "UINT16"
+        },
+        {
+            "id": 2,
+            "name": "TEMP_THRESHOLD_HIGH",
+            "description": "High-temperature threshold in centidegrees (used in auto mode)",
+            "type": "INT16"
+        },
+        {
+            "id": 3,
+            "name": "AUTO_LED_MODE",
+            "description": "0 = manual LED control via commands; 1 = auto (green when below threshold, red when above)",
+            "type": "UINT8"
+        }
+    ]
+}
