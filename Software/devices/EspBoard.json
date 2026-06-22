@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "description": "SmartDrive Commands for Esp Board",
+  "device": "Esp",
+  "typeShift": 1,
+  "commands": [
+    {
+      "id": 1,
+      "name": "TURNON_BUILTIN_LED",
+      "description": "Turn on the built-in LED on the ESP board",
+      "acknowledges": false,
+      "params": []
+    },
+    {
+      "id": 2,
+      "name": "TURNOFF_BUILTIN_LED",
+      "description": "Turn off the built-in LED on the ESP board",
+      "acknowledges": false,
+      "params": []
+    }
+  ],
+  "telemetry": [
+    {
+      "id": 1,
+      "name": "BOARD_VOLTAGE",
+      "description": "Current board voltage in volts",
+      "type": "UINT8",
+      "trigger": { "type": "periodic", "intervalMs": 5000 }
+    },
+    {
+      "id": 2,
+      "name": "BOARD_TEMPERATURE",
+      "description": "ESP board temperature in celsius",
+      "type": "FLOAT",
+      "trigger": { "type": "periodic", "intervalMs": 10000 }
+    }
+  ],
+  "settings": [
+    {
+      "id": 1,
+      "name": "WIFI_CHANNEL",
+      "description": "WiFi channel to use for communication (1-13)",
+      "type": "UINT8"
+    },
+    {
+      "id": 2,
+      "name": "TELEMETRY_INTERVAL_MS",
+      "description": "Interval in milliseconds between periodic telemetry sends",
+      "type": "UINT32"
+    },
+    {
+      "id": 3,
+      "name": "DEVICE_NAME",
+      "description": "Human-readable name for this ESP device",
+      "type": "STRING"
+    }
+  ]
+}

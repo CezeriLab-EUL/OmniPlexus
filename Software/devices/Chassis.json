@@ -1,0 +1,154 @@
+
+{
+  "version": "1.0",
+  "description": "OmniPlexus Commands for Chassis Motor Controller",
+  "device": "Chassis",
+  "typeShift": 3,
+  "commands": [
+    {
+      "id": 1,
+      "name": "MOVE",
+      "description": "Set motor A and B speeds. Positive = forward, negative = backward. Range -255 to 255.",
+      "acknowledges": false,
+      "params": [
+        {
+          "name": "speedA",
+          "type": "INT16",
+          "required": true,
+          "description": "Motor A speed (-255 to 255)"
+        },
+        {
+          "name": "speedB",
+          "type": "INT16",
+          "required": true,
+          "description": "Motor B speed (-255 to 255)"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "STOP",
+      "description": "Stop both motors immediately",
+      "acknowledges": false,
+      "params": []
+    },
+    {
+      "id": 3,
+      "name": "FORWARD",
+      "description": "Move forward at specified speed",
+      "acknowledges": false,
+      "params": [
+        {
+          "name": "speed",
+          "type": "UINT8",
+          "required": true,
+          "description": "Speed 0-255"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "BACKWARD",
+      "description": "Move backward at specified speed",
+      "acknowledges": false,
+      "params": [
+        {
+          "name": "speed",
+          "type": "UINT8",
+          "required": true,
+          "description": "Speed 0-255"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "TURN_LEFT",
+      "description": "Turn left at specified speed",
+      "acknowledges": false,
+      "params": [
+        {
+          "name": "speed",
+          "type": "UINT8",
+          "required": true,
+          "description": "Speed 0-255"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "TURN_RIGHT",
+      "description": "Turn right at specified speed",
+      "acknowledges": false,
+      "params": [
+        {
+          "name": "speed",
+          "type": "UINT8",
+          "required": true,
+          "description": "Speed 0-255"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "SET_SPEED",
+      "description": "Set individual motor speeds without changing direction",
+      "acknowledges": false,
+      "params": [
+        {
+          "name": "speedA",
+          "type": "UINT8",
+          "required": true,
+          "description": "Motor A speed 0-255"
+        },
+        {
+          "name": "speedB",
+          "type": "UINT8",
+          "required": true,
+          "description": "Motor B speed 0-255"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "SEND_ID",
+      "description": "Send ID with protocol revision and slave capabilities to STM32",
+      "acknowledges": true,
+      "params": [
+        {
+          "name": "id",
+          "type": "UINT8",
+          "required": true,
+          "description": "ID to send"
+        },
+        {
+          "name": "protocol_revision",
+          "type": "UINT8",
+          "required": true,
+          "description": "Protocol Revision"
+        },
+        {
+          "name": "slave_capabilities",
+          "type": "UINT16",
+          "required": true,
+          "description": "Slave capabilities"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "DISCOVERY",
+      "description": "Broadcast by master at startup. Slave replies with SEND_ID.",
+      "acknowledges": false,
+      "params": []
+    }
+  ],
+  "telemetry": [],
+  "settings": [
+    {
+      "id": 1,
+      "name": "MAX_SPEED",
+      "description": "Maximum PWM duty cycle (0-255)",
+      "type": "UINT8"
+    }
+  ]
+}
