@@ -6,8 +6,8 @@
 #ifndef SMARTDRIVE_COMMANDPACKER_H
 #define SMARTDRIVE_COMMANDPACKER_H
 
+#include "CommandTypes.h"
 #include "opx/core/platform.h"
-#include "opx/generated/CommandTypes.h"
 #include "opx/types/ProtocolTypes.h"
 
 class CommandPacker {

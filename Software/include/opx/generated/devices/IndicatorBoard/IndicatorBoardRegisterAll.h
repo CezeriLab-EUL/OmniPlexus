@@ -9,8 +9,8 @@
 #include "opx/core/platform.h"
 #include "opx/core/OpxDevice.h"
 #include "opx/core/TriggerConfig.h"
-#include "SettingIDs.h"
-#include "TelemetrySourceIDs.h"
+#include "../../shared/SettingIDs.h"
+#include "../../shared/TelemetrySourceIDs.h"
 
 inline void registerIndicatorBoardSettings(OpxDevice& device) {
     device.registerSetting(SettingID::IndicatorBoardSetting::OLED_BRIGHTNESS, ValueType::UINT8);

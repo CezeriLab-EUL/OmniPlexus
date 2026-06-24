@@ -13,30 +13,41 @@ find_package(Boost REQUIRED COMPONENTS system)
 # Build the tool
 add_subdirectory(tools/CommandGenerator)
 
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/include/opx/generated)
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/generated)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/include/opx/autogen)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/autogen)
 
 # Discover all device JSON files in devices/
 file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/devices/*.json")
 
-# Derive per-device controller header paths from JSON filenames
-set(ALL_CONTROLLER_HEADERS "")
+# Derive per-device output paths from JSON filenames (new structure)
+set(ALL_DEVICE_OUTPUTS "")
 foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
     get_filename_component(DEVICE_NAME ${DEVICE_JSON} NAME_WE)
-    list(APPEND ALL_CONTROLLER_HEADERS
-            "${CMAKE_SOURCE_DIR}/include/opx/generated/${DEVICE_NAME}Controller.h")
+    set(DEVICE_DIR "${CMAKE_SOURCE_DIR}/include/opx/generated/devices/${DEVICE_NAME}")
+    list(APPEND ALL_DEVICE_OUTPUTS
+            "${DEVICE_DIR}/${DEVICE_NAME}Controller.h"
+            "${DEVICE_DIR}/${DEVICE_NAME}RegisterAll.h"
+            "${DEVICE_DIR}/${DEVICE_NAME}Register.h"
+    )
 endforeach()
 
-# Single custom command — passes ALL json files at once
+# Shared outputs (flat, always generated)
+set(SHARED_GENERATED_DIR "${CMAKE_SOURCE_DIR}/include/opx/generated/shared")
+set(ALL_SHARED_OUTPUTS
+        "${SHARED_GENERATED_DIR}/CommandTypes.h"
+        "${SHARED_GENERATED_DIR}/CommandPacker.h"
+        "${SHARED_GENERATED_DIR}/GeneratedConfig.h"
+        "${SHARED_GENERATED_DIR}/TelemetrySourceIDs.h"
+        "${SHARED_GENERATED_DIR}/SettingIDs.h"
+        "${SHARED_GENERATED_DIR}/DeviceManifest.h"
+        "${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp"
+)
+
 add_custom_command(
         OUTPUT
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/CommandTypes.h
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/CommandPacker.h
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/GeneratedConfig.h
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/TelemetrySourceIDs.h
-        ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
-        ${ALL_CONTROLLER_HEADERS}
+        ${ALL_SHARED_OUTPUTS}
+        ${ALL_DEVICE_OUTPUTS}
         COMMAND CommandGenerator
         ${DEVICE_JSON_FILES}
         ${CMAKE_SOURCE_DIR}/include/opx/generated/
@@ -50,16 +61,11 @@ add_custom_command(
 
 add_custom_target(GenerateCommands ALL
         DEPENDS
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/CommandTypes.h
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/CommandPacker.h
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/GeneratedConfig.h
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/TelemetrySourceIDs.h
-        ${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp
-        ${ALL_CONTROLLER_HEADERS}
+        ${ALL_SHARED_OUTPUTS}
+        ${ALL_DEVICE_OUTPUTS}
 )
 
 add_library(OmniPlexus
-        src/generated/CommandRegistry.cpp
         src/OpxSession.cpp
         src/OpxDevice.cpp
         include/opx/core/SettingsManager.h
@@ -99,21 +105,21 @@ add_dependencies(OmniPlexus GenerateCommands)
 ##        tests/test_command_registry.cpp
 #)
 
-add_executable(OmniPlexus_Test_SerialTransport
-#        tests/transport/test_serial_transport.cpp
-#        tests/transport/serial_round_trip.cpp
-#        tests/transport/serial_receive_single.cpp
-#        tests/transport/serial_receive_multithreaded.cpp
-#        tests/transport/serial_command_response.cpp
-#        tests/transport/serial_telemetry_receive.cpp
-#        tests/transport/http/send_command.cpp
-#        tests/transport/http/receive_telemetry.cpp
-        tests/transport/wifi/send_command.cpp
-)
+# add_executable(OmniPlexus_Test_SerialTransport
+# #        tests/transport/test_serial_transport.cpp
+# #        tests/transport/serial_round_trip.cpp
+# #        tests/transport/serial_receive_single.cpp
+# #        tests/transport/serial_receive_multithreaded.cpp
+# #        tests/transport/serial_command_response.cpp
+# #        tests/transport/serial_telemetry_receive.cpp
+# #        tests/transport/http/send_command.cpp
+# #        tests/transport/http/receive_telemetry.cpp
+#         # tests/transport/wifi/send_command.cpp
+# )
 
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
 #target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
-target_link_libraries(OmniPlexus_Test_SerialTransport PRIVATE OmniPlexus)
+# target_link_libraries(OmniPlexus_Test_SerialTransport PRIVATE OmniPlexus)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

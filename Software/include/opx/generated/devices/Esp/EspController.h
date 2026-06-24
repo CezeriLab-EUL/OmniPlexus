@@ -10,7 +10,7 @@
 #include "opx/core/platform.h"
 #include "opx/core/CommunicationManager.h"
 #include "opx/types/ProtocolTypes.h"
-#include "CommandTypes.h"
+#include "../../shared/CommandTypes.h"
 
 class EspController {
 private:

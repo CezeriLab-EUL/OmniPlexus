@@ -4,7 +4,7 @@
 //
 
 #include "opx/registry/CommandRegistry.h"
-#include "opx/generated/CommandTypes.h"
+#include "opx/generated/shared/CommandTypes.h"
 
 #ifndef EMBEDDED_BUILD
 
