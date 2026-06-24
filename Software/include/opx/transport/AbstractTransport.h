@@ -6,9 +6,9 @@
 #define SMARTDRIVE_ABSTRACTTRANSPORT_H
 
 #include "opx/core/ValueSource.h"
-#include "opx/generated/shared/CommandPacker.h"
 #include "opx/interfaces/ITransport.h"
 #include "opx/utils/CRC8.h"
+#include "shared/CommandPacker.h"
 
 class AbstractTransport : public ITransport {
 private:

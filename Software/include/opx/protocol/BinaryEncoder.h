@@ -6,7 +6,7 @@
 #define SMARTDRIVE_BINARYENCODER_H
 
 #include "opx/core/Config.h"
-#include "opx/generated/shared/CommandPacker.h"
+#include "shared/CommandPacker.h"
 #include "opx/interfaces/IEncoder.h"
 #include "opx/types/ProtocolTypes.h"
 #include "opx/types/RobotData.h"

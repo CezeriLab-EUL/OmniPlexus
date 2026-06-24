@@ -7,7 +7,7 @@
 
 #include "opx/core/TransportManager.h"
 #include "opx/core/platform.h"
-#include "opx/generated/shared/CommandPacker.h"
+#include "shared/CommandPacker.h"
 #include "opx/interfaces/IEncoder.h"
 #include "opx/interfaces/IMutex.h"
 #include "opx/types/ProtocolTypes.h"

@@ -13,7 +13,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 # Build the tool
 add_subdirectory(tools/CommandGenerator)
 
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/include/opx/autogen)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/autogen)
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/autogen)
 
 # Discover all device JSON files in devices/
@@ -24,7 +24,7 @@ file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
 set(ALL_DEVICE_OUTPUTS "")
 foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
     get_filename_component(DEVICE_NAME ${DEVICE_JSON} NAME_WE)
-    set(DEVICE_DIR "${CMAKE_SOURCE_DIR}/include/opx/generated/devices/${DEVICE_NAME}")
+    set(DEVICE_DIR "${CMAKE_SOURCE_DIR}/autogen/devices/${DEVICE_NAME}")
     list(APPEND ALL_DEVICE_OUTPUTS
             "${DEVICE_DIR}/${DEVICE_NAME}Controller.h"
             "${DEVICE_DIR}/${DEVICE_NAME}RegisterAll.h"
@@ -33,7 +33,7 @@ foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
 endforeach()
 
 # Shared outputs (flat, always generated)
-set(SHARED_GENERATED_DIR "${CMAKE_SOURCE_DIR}/include/opx/generated/shared")
+set(SHARED_GENERATED_DIR "${CMAKE_SOURCE_DIR}/autogen/shared")
 set(ALL_SHARED_OUTPUTS
         "${SHARED_GENERATED_DIR}/CommandTypes.h"
         "${SHARED_GENERATED_DIR}/CommandPacker.h"
@@ -41,7 +41,7 @@ set(ALL_SHARED_OUTPUTS
         "${SHARED_GENERATED_DIR}/TelemetrySourceIDs.h"
         "${SHARED_GENERATED_DIR}/SettingIDs.h"
         "${SHARED_GENERATED_DIR}/DeviceManifest.h"
-        "${CMAKE_SOURCE_DIR}/src/generated/CommandRegistry.cpp"
+        "${CMAKE_SOURCE_DIR}/src/autogen/CommandRegistry.cpp"
 )
 
 add_custom_command(
@@ -50,8 +50,8 @@ add_custom_command(
         ${ALL_DEVICE_OUTPUTS}
         COMMAND CommandGenerator
         ${DEVICE_JSON_FILES}
-        ${CMAKE_SOURCE_DIR}/include/opx/generated/
-        ${CMAKE_SOURCE_DIR}/src/generated/
+        ${CMAKE_SOURCE_DIR}/autogen/
+        ${CMAKE_SOURCE_DIR}/src/autogen/
         DEPENDS
         ${DEVICE_JSON_FILES}
         CommandGenerator
@@ -77,6 +77,10 @@ add_custom_target(SyncArduinoLibrary
         ${CMAKE_SOURCE_DIR}/include/opx
         ${ARDUINO_LIBRARY_PATH}/opx
 
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/autogen
+        ${ARDUINO_LIBRARY_PATH}/autogen
+
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/src/OpxDevice.cpp
         ${ARDUINO_LIBRARY_PATH}/OpxDevice.cpp
@@ -87,6 +91,7 @@ add_dependencies(SyncArduinoLibrary OmniPlexus GenerateCommands)
 
 target_include_directories(OmniPlexus PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_include_directories(OmniPlexus PRIVATE

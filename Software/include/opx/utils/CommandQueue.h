@@ -5,9 +5,9 @@
 #ifndef SMARTDRIVE_COMMANDQUEUE_H
 #define SMARTDRIVE_COMMANDQUEUE_H
 
-#include "opx/generated/shared/GeneratedConfig.h"
 #include "opx/types/ProtocolTypes.h"
 #include "opx/utils/Logger.h"
+#include "shared/GeneratedConfig.h"
 
 #if !defined(ARDUINO) && !defined(ESP_PLATFORM)
 #include <mutex>
