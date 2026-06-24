@@ -51,9 +51,15 @@ We maintain a public record of all contributors. Unless you explicitly request o
 
 | Scope | Convention | Example |
 |---|---|---|
-| Public types, classes, methods, constants | `PascalCase` | `CommunicationManager`, `GetModuleId()` |
-| Local, private, and internal variables | `camelCase` | `frameBuffer`, `retryCount` |
-| Preprocessor macros | `UPPER_SNAKE_CASE` | `OPX_MAX_DEVICES` |
+| Classes and structs | `PascalCase` | `CommunicationManager`, `BinaryEncoder`, `TaggedFrame` |
+| Interface classes | `I` prefix + `PascalCase` | `ITransport`, `IEncoder`, `IMutex` |
+| Namespaces | `PascalCase` | `ProtocolConstants` |
+| Public and private methods | `camelCase` | `sendCommand()`, `beginSerial()`, `hasCompleteFrame()` |
+| `using` type aliases | `PascalCase` | `CommandHandler`, `TelemetryCallback` |
+| `enum class` type names | `PascalCase` | `FrameType`, `LogLevel`, `ResponseStatus` |
+| `enum class` values | `UPPER_SNAKE_CASE` | `OP_WARNING`, `UNKNOWN_COMMAND_TYPE` |
+| Local variables and member variables | `camelCase`, no leading underscore | `frameBuffer`, `heartbeatTimeoutMs`, `retryCount` |
+| Preprocessor macros and compile-time constants | `UPPER_SNAKE_CASE` | `OPX_MAX_DEVICES`, `MAX_TRANSPORTS` |
 
 ### Hardware (OpenSCAD)
 
@@ -78,7 +84,7 @@ Every public C++ class and function **must** be documented using Doxygen-style c
  * @param[in] mass The mass of the attached load in kilograms.
  * @return The required torque in Newton-meters.
  */
-float CalculateTorque(float mass);
+float calculateTorque(float mass);
 ```
 
 ### Triple-Slash Style (acceptable alternative)
@@ -87,7 +93,7 @@ float CalculateTorque(float mass);
 /// @brief Calculates the required torque for the specified joint.
 /// @param[in] mass The mass of the attached load in kilograms.
 /// @return The required torque in Newton-meters.
-float CalculateTorque(float mass);
+float calculateTorque(float mass);
 ```
 
 ### Class-Level Documentation
@@ -133,7 +139,7 @@ int            motorSpeed;
 Mark any value, reference, or pointer that must not change as `const`.
 
 ```cpp
-void ProcessFrame(const uint8_t* data, uint16_t length);
+void processFrame(const uint8_t* data, uint16_t length);
 ```
 
 ### No Heap Allocation in the Main Loop

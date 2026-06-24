@@ -67,3 +67,94 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Editor files and directories
+
+# Visual Studio Code
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+
+# CLion
+.idea/
+cmake-build-*/
+*.iml
+
+# Qt Creator
+*.user.*
+*.creator.user*
+*.creator.files
+*.creator.includes
+
+# Eclipse / CDT
+.project
+.cproject
+.classpath
+.settings/
+
+# NetBeans
+nbproject/
+nbactions.xml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.un~
+*.swp
+*.swo
+*.vim
+[._]*.s[a-v][a-z]
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+*.xcuserdata/
+DerivedData/
+
+# Code::Blocks
+*.cbp
+*.depend
+*.layout
+*.workspace
+*.cfgp
+
+# KDevelop
+*.kdev4
+.kdev4/
+
+# GNOME Builder
+.build/
+.cache/
+.flatpak-builder/
+.flatpak/
+
+# Generic backup files
+*.[0-9][0-9][0-9][0-9]*
+*.[0-9][0-9][0-9]*
+*.[0-9][0-9]*
+*.[0-9]*
