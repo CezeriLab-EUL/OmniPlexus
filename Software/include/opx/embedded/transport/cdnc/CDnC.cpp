@@ -15,7 +15,9 @@
 //   • GPIOE clock enabled BEFORE register writes (silently ignored otherwise)
 //   • JTAG disabled on F103 to free PB3/PB4/PA15 for GPIO
 
-#if defined(STM32F4xx) || defined(STM32F1xx)
+#include "opx/shared/core/Config.h"
+
+#if OPX_TARGET_STM32F4xx || OPX_TARGET_STM32F1xx
 
 #include "CDnC.h"
 #include <Arduino.h>
@@ -28,9 +30,9 @@
 #define DETECT_THRESHOLD  6
 
 // ── Platform GPIO abstraction ─────────────────────────────────────────────────
-#ifdef STM32F4xx
+#if OPX_TARGET_STM32F4xx
 #define CDNC_DATA_GPIO GPIOE
-#elif defined(STM32F1xx)
+#elif OPX_TARGET_STM32F1xx
 #define CDNC_DATA_GPIO GPIOB
 #endif
 
@@ -60,11 +62,11 @@ static cdnc_slave_state_t slave_state[CDNC_MAX_SLAVES];
 
 // ── GPIO helpers ──────────────────────────────────────────────────────────────
 static void cdnc_gpio_tx_mode(void) {
-#ifdef STM32F4xx
+#if OPX_TARGET_STM32F4xx
     GPIOE->MODER   = 0x55555555;  // output mode on all 16 pins
     GPIOE->OTYPER  = 0xFFFF;      // open-drain on all 16 pins
     GPIOE->OSPEEDR = 0xAAAAAAAA;  // high speed
-#elif defined(STM32F1xx)
+#elif OPX_TARGET_STM32F1xx
     // CNF=01 (open-drain output), MODE=11 (50MHz output) → 0x7 per pin
     GPIOB->CRL = 0x77777777;      // PB0–PB7
     GPIOB->CRH = 0x77777777;      // PB8–PB15
@@ -72,12 +74,12 @@ static void cdnc_gpio_tx_mode(void) {
 }
 
 static void cdnc_gpio_rx_mode(void) {
-#ifdef STM32F4xx
+#if OPX_TARGET_STM32F4xx
     GPIOE->MODER = 0x00000000;    // input mode on all 16 pins
     GPIOE->PUPDR = 0x00000000;    // NO internal pull-downs — external 5V pull-ups only
     // Internal pull-downs (~40kΩ) cannot overcome 5V pull-up
     // and would falsely pull absent slots LOW
-#elif defined(STM32F1xx)
+#elif OPX_TARGET_STM32F1xx
     // CNF=01 (floating input), MODE=00 → 0x4 per pin
     GPIOB->CRL = 0x44444444;      // PB0–PB7 floating input
     GPIOB->CRH = 0x44444444;      // PB8–PB15 floating input
@@ -168,7 +170,7 @@ uint32_t cdnc_read_ptr(void)           { return readPtr; }
 // ── Public API ────────────────────────────────────────────────────────────────
 
 void cdnc_init(void) {
-#ifdef STM32F4xx
+#if OPX_TARGET_STM32F4xx
     // CRITICAL: enable clock BEFORE any register writes — writes before
     // clock enable are silently ignored, leaving open-drain unconfigured
     __HAL_RCC_GPIOE_CLK_ENABLE();
@@ -177,7 +179,7 @@ void cdnc_init(void) {
     GPIOE->OTYPER = 0xFFFF;       // open-drain on all 16 pins
     GPIOE->PUPDR  = 0x00000000;   // no pull — external 5V pull-ups only
 
-#elif defined(STM32F1xx)
+#elif OPX_TARGET_STM32F1xx
     RCC->APB2ENR |= RCC_APB2ENR_IOPBEN | RCC_APB2ENR_AFIOEN;
 
     // Disable JTAG, keep SWD — frees PB3, PB4, PA15 for GPIO use
@@ -334,4 +336,4 @@ cdnc_slave_state_t cdnc_slave_state_get(uint8_t slave) {
     return slave_state[slave];
 }
 
-#endif // STM32F4xx || STM32F1xx
+#endif // OPX_TARGET_STM32F4xx || OPX_TARGET_STM32F1xx

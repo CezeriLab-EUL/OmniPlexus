@@ -9,7 +9,9 @@
 #ifndef SMARTDRIVE_CDNCTRANSPORT_H
 #define SMARTDRIVE_CDNCTRANSPORT_H
 
-#if defined(STM32F4xx) || defined(STM32F1xx)
+#include "opx/shared/core/Config.h"
+
+#if OPX_TARGET_STM32F4xx || OPX_TARGET_STM32F1xx
 
 #include "CDnC.h"
 #include "opx/shared/constants/ProtocolConstants.h"

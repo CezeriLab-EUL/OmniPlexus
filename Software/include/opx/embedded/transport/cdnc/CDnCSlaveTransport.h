@@ -19,7 +19,7 @@
 #ifndef SMARTDRIVE_CDNCSLAVETRANSPORT_H
 #define SMARTDRIVE_CDNCSLAVETRANSPORT_H
 
-#ifdef CDNC_SLAVE
+#if OPX_CDNC_SLAVE
 
 #include "CDnCConfig.h"
 #include "opx/shared/constants/ProtocolConstants.h"
@@ -395,5 +395,5 @@ private:
   }
 };
 
-#endif // CDNC_SLAVE
+#endif // OPX_CDNC_SLAVE
 #endif // SMARTDRIVE_CDNCSLAVETRANSPORT_H

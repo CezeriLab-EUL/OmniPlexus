@@ -5,8 +5,9 @@
 
 #include "opx/embedded/core/OpxDevice.h"
 #include "opx/shared/constants/ProtocolConstants.h"
+#include "opx/shared/core/Config.h"
 
-#ifdef ARDUINO
+#ifdef OPX_FRAMEWORK_ARDUINO
 
 #ifdef CDNC_SLAVE
 CDnCSlaveTransport *CDnCSlaveTransport::_instance = nullptr;

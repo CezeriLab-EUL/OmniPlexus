@@ -4,8 +4,8 @@
 
 #ifndef SMARTDRIVE_PCSERIALTRANSPORT_H
 #define SMARTDRIVE_PCSERIALTRANSPORT_H
-
-#ifndef ARDUINO
+#include "opx/shared/core/Config.h"
+#ifndef OPX_TARGET_EMBEDDED
 
 #ifndef _WIN32
 #include <sys/ioctl.h>

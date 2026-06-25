@@ -5,16 +5,17 @@
 #ifndef SMARTDRIVE_PLATFORMCLOCK_H
 #define SMARTDRIVE_PLATFORMCLOCK_H
 
+#include "opx/shared/core/Config.h"
 #include "opx/shared/interfaces/IPlatformClock.h"
 
-#ifdef ARDUINO
+#ifdef OPX_FRAMEWORK_ARDUINO
 #include <Arduino.h>
 
 class PlatformClock : public IPlatformClock {
 public:
   uint32_t millis() const override { return ::millis(); }
 };
-#elif defined(STM32)
+#elif OPX_TARGET_STM32
 #include "stm32_hal.h"
 
 class PlatformClock : public IPlatformClock {

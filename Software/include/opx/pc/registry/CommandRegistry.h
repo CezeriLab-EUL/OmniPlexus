@@ -5,10 +5,11 @@
 #ifndef SMARTDRIVE_COMMANDREGISTRY_H
 #define SMARTDRIVE_COMMANDREGISTRY_H
 
+#include "opx/shared/core/Config.h"
 #include "opx/shared/core/ValueSource.h"
 #include <cstdint>
 
-#ifndef EMBEDDED_BUILD
+#ifndef OPX_TARGET_EMBEDDED
 #include <map>
 #include <optional>
 #include <string>

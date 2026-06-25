@@ -5,7 +5,9 @@
 #ifndef SMARTDRIVE_OPXSESSION_H
 #define SMARTDRIVE_OPXSESSION_H
 
-#ifndef EMBEDDED_BUILD
+#include "opx/shared/core/Config.h"
+
+#ifndef OPX_TARGET_EMBEDDED
 
 #include <atomic>
 #include <functional>

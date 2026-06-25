@@ -5,12 +5,14 @@
 #ifndef SMARTDRIVE_PLATFORM_H
 #define SMARTDRIVE_PLATFORM_H
 
-#ifdef ARDUINO
+#include "opx/shared/core/Config.h"
+
+#ifdef OPX_FRAMEWORK_ARDUINO
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 using ::size_t;
-    #ifdef __AVR__
+    #ifdef OPX_TARGET_AVR
     #define OPX_PLATFORM_AVR
     #endif
 #else

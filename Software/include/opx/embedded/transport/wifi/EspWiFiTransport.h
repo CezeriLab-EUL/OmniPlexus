@@ -4,7 +4,10 @@
 
 #ifndef SMARTDRIVE_ESPWIFITRANSPORT_H
 #define SMARTDRIVE_ESPWIFITRANSPORT_H
-#if defined(ARDUINO) && defined(ESP32)
+
+#include "opx/shared/core/Config.h"
+
+#if OPX_TARGET_ESP32
 #include "opx/shared/interfaces/IConnectable.h"
 #include "opx/shared/transport/AbstractTransport.h"
 #include "opx/shared/utils/Logger.h"

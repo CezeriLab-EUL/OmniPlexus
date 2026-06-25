@@ -6,7 +6,9 @@
 #ifndef SMARTDRIVE_OPXDEVICE_H
 #define SMARTDRIVE_OPXDEVICE_H
 
-#ifdef ARDUINO
+#include "opx/shared/core/Config.h"
+
+#ifdef OPX_FRAMEWORK_ARDUINO
 #include "opx/shared/core/CommunicationManager.h"
 #include "opx/shared/core/DeviceRegistry.h"
 #include "opx/shared/core/PlatformClock.h"
@@ -21,7 +23,7 @@
 #include "opx/shared/types/ProtocolTypes.h"
 #include "opx/shared/utils/Logger.h"
 
-#ifdef ESP32
+#if OPX_TARGET_ESP32
 #include "opx/embedded/transport/http/EspHttpTransport.h"
 #include "opx/embedded/transport/wifi/EspWiFiTransport.h"
 #include "opx/shared/mutex/FreeRtosMutex.h"
@@ -30,13 +32,13 @@
 #include "opx/mutex/NullMutex.h"
 #include "opx/transport/serial/ArduinoSerialTransport.h"
 
-#ifdef CDNC_MASTER
+#if OPX_CDNC_MASTER
 #include "opx/embedded/transport/cdnc/CDnC.h"
 #include "opx/embedded/transport/cdnc/CDnCManager.h"
 #include "opx/embedded/transport/cdnc/CDnCTransport.h"
 #endif
 
-#ifdef CDNC_SLAVE
+#if OPX_CDNC_SLAVE
 #include "opx/embedded/transport/cdnc/CDnCSlaveManager.h"
 #include "opx/embedded/transport/cdnc/CDnCSlaveTransport.h"
 #endif
@@ -69,7 +71,7 @@ public:
   void onHeartbeat(ProtocolCommandHook hook, void *ctx = nullptr);
   void onHeartbeatAck(ProtocolCommandHook hook, void *ctx = nullptr);
 
-#ifdef CDNC_MASTER
+#if OPX_CDNC_MASTER
   using CdncSlaveCallback = void (*)(uint8_t slaveIndex, void *context);
   void onCdncSlaveConnected(CdncSlaveCallback cb, void *context = nullptr);
   void onCdncSlaveDisconnected(CdncSlaveCallback cb, void *context = nullptr);
@@ -91,7 +93,7 @@ public:
   void setTypeShift(uint8_t typeShift);
   bool forwardBetween(uint8_t transportA, uint8_t transportB);
 
-#ifdef ESP32
+#if OPX_TARGET_ESP32
   bool beginWiFi(uint16_t port, uint32_t stackSize = 4096);
   bool beginHttpServer(uint16_t port, uint32_t stackSize = 4096);
   bool beginHttpClient(const char *host, uint16_t port);
@@ -101,7 +103,7 @@ public:
   bool connectHttp(const char *host, uint16_t port);
 #endif
 
-#ifdef CDNC_MASTER
+#if OPX_CDNC_MASTER
   bool beginCDnC();
   uint16_t exchangeCDnC();
   void endCDnC();
@@ -115,7 +117,7 @@ public:
   uint8_t cdncAvailable(uint8_t slave);
 #endif
 
-#ifdef CDNC_SLAVE
+#if OPX_CDNC_SLAVE
   bool beginCDnC(uint8_t dataPin, uint8_t clkPin);
   void endCDnCSlave();
 #endif
@@ -226,7 +228,7 @@ private:
   bool heartbeatReceived = false;
   bool connectionLost = false;
 
-#ifdef ESP32
+#if OPX_TARGET_ESP32
   FreeRtosMutex sendMutex;
   FreeRtosMutex listenMutex;
 #else
@@ -241,7 +243,7 @@ private:
   TransportSlot slots[MAX_DEVICE_TRANSPORTS];
   uint8_t activeSlotCount = 0;
 
-#ifdef ESP32
+#if OPX_TARGET_ESP32
   TaskHandle_t listenTaskHandle = nullptr;
   volatile bool listenTaskShouldStop = false;
   SemaphoreHandle_t listenTaskDoneSem = nullptr;
@@ -249,7 +251,7 @@ private:
   void stopListenTask();
 #endif
 
-#ifdef CDNC_MASTER
+#if OPX_CDNC_MASTER
   CDnCManager *cdncManager = nullptr;
   bool cdncActive = false;
   uint16_t _cdncPrevAliveMask = 0;
@@ -260,7 +262,7 @@ private:
   void *_cdncSlaveDisconnectedCtx = nullptr;
 #endif
 
-#ifdef CDNC_SLAVE
+#if OPX_CDNC_SLAVE
   CDnCSlaveManager *_cdncSlaveManager = nullptr;
   bool _cdncSlaveActive = false;
 #endif
@@ -296,11 +298,11 @@ bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud) {
   return addTransport(transport, OpxDeviceTransportID::OPX_SERIAL);
 }
 
-// ── CDNC_MASTER inline definitions ───────────────────────────────────────────
-// These must live in the header so the sketch's #define CDNC_MASTER is visible
-// at compile time. The Arduino build system compiles library .cpp files
+// ── OPX_CDNC_MASTER inline definitions ───────────────────────────────────────
+// These must live in the header so the sketch's #define OPX_CDNC_MASTER is
+// visible at compile time. The Arduino build system compiles library .cpp files
 // separately and does not see defines from the sketch.
-#ifdef CDNC_MASTER
+#if OPX_CDNC_MASTER
 
 inline bool OpxDevice::beginCDnC() {
   if (cdncActive) {
@@ -383,10 +385,10 @@ inline void OpxDevice::onCdncSlaveDisconnected(CdncSlaveCallback cb,
   _cdncSlaveDisconnectedCtx = ctx;
 }
 
-#endif // CDNC_MASTER
+#endif // OPX_CDNC_MASTER
 
-// ── CDNC_SLAVE inline definitions ────────────────────────────────────────────
-#ifdef CDNC_SLAVE
+// ── OPX_CDNC_SLAVE inline definitions ────────────────────────────────────────
+#if OPX_CDNC_SLAVE
 
 inline bool OpxDevice::beginCDnC(uint8_t dataPin, uint8_t clkPin) {
   if (_cdncSlaveActive) {
@@ -415,7 +417,7 @@ inline void OpxDevice::endCDnCSlave() {
   _cdncSlaveActive = false;
 }
 
-#endif // CDNC_SLAVE
+#endif // OPX_CDNC_SLAVE
 
 // ── Protocol hook setters (inline — same reason as above) ────────────────────
 inline void OpxDevice::onDiscover(ProtocolCommandHook h, void *c) {
@@ -435,5 +437,5 @@ inline void OpxDevice::onHeartbeatAck(ProtocolCommandHook h, void *c) {
   _heartbeatAckHookCtx = c;
 }
 
-#endif // ARDUINO
+#endif // OPX_FRAMEWORK_ARDUINO
 #endif // SMARTDRIVE_OPXDEVICE_H

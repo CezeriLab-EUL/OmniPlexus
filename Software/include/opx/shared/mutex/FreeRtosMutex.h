@@ -5,7 +5,9 @@
 #ifndef SMARTDRIVE_FREERTOSMUTEX_H
 #define SMARTDRIVE_FREERTOSMUTEX_H
 
-#if defined(ARDUINO) && defined(ESP32)
+#include "opx/shared/core/Config.h"
+
+#if OPX_HAS_FREERTOS
 #include "opx/shared/interfaces/IMutex.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>

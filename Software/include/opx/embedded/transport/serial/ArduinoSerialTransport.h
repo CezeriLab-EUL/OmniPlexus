@@ -5,7 +5,9 @@
 #ifndef SMARTDRIVE_ARDUINOSERIALTRANSPORT_H
 #define SMARTDRIVE_ARDUINOSERIALTRANSPORT_H
 
-#ifdef ARDUINO
+#include "opx/shared/core/Config.h"
+
+#ifdef OPX_FRAMEWORK_ARDUINO
 #include "opx/shared/transport/AbstractTransport.h"
 #include "opx/shared/types/ProtocolTypes.h"
 #include <Arduino.h>

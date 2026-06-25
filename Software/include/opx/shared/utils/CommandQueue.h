@@ -5,11 +5,12 @@
 #ifndef SMARTDRIVE_COMMANDQUEUE_H
 #define SMARTDRIVE_COMMANDQUEUE_H
 
+#include "opx/shared/core/Config.h"
 #include "opx/shared/types/ProtocolTypes.h"
 #include "opx/shared/utils/Logger.h"
 #include "GeneratedConfig.h"
 
-#if !defined(ARDUINO) && !defined(ESP_PLATFORM)
+#ifdef OPX_TARGET_PC
 #include <mutex>
 #endif
 
@@ -31,12 +32,12 @@ private:
   uint8_t tail = 0;
   uint8_t count = 0;
 
-#if defined(ARDUINO)
-#if defined(ESP32) || defined(ESP8266)
+#ifdef OPX_FRAMEWORK_ARDUINO
+#if OPX_HAS_FREERTOS
   portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
   void lock() { taskENTER_CRITICAL(&mux); }
   void unlock() { taskEXIT_CRITICAL(&mux); }
-#elif defined(__AVR__)
+#elif OPX_TARGET_AVR
   uint8_t savedSREG = 0;
   void lock() {
     savedSREG = SREG;

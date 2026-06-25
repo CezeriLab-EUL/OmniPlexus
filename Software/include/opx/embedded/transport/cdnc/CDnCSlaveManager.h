@@ -11,7 +11,7 @@
 #ifndef SMARTDRIVE_CDNCSLAVEMANAGER_H
 #define SMARTDRIVE_CDNCSLAVEMANAGER_H
 
-#ifdef CDNC_SLAVE
+#if OPX_CDNC_SLAVE
 
 #include "CDnCSlaveTransport.h"
 #include "opx/shared/core/TransportManager.h"
@@ -54,5 +54,5 @@ private:
   CDnCSlaveTransport _transport;
 };
 
-#endif // CDNC_SLAVE
+#endif // OPX_CDNC_SLAVE
 #endif // SMARTDRIVE_CDNCSLAVEMANAGER_H

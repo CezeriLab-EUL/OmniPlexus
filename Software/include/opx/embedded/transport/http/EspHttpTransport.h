@@ -5,7 +5,9 @@
 #ifndef SMARTDRIVE_ESPHTTPTRANSPORT_H
 #define SMARTDRIVE_ESPHTTPTRANSPORT_H
 
-#if defined(ARDUINO) && defined(ESP32)
+#include "opx/shared/core/Config.h"
+
+#if OPX_TARGET_ESP32
 #include "opx/shared/constants/ProtocolConstants.h"
 #include "opx/shared/interfaces/ITransport.h"
 #include "opx/shared/types/ProtocolTypes.h"

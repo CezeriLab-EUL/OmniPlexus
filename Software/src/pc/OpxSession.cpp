@@ -3,9 +3,9 @@
 //
 
 #include "opx/pc/core/OpxSession.h"
+#include "opx/shared/core/Config.h"
 
-#ifndef EMBEDDED_BUILD
-
+#ifndef OPX_TARGET_EMBEDDED
 #include "opx/pc/transport/http/PcHttpTransport.h"
 #include "opx/pc/transport/serial/PcSerialTransport.h"
 #include "opx/pc/transport/wifi/PcWiFiTransport.h"

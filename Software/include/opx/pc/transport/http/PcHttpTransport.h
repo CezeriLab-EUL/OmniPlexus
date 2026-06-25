@@ -5,7 +5,8 @@
 #ifndef SMARTDRIVE_PCHTTPTRANSPORT_H
 #define SMARTDRIVE_PCHTTPTRANSPORT_H
 
-#ifndef ARDUINO
+#include "opx/shared/core/Config.h"
+#ifndef OPX_TARGET_EMBEDDED
 
 #include "external/httplib/httplib.h"
 #include "opx/shared/interfaces/ITransport.h"

@@ -5,7 +5,8 @@
 #ifndef SMARTDRIVE_PCWIFITRANSPORT_H
 #define SMARTDRIVE_PCWIFITRANSPORT_H
 
-#ifndef ARDUINO
+#include "opx/shared/core/Config.h"
+#ifndef OPX_TARGET_EMBEDDED
 #include "opx/shared/interfaces/IConnectable.h"
 #include "opx/shared/transport/AbstractTransport.h"
 #include "opx/shared/utils/Logger.h"
