@@ -2,8 +2,7 @@
 // OmniPlexus (opx) - Embedded Device Facade
 //
 
-#ifndef SMARTDRIVE_OPXDEVICE_H
-#define SMARTDRIVE_OPXDEVICE_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -437,4 +436,3 @@ inline void OpxDevice::onHeartbeatAck(ProtocolCommandHook h, void *c) {
 }
 
 #endif // OPX_FRAMEWORK_ARDUINO
-#endif // SMARTDRIVE_OPXDEVICE_H

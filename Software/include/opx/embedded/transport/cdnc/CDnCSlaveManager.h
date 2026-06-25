@@ -8,8 +8,7 @@
 //   // In loop():
 //   mgr.tick();
 
-#ifndef SMARTDRIVE_CDNCSLAVEMANAGER_H
-#define SMARTDRIVE_CDNCSLAVEMANAGER_H
+#pragma once
 
 #if OPX_CDNC_SLAVE
 
@@ -55,4 +54,4 @@ private:
 };
 
 #endif // OPX_CDNC_SLAVE
-#endif // SMARTDRIVE_CDNCSLAVEMANAGER_H
+

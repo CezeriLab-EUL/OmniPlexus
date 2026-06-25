@@ -2,8 +2,7 @@
 // Created by dunamis on 29/04/2026.
 //
 
-#ifndef SMARTDRIVE_ESPWIFITRANSPORT_H
-#define SMARTDRIVE_ESPWIFITRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -184,4 +183,3 @@ protected:
 };
 
 #endif
-#endif // SMARTDRIVE_ESPWIFITRANSPORT_H

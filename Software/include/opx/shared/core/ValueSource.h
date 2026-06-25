@@ -2,8 +2,7 @@
 // Created by dunamis on 26/01/2026.
 //
 
-#ifndef SMARTDRIVE_VALUESOURCE_H
-#define SMARTDRIVE_VALUESOURCE_H
+#pragma once
 
 #include "../core/platform.h" // IWYU pragma: keep
 #ifndef __AVR__
@@ -301,4 +300,3 @@ public:
 
 static_assert(sizeof(ValueSource) == 17,
               "ValueSource must be exactly 17 bytes");
-#endif // SMARTDRIVE_VALUESOURCE_H

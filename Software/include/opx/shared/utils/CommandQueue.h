@@ -2,13 +2,12 @@
 // Created by dunamis on 25/02/2026.
 //
 
-#ifndef SMARTDRIVE_COMMANDQUEUE_H
-#define SMARTDRIVE_COMMANDQUEUE_H
+#pragma once
 
+#include "GeneratedConfig.h"
 #include "opx/shared/core/Config.h"
 #include "opx/shared/types/ProtocolTypes.h" // IWYU pragma: keep
 #include "opx/shared/utils/Logger.h"
-#include "GeneratedConfig.h"
 
 #ifdef OPX_TARGET_PC
 #include <mutex>
@@ -97,5 +96,3 @@ public:
     unlock();
   }
 };
-
-#endif // SMARTDRIVE_COMMANDQUEUE_H

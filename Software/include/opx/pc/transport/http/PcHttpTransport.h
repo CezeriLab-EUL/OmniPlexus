@@ -2,8 +2,7 @@
 // Created by dunamis on 23/04/2026.
 //
 
-#ifndef SMARTDRIVE_PCHTTPTRANSPORT_H
-#define SMARTDRIVE_PCHTTPTRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -170,5 +169,3 @@ public:
   }
 };
 #endif
-
-#endif // SMARTDRIVE_PCHTTPTRANSPORT_H

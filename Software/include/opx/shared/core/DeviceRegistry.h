@@ -2,8 +2,7 @@
 // Created by dunamis on 27/05/2026.
 //
 
-#ifndef OMNIPLEXUS_DEVICEREGISTRY_H
-#define OMNIPLEXUS_DEVICEREGISTRY_H
+#pragma once
 
 #include "opx/shared/core/Config.h"
 #include "opx/shared/core/platform.h" // IWYU pragma: keep
@@ -188,5 +187,3 @@ public:
     count = 0;
   }
 };
-
-#endif // OMNIPLEXUS_DEVICEREGISTRY_H

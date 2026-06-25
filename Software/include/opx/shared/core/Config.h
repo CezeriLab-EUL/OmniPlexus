@@ -1,5 +1,4 @@
-#ifndef OPX_CONFIG_H
-#define OPX_CONFIG_H
+#pragma once
 
 // Auto-detected from compiler defines. Do not set manually.
 
@@ -156,5 +155,3 @@
 #ifdef OPX_CONSTRAINED
 #define OPX_SLAVE_MINIMAL 1
 #endif
-
-#endif // OPX_CONFIG_H

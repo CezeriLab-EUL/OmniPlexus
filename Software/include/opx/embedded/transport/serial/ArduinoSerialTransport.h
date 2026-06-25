@@ -2,8 +2,7 @@
 // Created by dunamis on 25/02/2026.
 //
 
-#ifndef SMARTDRIVE_ARDUINOSERIALTRANSPORT_H
-#define SMARTDRIVE_ARDUINOSERIALTRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -41,4 +40,3 @@ protected:
   }
 };
 #endif
-#endif // SMARTDRIVE_ARDUINOSERIALTRANSPORT_H

@@ -2,8 +2,7 @@
 // Created by dunamis on 25/02/2026.
 //
 
-#ifndef SMARTDRIVE_PCSERIALTRANSPORT_H
-#define SMARTDRIVE_PCSERIALTRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -103,5 +102,3 @@ protected:
   uint8_t readByte() override { return stagingBuffer[stagingHead++]; }
 };
 #endif
-
-#endif // SMARTDRIVE_PCSERIALTRANSPORT_H

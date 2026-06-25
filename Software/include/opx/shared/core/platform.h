@@ -2,8 +2,7 @@
 // Created by dunamis on 23/02/2026.
 //
 
-#ifndef SMARTDRIVE_PLATFORM_H
-#define SMARTDRIVE_PLATFORM_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -21,5 +20,3 @@ using ::size_t;
 #include <cstring>
 using std::size_t;
 #endif
-
-#endif // SMARTDRIVE_PLATFORM_H

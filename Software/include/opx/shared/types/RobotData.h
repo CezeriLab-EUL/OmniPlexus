@@ -2,8 +2,7 @@
 // Created by dunamis on 27/01/2026.
 //
 
-#ifndef SMARTDRIVE_ROBOTDATA_H
-#define SMARTDRIVE_ROBOTDATA_H
+#pragma once
 
 #include "opx/shared/core/ValueSource.h"
 
@@ -22,5 +21,3 @@ static_assert(sizeof(Telemetry) == 19,
               "TelemetryData must be exactly 19 bytes");
 static_assert(sizeof(SettingsData) == 19,
               "SettingsData must be exactly 19 bytes");
-
-#endif // SMARTDRIVE_ROBOTDATA_H

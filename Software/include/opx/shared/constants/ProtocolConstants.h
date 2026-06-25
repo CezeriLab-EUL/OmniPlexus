@@ -2,8 +2,7 @@
 // Created by dunamis on 30/01/2026.
 //
 
-#ifndef SMARTDRIVE_PROTOCOLCONSTANTS_H
-#define SMARTDRIVE_PROTOCOLCONSTANTS_H
+#pragma once
 
 #include "opx/shared/core/platform.h" // IWYU pragma: keep
 
@@ -85,5 +84,3 @@ constexpr bool isProtocolLevelCommand(uint16_t cmdType) {
          cmdType == HEARTBEAT_ACK || cmdType == ESTOP_COMMAND;
 }
 } // namespace ProtocolConstants
-
-#endif // SMARTDRIVE_PROTOCOLCONSTANTS_H

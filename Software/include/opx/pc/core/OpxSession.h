@@ -2,8 +2,7 @@
 // Created by dunamis on 01/05/2026.
 //
 
-#ifndef SMARTDRIVE_OPXSESSION_H
-#define SMARTDRIVE_OPXSESSION_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -196,4 +195,3 @@ template <typename TController> TController &OpxSession::getDevice() {
 }
 
 #endif
-#endif // SMARTDRIVE_OPXSESSION_H

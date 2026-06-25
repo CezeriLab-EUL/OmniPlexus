@@ -2,13 +2,12 @@
 // Created by dunamis on 25/02/2026.
 //
 
-#ifndef SMARTDRIVE_ABSTRACTTRANSPORT_H
-#define SMARTDRIVE_ABSTRACTTRANSPORT_H
+#pragma once
 
+#include "CommandPacker.h"
 #include "opx/shared/core/ValueSource.h"
 #include "opx/shared/interfaces/ITransport.h"
 #include "opx/shared/utils/CRC8.h"
-#include "CommandPacker.h"
 
 class AbstractTransport : public ITransport {
 private:
@@ -242,5 +241,3 @@ private:
     state = AccumulatorState::WAITING_FOR_HEADER;
   }
 };
-
-#endif // SMARTDRIVE_ABSTRACTTRANSPORT_H

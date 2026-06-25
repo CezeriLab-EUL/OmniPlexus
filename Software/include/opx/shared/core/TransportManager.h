@@ -2,8 +2,7 @@
 // Created by dunamis on 01/05/2026.
 //
 
-#ifndef SMARTDRIVE_TRANSPORTMANAGER_H
-#define SMARTDRIVE_TRANSPORTMANAGER_H
+#pragma once
 
 #include "opx/shared/core/Config.h"
 #include "opx/shared/core/platform.h" // IWYU pragma: keep
@@ -150,5 +149,3 @@ public:
 
   uint8_t registeredCount() const { return count; }
 };
-
-#endif // SMARTDRIVE_TRANSPORTMANAGER_H

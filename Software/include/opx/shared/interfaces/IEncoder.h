@@ -2,8 +2,7 @@
 // Created by dunamis on 29/01/2026.
 //
 
-#ifndef SMARTDRIVE_IENCODER_H
-#define SMARTDRIVE_IENCODER_H
+#pragma once
 
 #include "opx/shared/types/ProtocolTypes.h"
 #include "opx/shared/types/RobotData.h"
@@ -37,5 +36,3 @@ public:
 
   virtual uint8_t computeIntegrityCode(const RawData &rawData) = 0;
 };
-
-#endif // SMARTDRIVE_IENCODER_H

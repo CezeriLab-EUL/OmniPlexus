@@ -6,8 +6,7 @@
 //   0–15                         → per-slave CDnCTransport instances
 //   CDNC_TRANSPORT_ID_BROADCAST  → broadcast instance (used for DISCOVERY)
 
-#ifndef SMARTDRIVE_CDNCMANAGER_H
-#define SMARTDRIVE_CDNCMANAGER_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -66,5 +65,3 @@ private:
 };
 
 #endif // STM32F4xx || STM32F1xx
-
-#endif // SMARTDRIVE_CDNCMANAGER_H

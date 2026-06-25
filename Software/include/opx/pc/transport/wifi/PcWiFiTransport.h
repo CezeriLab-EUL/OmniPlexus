@@ -2,8 +2,7 @@
 // Created by dunamis on 30/04/2026.
 //
 
-#ifndef SMARTDRIVE_PCWIFITRANSPORT_H
-#define SMARTDRIVE_PCWIFITRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -286,4 +285,3 @@ protected:
 };
 
 #endif // ARDUINO
-#endif // SMARTDRIVE_PCWIFITRANSPORT_H

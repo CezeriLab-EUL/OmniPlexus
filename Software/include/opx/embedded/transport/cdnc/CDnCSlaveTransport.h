@@ -16,8 +16,7 @@
 // Double-buffer design: parser writes into one slot while TransportManager
 // reads from the other. Prevents RX queue starvation when consumer is slow.
 
-#ifndef SMARTDRIVE_CDNCSLAVETRANSPORT_H
-#define SMARTDRIVE_CDNCSLAVETRANSPORT_H
+#pragma once
 
 #if OPX_CDNC_SLAVE
 
@@ -396,4 +395,3 @@ private:
 };
 
 #endif // OPX_CDNC_SLAVE
-#endif // SMARTDRIVE_CDNCSLAVETRANSPORT_H

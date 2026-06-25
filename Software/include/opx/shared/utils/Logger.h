@@ -2,8 +2,7 @@
 // Created by dunamis on 26/01/2026.
 //
 
-#ifndef SMARTDRIVE_LOGGER_H
-#define SMARTDRIVE_LOGGER_H
+#pragma once
 
 #include "opx/shared/core/Config.h"
 
@@ -37,5 +36,3 @@ private:
 #else
 #define LOG(level, msg) ((void)0)
 #endif
-
-#endif // SMARTDRIVE_LOGGER_H

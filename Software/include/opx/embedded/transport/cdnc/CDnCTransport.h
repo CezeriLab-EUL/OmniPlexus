@@ -6,8 +6,7 @@
 // CDnCTransport::accumulate() only drains the software RX ring buffers;
 // it does not drive the physical bus.
 
-#ifndef SMARTDRIVE_CDNCTRANSPORT_H
-#define SMARTDRIVE_CDNCTRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -158,5 +157,3 @@ private:
 };
 
 #endif // STM32F4xx || STM32F1xx
-
-#endif // SMARTDRIVE_CDNCTRANSPORT_H

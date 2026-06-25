@@ -2,8 +2,7 @@
 // Created by dunamis on 27/03/2026.
 //
 
-#ifndef SMARTDRIVE_TELEMETRYMANAGER_H
-#define SMARTDRIVE_TELEMETRYMANAGER_H
+#pragma once
 
 #include "opx/shared/core/CommunicationManager.h"
 #include "opx/shared/core/Config.h"
@@ -243,5 +242,3 @@ public:
 
   uint8_t registeredCount() const { return count; }
 };
-
-#endif // SMARTDRIVE_TELEMETRYMANAGER_H

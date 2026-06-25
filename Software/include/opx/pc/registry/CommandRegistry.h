@@ -2,8 +2,7 @@
 // Created by dunamis on 16/02/2026.
 //
 
-#ifndef SMARTDRIVE_COMMANDREGISTRY_H
-#define SMARTDRIVE_COMMANDREGISTRY_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 #include "opx/shared/core/ValueSource.h"
@@ -72,5 +71,3 @@ public:
   }
 };
 #endif
-
-#endif // SMARTDRIVE_COMMANDREGISTRY_H

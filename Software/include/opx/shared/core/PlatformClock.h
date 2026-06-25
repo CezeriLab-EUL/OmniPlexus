@@ -2,8 +2,7 @@
 // Created by dunamis on 27/03/2026.
 //
 
-#ifndef SMARTDRIVE_PLATFORMCLOCK_H
-#define SMARTDRIVE_PLATFORMCLOCK_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IPlatformClock.h"
@@ -36,5 +35,3 @@ public:
 };
 
 #endif
-
-#endif // SMARTDRIVE_PLATFORMCLOCK_H

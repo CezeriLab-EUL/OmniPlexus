@@ -2,8 +2,7 @@
 // Created by dunamis on 30/04/2026.
 //
 
-#ifndef SMARTDRIVE_FREERTOSMUTEX_H
-#define SMARTDRIVE_FREERTOSMUTEX_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -26,5 +25,3 @@ public:
   void unlock() override { xSemaphoreGive(mutex); }
 };
 #endif
-
-#endif // SMARTDRIVE_FREERTOSMUTEX_H

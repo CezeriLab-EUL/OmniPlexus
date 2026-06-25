@@ -2,8 +2,7 @@
 // Created by dunamis on 02/03/2026.
 //
 
-#ifndef SMARTDRIVE_CRC8_H
-#define SMARTDRIVE_CRC8_H
+#pragma once
 
 #include "opx/shared/types/ProtocolTypes.h"
 
@@ -25,5 +24,3 @@ inline uint8_t compute(const RawData &rawData) {
   return crc;
 }
 } // namespace CRC8
-
-#endif // SMARTDRIVE_CRC8_H

@@ -2,8 +2,7 @@
 // Created by dunamis on 09/03/2026.
 //
 
-#ifndef SMARTDRIVE_PENDINGACKQUEUE_H
-#define SMARTDRIVE_PENDINGACKQUEUE_H
+#pragma once
 
 #include "opx/shared/core/Config.h"
 #include "opx/shared/utils/Logger.h"
@@ -98,5 +97,3 @@ public:
     unlock();
   }
 };
-
-#endif // SMARTDRIVE_PENDINGACKQUEUE_H

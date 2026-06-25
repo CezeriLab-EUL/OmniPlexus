@@ -2,8 +2,7 @@
 // Created by dunamis on 26/05/2026.
 //
 
-#ifndef OMNIPLEXUS_SETTINGSMANAGER_H
-#define OMNIPLEXUS_SETTINGSMANAGER_H
+#pragma once
 
 #include "opx/shared/constants/ProtocolConstants.h"
 #include "opx/shared/core/CommunicationManager.h"
@@ -212,4 +211,3 @@ public:
 
   uint8_t registeredCount() const { return count; }
 };
-#endif // OMNIPLEXUS_SETTINGSMANAGER_H

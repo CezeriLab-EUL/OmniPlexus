@@ -2,8 +2,7 @@
 // Created by dunamis on 11/03/2026.
 //
 
-#ifndef SMARTDRIVE_RESPONSEQUEUE_H
-#define SMARTDRIVE_RESPONSEQUEUE_H
+#pragma once
 
 #include "opx/shared/core/Config.h"
 #include "opx/shared/types/ProtocolTypes.h"
@@ -90,5 +89,3 @@ public:
     unlock();
   }
 };
-
-#endif // SMARTDRIVE_RESPONSEQUEUE_H

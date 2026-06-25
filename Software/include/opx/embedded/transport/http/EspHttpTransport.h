@@ -2,8 +2,7 @@
 // Created by dunamis on 23/04/2026.
 //
 
-#ifndef SMARTDRIVE_ESPHTTPTRANSPORT_H
-#define SMARTDRIVE_ESPHTTPTRANSPORT_H
+#pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 
@@ -226,5 +225,3 @@ private:
 };
 
 #endif
-
-#endif // SMARTDRIVE_ESPHTTPTRANSPORT_H

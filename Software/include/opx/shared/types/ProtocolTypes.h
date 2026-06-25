@@ -2,8 +2,7 @@
 // Created by dunamis on 29/01/2026.
 //
 
-#ifndef SMARTDRIVE_PROTOCOLTYPES_H
-#define SMARTDRIVE_PROTOCOLTYPES_H
+#pragma once
 
 #include "opx/shared/constants/ProtocolConstants.h"
 #include "opx/shared/core/ValueSource.h"
@@ -36,5 +35,3 @@ struct CommandResponse {
 static_assert(sizeof(Command) == 53, "Command must be exactly 53 bytes");
 static_assert(sizeof(CommandResponse) == 4,
               "CommandResponse must be exactly 4 bytes");
-
-#endif // SMARTDRIVE_PROTOCOLTYPES_H

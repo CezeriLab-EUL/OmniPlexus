@@ -2,8 +2,7 @@
 // Created by dunamis on 28/01/2026.
 //
 
-#ifndef SMARTDRIVE_BINARYENCODER_H
-#define SMARTDRIVE_BINARYENCODER_H
+#pragma once
 
 #include "CommandPacker.h"
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
@@ -346,4 +345,3 @@ public:
   }
 };
 
-#endif // SMARTDRIVE_BINARYENCODER_H

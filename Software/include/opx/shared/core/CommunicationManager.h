@@ -2,8 +2,7 @@
 // Created by dunamis on 25/02/2026.
 //
 
-#ifndef SMARTDRIVE_COMMUNICATIONMANAGER_H
-#define SMARTDRIVE_COMMUNICATIONMANAGER_H
+#pragma once
 
 #include "CommandPacker.h"
 #include "opx/shared/core/TransportManager.h"
@@ -436,4 +435,3 @@ public:
   void flushResponseQueue() { responseQueue.clear(); }
 };
 
-#endif // SMARTDRIVE_COMMUNICATIONMANAGER_H

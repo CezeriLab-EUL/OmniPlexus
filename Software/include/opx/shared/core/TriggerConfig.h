@@ -2,8 +2,7 @@
 // Created by dunamis on 27/03/2026.
 //
 
-#ifndef SMARTDRIVE_TRIGGERCONFIG_H
-#define SMARTDRIVE_TRIGGERCONFIG_H
+#pragma once
 
 #include "opx/shared/core/platform.h" // IWYU pragma: keep
 
@@ -41,5 +40,3 @@ struct TriggerConfig {
     return config;
   }
 };
-
-#endif // SMARTDRIVE_TRIGGERCONFIG_H
