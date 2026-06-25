@@ -14,7 +14,7 @@ find_package(Boost REQUIRED COMPONENTS system)
 add_subdirectory(tools/CommandGenerator)
 
 file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/autogen)
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/autogen)
+file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/autogen/pc)
 
 # Discover all device JSON files in devices/
 file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
@@ -24,34 +24,39 @@ file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
 set(ALL_DEVICE_OUTPUTS "")
 foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
     get_filename_component(DEVICE_NAME ${DEVICE_JSON} NAME_WE)
-    set(DEVICE_DIR "${CMAKE_SOURCE_DIR}/autogen/devices/${DEVICE_NAME}")
     list(APPEND ALL_DEVICE_OUTPUTS
-            "${DEVICE_DIR}/${DEVICE_NAME}Controller.h"
-            "${DEVICE_DIR}/${DEVICE_NAME}RegisterAll.h"
-            "${DEVICE_DIR}/${DEVICE_NAME}Register.h"
+            "${CMAKE_SOURCE_DIR}/autogen/shared/devices/${DEVICE_NAME}/${DEVICE_NAME}Controller.h"
+            "${CMAKE_SOURCE_DIR}/autogen/embedded/devices/${DEVICE_NAME}/${DEVICE_NAME}RegisterAll.h"
+            "${CMAKE_SOURCE_DIR}/autogen/embedded/devices/${DEVICE_NAME}/${DEVICE_NAME}Register.h"
     )
 endforeach()
 
-# Shared outputs (flat, always generated)
-set(SHARED_GENERATED_DIR "${CMAKE_SOURCE_DIR}/autogen/shared")
 set(ALL_SHARED_OUTPUTS
-        "${SHARED_GENERATED_DIR}/CommandTypes.h"
-        "${SHARED_GENERATED_DIR}/CommandPacker.h"
-        "${SHARED_GENERATED_DIR}/GeneratedConfig.h"
-        "${SHARED_GENERATED_DIR}/TelemetrySourceIDs.h"
-        "${SHARED_GENERATED_DIR}/SettingIDs.h"
-        "${SHARED_GENERATED_DIR}/DeviceManifest.h"
-        "${CMAKE_SOURCE_DIR}/src/autogen/CommandRegistry.cpp"
+        "${CMAKE_SOURCE_DIR}/autogen/shared/CommandTypes.h"
+        "${CMAKE_SOURCE_DIR}/autogen/shared/CommandPacker.h"
+        "${CMAKE_SOURCE_DIR}/autogen/shared/GeneratedConfig.h"
+        "${CMAKE_SOURCE_DIR}/src/autogen/pc/CommandRegistry.cpp"
+)
+
+set(ALL_EMBEDDED_OUTPUTS
+        "${CMAKE_SOURCE_DIR}/autogen/embedded/TelemetrySourceIDs.h"
+        "${CMAKE_SOURCE_DIR}/autogen/embedded/SettingIDs.h"
+)
+
+set(ALL_PC_OUTPUTS
+        "${CMAKE_SOURCE_DIR}/autogen/pc/DeviceManifest.h"
 )
 
 add_custom_command(
         OUTPUT
         ${ALL_SHARED_OUTPUTS}
+        ${ALL_EMBEDDED_OUTPUTS}
+        ${ALL_PC_OUTPUTS}
         ${ALL_DEVICE_OUTPUTS}
         COMMAND CommandGenerator
         ${DEVICE_JSON_FILES}
         ${CMAKE_SOURCE_DIR}/autogen/
-        ${CMAKE_SOURCE_DIR}/src/autogen/
+        ${CMAKE_SOURCE_DIR}/src/autogen/pc/
         DEPENDS
         ${DEVICE_JSON_FILES}
         CommandGenerator
@@ -62,14 +67,15 @@ add_custom_command(
 add_custom_target(GenerateCommands ALL
         DEPENDS
         ${ALL_SHARED_OUTPUTS}
+        ${ALL_EMBEDDED_OUTPUTS}
+        ${ALL_PC_OUTPUTS}
         ${ALL_DEVICE_OUTPUTS}
 )
 
 add_library(OmniPlexus
-        src/OpxSession.cpp
-        src/OpxDevice.cpp
-        include/opx/core/SettingsManager.h
-        include/opx/core/DeviceRegistry.h
+        src/pc/OpxSession.cpp
+        src/embedded/OpxDevice.cpp
+        src/autogen/pc/CommandRegistry.cpp
 )
 
 add_custom_target(SyncArduinoLibrary
@@ -82,7 +88,7 @@ add_custom_target(SyncArduinoLibrary
         ${ARDUINO_LIBRARY_PATH}/autogen
 
         COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_SOURCE_DIR}/src/OpxDevice.cpp
+        ${CMAKE_SOURCE_DIR}/src/embedded/OpxDevice.cpp
         ${ARDUINO_LIBRARY_PATH}/OpxDevice.cpp
         COMMENT "Syncing OmniPlexus headers to Arduino library..."
 )
@@ -91,7 +97,9 @@ add_dependencies(SyncArduinoLibrary OmniPlexus GenerateCommands)
 
 target_include_directories(OmniPlexus PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen/shared>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen/embedded>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen/pc>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_include_directories(OmniPlexus PRIVATE
@@ -137,6 +145,14 @@ install(TARGETS OmniPlexus
 
 install(DIRECTORY include/opx
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(DIRECTORY autogen/shared
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/autogen
+)
+
+install(DIRECTORY autogen/pc
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/autogen
 )
 
 install(EXPORT OmniPlexusTargets
