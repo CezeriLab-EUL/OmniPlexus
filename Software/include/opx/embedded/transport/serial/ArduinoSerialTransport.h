@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_ARDUINOSERIALTRANSPORT_H
 #define SMARTDRIVE_ARDUINOSERIALTRANSPORT_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #ifdef OPX_FRAMEWORK_ARDUINO
 #include "opx/shared/transport/AbstractTransport.h"

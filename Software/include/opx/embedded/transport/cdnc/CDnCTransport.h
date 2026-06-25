@@ -9,7 +9,7 @@
 #ifndef SMARTDRIVE_CDNCTRANSPORT_H
 #define SMARTDRIVE_CDNCTRANSPORT_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #if OPX_TARGET_STM32F4xx || OPX_TARGET_STM32F1xx
 

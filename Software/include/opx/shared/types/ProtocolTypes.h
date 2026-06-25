@@ -6,7 +6,6 @@
 #define SMARTDRIVE_PROTOCOLTYPES_H
 
 #include "opx/shared/constants/ProtocolConstants.h"
-#include "opx/shared/core/Config.h"
 #include "opx/shared/core/ValueSource.h"
 
 struct RawData {

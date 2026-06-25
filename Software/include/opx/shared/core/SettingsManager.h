@@ -8,7 +8,7 @@
 #include "opx/shared/constants/ProtocolConstants.h"
 #include "opx/shared/core/CommunicationManager.h"
 #include "opx/shared/core/Config.h"
-#include "opx/shared/core/platform.h"
+#include "opx/shared/core/platform.h" // IWYU pragma: keep
 #include "opx/shared/types/RobotData.h"
 #include "opx/shared/utils/Logger.h"
 

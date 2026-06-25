@@ -6,7 +6,6 @@
 #define SMARTDRIVE_ROBOTDATA_H
 
 #include "opx/shared/core/ValueSource.h"
-#include "opx/shared/core/platform.h"
 
 #pragma pack(push, 1)
 struct SettingsData : public ValueSource {
@@ -16,10 +15,12 @@ struct SettingsData : public ValueSource {
 struct Telemetry : public ValueSource {
   uint16_t sourceID;
 };
+
 #pragma pack(pop)
 
 static_assert(sizeof(Telemetry) == 19,
               "TelemetryData must be exactly 19 bytes");
 static_assert(sizeof(SettingsData) == 19,
               "SettingsData must be exactly 19 bytes");
+
 #endif // SMARTDRIVE_ROBOTDATA_H

@@ -5,10 +5,9 @@
 #ifndef SMARTDRIVE_OPXSESSION_H
 #define SMARTDRIVE_OPXSESSION_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #ifndef OPX_TARGET_EMBEDDED
-
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -26,7 +25,6 @@
 #include "opx/shared/mutex/StdMutex.h"
 #include "opx/shared/protocol/BinaryEncoder.h"
 #include "opx/shared/types/ProtocolTypes.h"
-#include "opx/shared/utils/Logger.h"
 
 enum class OpxTransportID : uint8_t { WIFI = 0, SERIAL = 1, HTTP = 2 };
 

@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_TRIGGERCONFIG_H
 #define SMARTDRIVE_TRIGGERCONFIG_H
 
-#include "opx/shared/core/platform.h"
+#include "opx/shared/core/platform.h" // IWYU pragma: keep
 
 enum class TriggerType : uint8_t {
   ON_CHANGE = 0x00,

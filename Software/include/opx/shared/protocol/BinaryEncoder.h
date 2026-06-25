@@ -5,13 +5,13 @@
 #ifndef SMARTDRIVE_BINARYENCODER_H
 #define SMARTDRIVE_BINARYENCODER_H
 
-#include "opx/shared/core/Config.h"
+#include "CommandPacker.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IEncoder.h"
 #include "opx/shared/types/ProtocolTypes.h"
 #include "opx/shared/types/RobotData.h"
 #include "opx/shared/utils/CRC8.h"
 #include "opx/shared/utils/Logger.h"
-#include "CommandPacker.h"
 
 class BinaryEncoder : public IEncoder {
 private:

@@ -7,7 +7,7 @@
 
 #include "CommandPacker.h"
 #include "opx/shared/core/TransportManager.h"
-#include "opx/shared/core/platform.h"
+#include "opx/shared/core/platform.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IEncoder.h"
 #include "opx/shared/interfaces/IMutex.h"
 #include "opx/shared/types/ProtocolTypes.h"

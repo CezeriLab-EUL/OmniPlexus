@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_COMMANDREGISTRY_H
 #define SMARTDRIVE_COMMANDREGISTRY_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 #include "opx/shared/core/ValueSource.h"
 #include <cstdint>
 

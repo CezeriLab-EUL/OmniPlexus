@@ -6,7 +6,7 @@
 #define SMARTDRIVE_COMMANDQUEUE_H
 
 #include "opx/shared/core/Config.h"
-#include "opx/shared/types/ProtocolTypes.h"
+#include "opx/shared/types/ProtocolTypes.h" // IWYU pragma: keep
 #include "opx/shared/utils/Logger.h"
 #include "GeneratedConfig.h"
 

@@ -3,7 +3,7 @@
 //
 
 #include "opx/pc/core/OpxSession.h"
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #ifndef OPX_TARGET_EMBEDDED
 #include "opx/pc/transport/http/PcHttpTransport.h"

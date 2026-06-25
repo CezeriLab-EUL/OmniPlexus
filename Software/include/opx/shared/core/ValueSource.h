@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_VALUESOURCE_H
 #define SMARTDRIVE_VALUESOURCE_H
 
-#include "../core/platform.h"
+#include "../core/platform.h" // IWYU pragma: keep
 #ifndef __AVR__
 #include <type_traits>
 #endif

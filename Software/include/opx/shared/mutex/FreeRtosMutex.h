@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_FREERTOSMUTEX_H
 #define SMARTDRIVE_FREERTOSMUTEX_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #if OPX_HAS_FREERTOS
 #include "opx/shared/interfaces/IMutex.h"

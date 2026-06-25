@@ -4,7 +4,9 @@
 
 #ifndef SMARTDRIVE_PCSERIALTRANSPORT_H
 #define SMARTDRIVE_PCSERIALTRANSPORT_H
-#include "opx/shared/core/Config.h"
+
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
+
 #ifndef OPX_TARGET_EMBEDDED
 
 #ifndef _WIN32

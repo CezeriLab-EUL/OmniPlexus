@@ -1,12 +1,11 @@
 //
-// OpxDevice.h
 // OmniPlexus (opx) - Embedded Device Facade
 //
 
 #ifndef SMARTDRIVE_OPXDEVICE_H
 #define SMARTDRIVE_OPXDEVICE_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #ifdef OPX_FRAMEWORK_ARDUINO
 #include "opx/shared/core/CommunicationManager.h"

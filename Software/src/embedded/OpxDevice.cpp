@@ -4,8 +4,8 @@
 //
 
 #include "opx/embedded/core/OpxDevice.h"
-#include "opx/shared/constants/ProtocolConstants.h"
-#include "opx/shared/core/Config.h"
+#include "opx/shared/constants/ProtocolConstants.h" // IWYU pragma: keep
+#include "opx/shared/core/Config.h"                 // IWYU pragma: keep
 
 #ifdef OPX_FRAMEWORK_ARDUINO
 

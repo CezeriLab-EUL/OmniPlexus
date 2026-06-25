@@ -5,7 +5,8 @@
 #ifndef SMARTDRIVE_PCWIFITRANSPORT_H
 #define SMARTDRIVE_PCWIFITRANSPORT_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
+
 #ifndef OPX_TARGET_EMBEDDED
 #include "opx/shared/interfaces/IConnectable.h"
 #include "opx/shared/transport/AbstractTransport.h"

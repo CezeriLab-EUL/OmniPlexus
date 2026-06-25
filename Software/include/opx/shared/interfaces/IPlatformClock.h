@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_IPLATFORMCLOCK_H
 #define SMARTDRIVE_IPLATFORMCLOCK_H
 
-#include "opx/shared/core/platform.h"
+#include "opx/shared/core/platform.h" // IWYU pragma: keep
 
 class IPlatformClock {
 public:

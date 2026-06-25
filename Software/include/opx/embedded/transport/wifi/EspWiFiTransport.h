@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_ESPWIFITRANSPORT_H
 #define SMARTDRIVE_ESPWIFITRANSPORT_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #if OPX_TARGET_ESP32
 #include "opx/shared/interfaces/IConnectable.h"

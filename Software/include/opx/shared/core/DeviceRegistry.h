@@ -6,7 +6,7 @@
 #define OMNIPLEXUS_DEVICEREGISTRY_H
 
 #include "opx/shared/core/Config.h"
-#include "opx/shared/core/platform.h"
+#include "opx/shared/core/platform.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IPlatformClock.h"
 #include "opx/shared/utils/Logger.h"
 

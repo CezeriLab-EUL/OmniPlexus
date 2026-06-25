@@ -5,7 +5,7 @@
 #ifndef SMARTDRIVE_PLATFORMCLOCK_H
 #define SMARTDRIVE_PLATFORMCLOCK_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IPlatformClock.h"
 
 #ifdef OPX_FRAMEWORK_ARDUINO

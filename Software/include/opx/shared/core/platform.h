@@ -5,16 +5,16 @@
 #ifndef SMARTDRIVE_PLATFORM_H
 #define SMARTDRIVE_PLATFORM_H
 
-#include "opx/shared/core/Config.h"
+#include "opx/shared/core/Config.h" // IWYU pragma: keep
 
 #ifdef OPX_FRAMEWORK_ARDUINO
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 using ::size_t;
-    #ifdef OPX_TARGET_AVR
-    #define OPX_PLATFORM_AVR
-    #endif
+#ifdef OPX_TARGET_AVR
+#define OPX_PLATFORM_AVR
+#endif
 #else
 #include <cstdint>
 #include <cstdlib>
@@ -22,5 +22,4 @@ using ::size_t;
 using std::size_t;
 #endif
 
-
-#endif //SMARTDRIVE_PLATFORM_H
+#endif // SMARTDRIVE_PLATFORM_H
