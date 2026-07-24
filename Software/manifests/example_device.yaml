@@ -1,0 +1,101 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# OmniPlexus Device Manifest — Example
+# Copy this file, rename it to your device name, and fill in your commands.
+#
+# Rules:
+#   - device:    PascalCase, alphanumeric only (e.g. MotorBoard, SensorArray)
+#   - typeShift: unique integer 0-31 per device in your project
+#   - command/telemetry/setting names: UPPER_SNAKE_CASE
+#   - param types: UINT8, INT8, UINT16, INT16, UINT32, INT32, FLOAT, STRING
+#   - id values: start from 1, must be unique within each section
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: "1.0"
+description: A brief description of what this device does
+device: ExampleDevice
+typeShift: 1
+
+commands:
+  # A command with no parameters
+  - id: 1
+    name: PING
+    description: Check if the device is alive
+    acknowledges: true
+    params: []
+
+  # A command with required parameters
+  - id: 2
+    name: SET_VALUE
+    description: Set a value on the device
+    acknowledges: false
+    params:
+      - name: channel
+        type: UINT8
+        required: true
+        description: Channel index (0-based)
+      - name: value
+        type: INT16
+        required: true
+        description: Value to set (-32768 to 32767)
+
+  # A command with a string parameter
+  - id: 3
+    name: PRINT_MESSAGE
+    description: Display a message on the device
+    acknowledges: false
+    params:
+      - name: message
+        type: STRING
+        required: true
+        maxLength: 20
+        description: Message to display (max 20 chars)
+
+  # A command with an optional parameter and a default value
+  - id: 4
+    name: BLINK
+    description: Blink the LED a number of times
+    acknowledges: false
+    params:
+      - name: count
+        type: UINT8
+        required: false
+        default: "3"
+        description: Number of blinks (default 3)
+
+telemetry:
+  # Sent automatically when the value changes by more than the threshold
+  - id: 1
+    name: SENSOR_VALUE
+    description: Current sensor reading
+    type: INT16
+    trigger:
+      type: onChange
+      threshold: 1.0
+
+  # Sent automatically at a fixed interval
+  - id: 2
+    name: STATUS
+    description: Device status byte
+    type: UINT8
+    trigger:
+      type: periodic
+      intervalMs: 1000
+
+  # Only sent when explicitly requested by the PC
+  - id: 3
+    name: FIRMWARE_VERSION
+    description: Firmware version number
+    type: UINT16
+    trigger:
+      type: onRequest
+
+settings:
+  - id: 1
+    name: SAMPLE_RATE_MS
+    description: How often to sample the sensor in milliseconds
+    type: UINT16
+
+  - id: 2
+    name: DEVICE_NAME
+    description: Human-readable device name
+    type: STRING

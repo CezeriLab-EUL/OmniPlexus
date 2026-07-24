@@ -10,20 +10,17 @@ set(PREVIOUS_GENERATED_CONFIG "")
 
 find_package(Boost REQUIRED COMPONENTS system)
 
-# Build the tool
-add_subdirectory(tools/CommandGenerator)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/autogen)
-file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/src/autogen/pc)
+# Discover all device YAML files in manifests/
+file(GLOB DEVICE_MANIFEST_FILES CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/manifests/*.yaml"
+        "${CMAKE_SOURCE_DIR}/manifests/*.yml")
 
-# Discover all device JSON files in devices/
-file(GLOB DEVICE_JSON_FILES CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/devices/*.json")
-
-# Derive per-device output paths from JSON filenames (new structure)
+# Derive per-device output paths from YAML filenames (new structure)
 set(ALL_DEVICE_OUTPUTS "")
-foreach(DEVICE_JSON ${DEVICE_JSON_FILES})
-    get_filename_component(DEVICE_NAME ${DEVICE_JSON} NAME_WE)
+foreach(DEVICE_MANIFEST ${DEVICE_MANIFEST_FILES})
+    get_filename_component(DEVICE_NAME ${DEVICE_MANIFEST} NAME_WE)
     list(APPEND ALL_DEVICE_OUTPUTS
             "${CMAKE_SOURCE_DIR}/autogen/shared/devices/${DEVICE_NAME}/${DEVICE_NAME}Controller.h"
             "${CMAKE_SOURCE_DIR}/autogen/embedded/devices/${DEVICE_NAME}/${DEVICE_NAME}RegisterAll.h"
@@ -54,15 +51,16 @@ add_custom_command(
         ${ALL_EMBEDDED_OUTPUTS}
         ${ALL_PC_OUTPUTS}
         ${ALL_DEVICE_OUTPUTS}
-        COMMAND CommandGenerator
-        ${DEVICE_JSON_FILES}
+        COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tools/CommandGenerator/generate.py
+        ${CMAKE_SOURCE_DIR}/manifests/
         ${CMAKE_SOURCE_DIR}/autogen/
         ${CMAKE_SOURCE_DIR}/src/autogen/pc/
         DEPENDS
-        ${DEVICE_JSON_FILES}
-        CommandGenerator
+        ${DEVICE_MANIFEST_FILES}
+        ${CMAKE_SOURCE_DIR}/tools/CommandGenerator/generate.py
         COMMENT "Generating files for all devices..."
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/tools/CommandGenerator
 )
 
 add_custom_target(GenerateCommands ALL

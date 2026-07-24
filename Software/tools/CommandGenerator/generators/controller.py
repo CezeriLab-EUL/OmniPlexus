@@ -1,0 +1,172 @@
+from __future__ import annotations
+from utils import (
+    CPP_TYPES,
+    to_camel_case,
+    to_pascal_case,
+    get_optional_param_index,
+    format_default_value,
+)
+
+
+def _build_param_list(cmd: dict) -> str:
+    """Build the C++ parameter list string for a controller method."""
+    parts: list[str] = []
+    for param in cmd.get("params", []):
+        cpp_type = CPP_TYPES[param["type"]]
+        name = param["name"]
+        is_req = param.get("required", True)
+
+        entry = f"{cpp_type} {name}"
+
+        if not is_req and "default" in param:
+            default = format_default_value(param["type"], str(param["default"]))
+            entry += f" = {default}"
+
+        parts.append(entry)
+
+    # transportID always last with default
+    parts.append("uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT")
+    return ", ".join(parts)
+
+
+def _build_command_method(device_name: str, cmd: dict) -> list[str]:
+    """Generate the lines for a single command dispatch method."""
+    cmd_name = cmd["name"]
+    method_name = to_camel_case(cmd_name)
+    param_list = _build_param_list(cmd)
+    requires_ack = "true" if cmd.get("acknowledges") else "false"
+    lines: list[str] = []
+
+    if cmd.get("description"):
+        lines.append(f"    // {cmd['description']}")
+
+    lines.append(f"    bool {method_name}({param_list}) {{")
+    lines.append(f"        Command cmd;")
+    lines.append(f"        cmd.commandType = {device_name}CommandType::{cmd_name};")
+
+    for i, param in enumerate(cmd.get("params", [])):
+        lines.append(f"        cmd.params[{i}] = {param['name']};")
+
+    lines.append(f"        return comms.dispatch(cmd, transportID, {requires_ack});")
+    lines.append(f"    }}\n")
+
+    return lines
+
+
+def _build_telemetry_methods(device_name: str, data: dict) -> list[str]:
+    """Generate telemetry request methods."""
+    telemetry = data.get("telemetry", [])
+    if not telemetry:
+        return []
+
+    lines: list[str] = [
+        "    // --- Telemetry request methods (ON_REQUEST trigger) ---\n"
+    ]
+
+    for src in telemetry:
+        src_name = src["name"]
+        method_name = f"get{to_pascal_case(src_name)}"
+
+        if src.get("description"):
+            lines.append(f"    // Request current value of: {src['description']}")
+
+        lines.append(
+            f"    bool {method_name}"
+            f"(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {{"
+        )
+        lines.append(f"        Command cmd;")
+        lines.append(
+            f"        cmd.commandType = {device_name}CommandType::GET_{src_name};"
+        )
+        lines.append(f"        return comms.dispatch(cmd, transportID, false);")
+        lines.append(f"    }}\n")
+
+    return lines
+
+
+def _build_setting_methods(device_name: str, data: dict) -> list[str]:
+    """Generate setting GET and SET methods."""
+    settings = data.get("settings", [])
+    if not settings:
+        return []
+
+    lines: list[str] = ["    // --- Setting request and set methods ---\n"]
+
+    for setting in settings:
+        name = setting["name"]
+        cpp_type = CPP_TYPES[setting["type"]]
+        pascal_name = to_pascal_case(name)
+
+        if setting.get("description"):
+            lines.append(f"    // Get current value of: {setting['description']}")
+
+        lines.append(
+            f"    bool get{pascal_name}"
+            f"(uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {{"
+        )
+        lines.append(f"        Command cmd;")
+        lines.append(
+            f"        cmd.commandType = {device_name}CommandType::GET_SETTING_{name};"
+        )
+        lines.append(f"        return comms.dispatch(cmd, transportID, false);")
+        lines.append(f"    }}\n")
+
+        if setting.get("description"):
+            lines.append(f"    // Set value of: {setting['description']}")
+
+        lines.append(
+            f"    bool set{pascal_name}({cpp_type} value, "
+            f"uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {{"
+        )
+        lines.append(f"        Command cmd;")
+        lines.append(
+            f"        cmd.commandType = {device_name}CommandType::SET_SETTING_{name};"
+        )
+        lines.append(f"        cmd.params[0] = value;")
+        lines.append(f"        return comms.dispatch(cmd, transportID, true);")
+        lines.append(f"    }}\n")
+
+    return lines
+
+
+def generate(data: dict) -> str:
+    device_name = data["device"]
+    class_name = f"{device_name}Controller"
+    type_id = data["typeShift"]
+
+    method_lines: list[str] = []
+
+    for cmd in data.get("commands", []):
+        method_lines.extend(_build_command_method(device_name, cmd))
+
+    method_lines.extend(_build_telemetry_methods(device_name, data))
+    method_lines.extend(_build_setting_methods(device_name, data))
+
+    methods = "\n".join(method_lines)
+
+    return f"""\
+//
+// {class_name}.h
+// AUTO-GENERATED BY OmniPlexus CommandGenerator - DO NOT EDIT
+// Source: {device_name}.yaml
+//
+
+#pragma once
+
+#include "opx/shared/core/platform.h"
+#include "opx/shared/core/CommunicationManager.h"
+#include "opx/shared/types/ProtocolTypes.h"
+#include "autogen/shared/CommandTypes.h"
+
+class {class_name} {{
+private:
+    CommunicationManager& comms;
+
+public:
+    static constexpr uint16_t TYPE_ID = {type_id};
+
+    explicit {class_name}(CommunicationManager& comms) : comms(comms) {{}}
+
+{methods}
+}}; // class {class_name}
+"""
