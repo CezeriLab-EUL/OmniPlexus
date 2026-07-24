@@ -35,6 +35,7 @@ set(ALL_SHARED_OUTPUTS
         "${CMAKE_SOURCE_DIR}/autogen/shared/CommandTypes.h"
         "${CMAKE_SOURCE_DIR}/autogen/shared/CommandPacker.h"
         "${CMAKE_SOURCE_DIR}/autogen/shared/GeneratedConfig.h"
+        "${CMAKE_SOURCE_DIR}/autogen/shared/OpxDevices.h"
         "${CMAKE_SOURCE_DIR}/src/autogen/pc/CommandRegistry.cpp"
 )
 
@@ -76,6 +77,7 @@ add_library(OmniPlexus
         src/pc/OpxSession.cpp
         src/embedded/OpxDevice.cpp
         src/autogen/pc/CommandRegistry.cpp
+        include/opx/embedded/transport/http/types.h
 )
 
 add_custom_target(SyncArduinoLibrary
@@ -90,6 +92,15 @@ add_custom_target(SyncArduinoLibrary
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/src/embedded/OpxDevice.cpp
         ${ARDUINO_LIBRARY_PATH}/OpxDevice.cpp
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/src/arduino/Opx.h
+        ${ARDUINO_LIBRARY_PATH}/Opx.h
+
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/src/arduino/Opx.cpp
+        ${ARDUINO_LIBRARY_PATH}/Opx.cpp
+
         COMMENT "Syncing OmniPlexus headers to Arduino library..."
 )
 
@@ -97,9 +108,7 @@ add_dependencies(SyncArduinoLibrary OmniPlexus GenerateCommands)
 
 target_include_directories(OmniPlexus PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen/shared>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen/embedded>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/autogen/pc>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_include_directories(OmniPlexus PRIVATE

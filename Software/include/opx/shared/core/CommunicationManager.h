@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "CommandPacker.h"
+#include "autogen/shared/CommandPacker.h"
 #include "opx/shared/core/TransportManager.h"
 #include "opx/shared/core/platform.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IEncoder.h"
@@ -434,4 +434,3 @@ public:
 
   void flushResponseQueue() { responseQueue.clear(); }
 };
-

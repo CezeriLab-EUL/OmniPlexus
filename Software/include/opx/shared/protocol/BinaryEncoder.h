@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "CommandPacker.h"
+#include "autogen/shared/CommandPacker.h"
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
 #include "opx/shared/interfaces/IEncoder.h"
 #include "opx/shared/types/ProtocolTypes.h"
@@ -344,4 +344,3 @@ public:
     return CRC8::compute(rawData);
   }
 };
-

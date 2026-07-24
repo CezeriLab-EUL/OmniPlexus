@@ -27,8 +27,8 @@
 #include "opx/shared/mutex/FreeRtosMutex.h"
 #endif
 
-#include "opx/mutex/NullMutex.h"
-#include "opx/transport/serial/ArduinoSerialTransport.h"
+#include "opx/shared/mutex/NullMutex.h"
+#include "opx/embedded/transport/serial/ArduinoSerialTransport.h"
 
 #if OPX_CDNC_MASTER
 #include "opx/embedded/transport/cdnc/CDnC.h"

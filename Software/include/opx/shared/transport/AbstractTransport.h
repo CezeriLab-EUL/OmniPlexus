@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "CommandPacker.h"
+#include "autogen/shared/CommandPacker.h"
 #include "opx/shared/core/ValueSource.h"
 #include "opx/shared/interfaces/ITransport.h"
 #include "opx/shared/utils/CRC8.h"

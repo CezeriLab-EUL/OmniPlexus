@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "GeneratedConfig.h"
+#include "autogen/shared/GeneratedConfig.h"
 #include "opx/shared/core/Config.h"
 #include "opx/shared/types/ProtocolTypes.h" // IWYU pragma: keep
 #include "opx/shared/utils/Logger.h"
