@@ -13,6 +13,10 @@ each other.
 
 ## Where to start
 
+### I want to understand how OmniPlexus works
+
+→ [Concepts (Start Here)](docs/CONCEPTS.md)
+
 ### I want to flash a microcontroller (no PC application)
 
 → [Getting Started: Arduino](docs/GETTING_STARTED_ARDUINO.md)
@@ -20,10 +24,6 @@ each other.
 ### I want to build both a PC application and embedded firmware
 
 → [Getting Started: CMake](docs/GETTING_STARTED_CMAKE.md)
-
-### I want to understand how OmniPlexus works
-
-→ [Concepts](docs/CONCEPTS.md)
 
 ---
 
