@@ -138,20 +138,3 @@
 #define DEBUG_ENABLED 1
 #endif
 #endif
-
-// Legacy compatibility
-#ifdef OPX_TARGET_EMBEDDED
-#define EMBEDDED_BUILD 1
-#endif
-
-#if OPX_CDNC_MASTER
-#define CDNC_MASTER 1
-#endif
-
-#if OPX_CDNC_SLAVE
-#define CDNC_SLAVE 1
-#endif
-
-#ifdef OPX_CONSTRAINED
-#define OPX_SLAVE_MINIMAL 1
-#endif

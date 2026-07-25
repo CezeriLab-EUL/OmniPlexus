@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include "../core/platform.h" // IWYU pragma: keep
-#ifndef __AVR__
+#include "opx/shared/core/Config.h"   // IWYU pragma: keep
+#include "opx/shared/core/platform.h" // IWYU pragma: keep
+
+#ifndef OPX_TARGET_AVR
 #include <type_traits>
 #endif
 #include "opx/shared/utils/Logger.h"
@@ -207,7 +209,7 @@ public:
 
   // Numerical pack
   template <typename T> void pack(T value) {
-#ifndef __AVR__
+#ifndef OPX_TARGET_AVR
     static_assert(std::is_arithmetic<T>::value,
                   "Value must be arithmetic. Use packString() for strings");
     static_assert(std::is_trivially_copyable<T>::value,
@@ -236,7 +238,7 @@ public:
   }
 
   template <typename T> T unpack() const {
-#ifndef __AVR__
+#ifndef OPX_TARGET_AVR
     static_assert(std::is_arithmetic<T>::value,
                   "Use unpackString() for strings");
 #endif

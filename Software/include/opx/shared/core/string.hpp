@@ -2,9 +2,10 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "opx/shared/core/Config.h"
 
 // 1. Conditionally include PC/C++20 headers
-#ifndef ARDUINO
+#ifndef OPX_FRAMEWORK_ARDUINO
 #include <iostream>
 #endif
 
@@ -25,12 +26,12 @@
 #endif
 
 // 3. Arduino Checks
-#if defined(ARDUINO)
+#if defined(OPX_FRAMEWORK_ARDUINO)
 #include <Arduino.h>
 #endif
 
 // 4. Macro to handle printing errors cross-platform
-#if defined(ARDUINO)
+#if defined(OPX_FRAMEWORK_ARDUINO)
 #define PRINT_WARNING(msg) if(Serial) Serial.println(msg)
 #else
 #define PRINT_WARNING(msg) printf("%s\n", msg)
@@ -154,7 +155,7 @@ public:
 
     void print() const {
         if (m_data) {
-            #if defined(ARDUINO)
+            #if defined(OPX_FRAMEWORK_ARDUINO)
             Serial.write((const uint8_t*)m_data, m_len);
             #else
             std::cout.write(m_data, m_len);
@@ -284,7 +285,7 @@ class string : public string_view {
         }
         #endif
 
-        #if defined(ARDUINO)
+        #if defined(OPX_FRAMEWORK_ARDUINO)
         string(const String& ard_str)
             : string_view(nullptr, 0), capacity_(calc_min_cap(ard_str.length())), m_owns_memory(true)
         {

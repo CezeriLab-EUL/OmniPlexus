@@ -12,6 +12,10 @@
 #include "opx/shared/interfaces/IConnectable.h"
 #include <chrono>
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Construction / Destruction
+// ─────────────────────────────────────────────────────────────────────────────
+
 OpxSession::OpxSession() {
   for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
     slots[i].active = false;
@@ -21,6 +25,10 @@ OpxSession::OpxSession() {
 }
 
 OpxSession::~OpxSession() { disconnectAll(); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Transport Setup
+// ─────────────────────────────────────────────────────────────────────────────
 
 bool OpxSession::connectWiFi(const char *host, uint16_t port,
                              uint8_t maxReconnectAttempts,
@@ -80,6 +88,10 @@ bool OpxSession::connectHttp(const char *host, uint16_t port) {
   return addTransport(transport, OpxTransportID::HTTP);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Transport Teardown
+// ─────────────────────────────────────────────────────────────────────────────
+
 void OpxSession::disconnect(OpxTransportID id) {
   deviceRegistry.removeByTransport(static_cast<uint8_t>(id));
   removeTransport(id);
@@ -108,6 +120,10 @@ void OpxSession::disconnectAll() {
   controllerMap.clear();
   deviceRegistry.clear();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Connection Status
+// ─────────────────────────────────────────────────────────────────────────────
 
 bool OpxSession::isConnected(OpxTransportID id) const {
   const TransportSlot *slot = findSlot(id);
@@ -138,10 +154,25 @@ bool OpxSession::isAnyConnected() const {
   return false;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Event Handlers
+// ─────────────────────────────────────────────────────────────────────────────
+
 void OpxSession::onTelemetry(TelemetryHandler handler) {
   telemetryHandler = std::move(handler);
   if (cm.has_value()) {
     cm->onTelemetryReceived(telemetryBridge, this);
+  }
+}
+
+void OpxSession::onCommand(CommandHandler handler) {
+  commandHandler = std::move(handler);
+}
+
+void OpxSession::onCommandResponse(ResponseHandler handler) {
+  responseHandler = std::move(handler);
+  if (cm.has_value()) {
+    cm->onResponseReceived(responseBridge, this);
   }
 }
 
@@ -151,6 +182,10 @@ void OpxSession::onSetting(SettingHandler handler) {
     cm->onSettingReceived(settingBridge, this);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Discovery
+// ─────────────────────────────────────────────────────────────────────────────
 
 void OpxSession::discover() {
   if (!cm.has_value())
@@ -178,18 +213,30 @@ uint8_t OpxSession::transportIDFor(uint8_t typeShift) const {
   return deviceRegistry.transportIDFor(typeShift);
 }
 
-void OpxSession::onCommand(CommandHandler handler) {
-  commandHandler = std::move(handler);
+// ─────────────────────────────────────────────────────────────────────────────
+// Heartbeat
+// ─────────────────────────────────────────────────────────────────────────────
+
+void OpxSession::setHeartbeatInterval(uint32_t intervalMs) {
+  heartbeatIntervalMs = intervalMs;
 }
 
-void OpxSession::onCommandResponse(ResponseHandler handler) {
-  responseHandler = std::move(handler);
-  if (cm.has_value()) {
-    cm->onResponseReceived(responseBridge, this);
-  }
+void OpxSession::setDeviceTimeout(uint32_t timeoutMs) {
+  deviceRegistry.setDeviceTimeout(timeoutMs);
 }
+
+// dispatch() and getAllSettings() are defined inline in OpxSession.h
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Device Access
+// ─────────────────────────────────────────────────────────────────────────────
+// getDevice<TController>() is a template, defined inline in OpxSession.h
 
 CommandRegistry &OpxSession::registry() { return reg; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 bool OpxSession::slotOccupied(OpxTransportID id) const {
   return findSlot(id) != nullptr;
@@ -222,14 +269,6 @@ void OpxSession::ensureCommunicationManager() {
   // CommunicationManager starts with no callbacks — we must re-register them.
   cm.emplace(&encoder, &tm, &sendMutex, &listenMutex);
   rewireHandlers();
-}
-
-void OpxSession::setHeartbeatInterval(uint32_t intervalMs) {
-  heartbeatIntervalMs = intervalMs;
-}
-
-void OpxSession::setDeviceTimeout(uint32_t timeoutMs) {
-  deviceRegistry.setDeviceTimeout(timeoutMs);
 }
 
 bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
@@ -307,6 +346,10 @@ void OpxSession::rewireHandlers() {
     cm->onSettingReceived(settingBridge, this);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Background Threads
+// ─────────────────────────────────────────────────────────────────────────────
+
 void OpxSession::startThreads() {
   if (running)
     return; // already started
@@ -353,19 +396,17 @@ void OpxSession::stopThreads() {
     processingThread.join();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Static Bridge Functions
+// ─────────────────────────────────────────────────────────────────────────────
+// These adapt CommunicationManager's C-style callbacks (function pointer +
+// void* context) back into calls on the owning OpxSession instance.
+
 void OpxSession::telemetryBridge(const Telemetry &telemetry,
                                  uint8_t sourceTransportID, void *context) {
   auto *session = static_cast<OpxSession *>(context);
   if (session->telemetryHandler) {
     session->telemetryHandler(telemetry, sourceTransportID);
-  }
-}
-
-void OpxSession::settingBridge(const SettingsData &setting,
-                               uint8_t sourceTransportID, void *context) {
-  auto *session = static_cast<OpxSession *>(context);
-  if (session->settingHandler) {
-    session->settingHandler(setting, sourceTransportID);
   }
 }
 
@@ -405,6 +446,14 @@ void OpxSession::responseBridge(const CommandResponse &response,
   auto *session = static_cast<OpxSession *>(context);
   if (session->responseHandler) {
     session->responseHandler(response, sourceTransportID);
+  }
+}
+
+void OpxSession::settingBridge(const SettingsData &setting,
+                               uint8_t sourceTransportID, void *context) {
+  auto *session = static_cast<OpxSession *>(context);
+  if (session->settingHandler) {
+    session->settingHandler(setting, sourceTransportID);
   }
 }
 

@@ -31,6 +31,7 @@ static constexpr uint8_t OPX_MAX_TRANSPORTS = 3;
 
 class OpxSession {
 public:
+  // ── Handler type aliases ───────────────────────────────────────────────────
   using TelemetryHandler = std::function<void(const Telemetry &telemetry,
                                               uint8_t sourceTransportID)>;
   using CommandHandler = std::function<void(const Command &cmd, uint8_t seqNum,
@@ -40,6 +41,7 @@ public:
   using SettingHandler = std::function<void(const SettingsData &setting,
                                             uint8_t sourceTransportID)>;
 
+  // ── Construction / Destruction ─────────────────────────────────────────────
   OpxSession();
 
   ~OpxSession();
@@ -52,6 +54,7 @@ public:
 
   OpxSession &operator=(OpxSession &&) = delete;
 
+  // ── Transport Setup ─────────────────────────────────────────────────────────
   bool connectWiFi(const char *host, uint16_t port,
                    uint8_t maxReconnectAttempts = 5,
                    uint32_t reconnectDelayMs = 2000);
@@ -60,14 +63,17 @@ public:
 
   bool connectHttp(const char *host, uint16_t port);
 
+  // ── Transport Teardown ──────────────────────────────────────────────────────
   void disconnect(OpxTransportID id);
 
   void disconnectAll();
 
+  // ── Connection Status ───────────────────────────────────────────────────────
   bool isConnected(OpxTransportID id) const;
 
   bool isAnyConnected() const;
 
+  // ── Event Handlers ───────────────────────────────────────────────────────────
   void onTelemetry(TelemetryHandler handler);
 
   void onCommand(CommandHandler handler);
@@ -76,6 +82,7 @@ public:
 
   void onSetting(SettingHandler handler);
 
+  // ── Discovery ────────────────────────────────────────────────────────────────
   void discover();
   void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb,
                          void *context = nullptr);
@@ -84,9 +91,11 @@ public:
   bool isDeviceConnected(uint8_t typeShift) const;
   uint8_t transportIDFor(uint8_t typeShift) const;
 
+  // ── Heartbeat ────────────────────────────────────────────────────────────────
   void setHeartbeatInterval(uint32_t intervalMs);
   void setDeviceTimeout(uint32_t timeoutMs);
 
+  // ── Sending ──────────────────────────────────────────────────────────────────
   bool dispatch(const Command &cmd,
                 uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
     if (!cm.has_value())
@@ -101,16 +110,31 @@ public:
     return dispatch(cmd, transportID);
   }
 
+  // ── Device Access ────────────────────────────────────────────────────────────
   template <typename TController> TController &getDevice();
 
   CommandRegistry &registry();
 
 private:
+  // ── Nested types ─────────────────────────────────────────────────────────────
   struct TransportSlot {
     ITransport *transport = nullptr;
     OpxTransportID id;
     bool active = false;
   };
+
+  // ── Core protocol state ───────────────────────────────────────────────────────
+  BinaryEncoder encoder;
+  StdMutex sendMutex;
+  StdMutex listenMutex;
+  TransportManager tm;
+  std::optional<CommunicationManager> cm;
+
+  void ensureCommunicationManager();
+
+  // ── Transport slots ───────────────────────────────────────────────────────────
+  TransportSlot slots[OPX_MAX_TRANSPORTS];
+  uint8_t activeSlots = 0;
 
   bool slotOccupied(OpxTransportID id) const;
 
@@ -118,18 +142,41 @@ private:
 
   const TransportSlot *findSlot(OpxTransportID id) const;
 
-  void ensureCommunicationManager();
-
   bool addTransport(ITransport *transport, OpxTransportID id);
 
   void removeTransport(OpxTransportID id);
 
+  // ── User callbacks ────────────────────────────────────────────────────────────
+  TelemetryHandler telemetryHandler;
+  CommandHandler commandHandler;
+  ResponseHandler responseHandler;
+  SettingHandler settingHandler;
+
   void rewireHandlers();
+
+  // ── Registries ───────────────────────────────────────────────────────────────
+  DeviceRegistry deviceRegistry;
+  CommandRegistry reg;
+
+  using ControllerDeleter = void (*)(void *);
+  std::unordered_map<uint16_t, std::unique_ptr<void, ControllerDeleter>>
+      controllerMap;
+
+  // ── Background threads ────────────────────────────────────────────────────────
+  std::atomic<bool> running{false};
+  std::thread listenerThread;
+  std::thread processingThread;
 
   void startThreads();
 
   void stopThreads();
 
+  // ── Heartbeat state ───────────────────────────────────────────────────────────
+  PlatformClock clock;
+  uint32_t heartbeatIntervalMs = 1000;
+  uint32_t lastHeartbeatSentMs = 0;
+
+  // ── Static protocol bridges (CommunicationManager callbacks) ──────────────
   static void telemetryBridge(const Telemetry &telemetry,
                               uint8_t sourceTransportID, void *context);
 
@@ -141,37 +188,11 @@ private:
 
   static void settingBridge(const SettingsData &setting,
                             uint8_t sourceTransportID, void *context);
-
-  BinaryEncoder encoder;
-  StdMutex sendMutex;
-  StdMutex listenMutex;
-  TransportManager tm;
-
-  std::optional<CommunicationManager> cm;
-  TransportSlot slots[OPX_MAX_TRANSPORTS];
-  uint8_t activeSlots = 0;
-
-  TelemetryHandler telemetryHandler;
-  CommandHandler commandHandler;
-  ResponseHandler responseHandler;
-  SettingHandler settingHandler;
-
-  DeviceRegistry deviceRegistry;
-  CommandRegistry reg;
-
-  using ControllerDeleter = void (*)(void *);
-  std::unordered_map<uint16_t, std::unique_ptr<void, ControllerDeleter>>
-      controllerMap;
-
-  std::atomic<bool> running{false};
-  std::thread listenerThread;
-  std::thread processingThread;
-
-  PlatformClock clock;
-  uint32_t heartbeatIntervalMs = 1000;
-  uint32_t lastHeartbeatSentMs = 0;
 };
 
+// ── getDevice<T>() template definition ───────────────────────────────────────
+// Controllers are lazily constructed and cached per session; the map owns
+// them for the session's lifetime so callers can hold references safely.
 template <typename TController> TController &OpxSession::getDevice() {
   if (!cm.has_value()) {
     throw std::runtime_error(

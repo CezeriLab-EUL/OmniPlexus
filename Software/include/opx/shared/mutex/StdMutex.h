@@ -3,10 +3,10 @@
 //
 
 #pragma once
+#include "opx/shared/core/Config.h"
 
-#ifndef ARDUINO
+#ifndef OPX_FRAMEWORK_ARDUINO
 #include <mutex>
-
 #include "opx/shared/interfaces/IMutex.h"
 
 class StdMutex : public IMutex {
