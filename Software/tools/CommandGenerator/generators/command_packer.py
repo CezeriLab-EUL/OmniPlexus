@@ -1,5 +1,6 @@
 from __future__ import annotations
 from utils import (
+    CPP_DEFAULTS,
     CPP_SIZEOF,
     TYPE_SIZES,
     get_optional_param_index,
@@ -132,7 +133,7 @@ def _unpack_fixed_param(
     if is_optional:
         lines.append(f"{indent}if (remainingBytes >= {sz}) {{")
         inner = "                    "
-        lines.append(f"{inner}cmdOut.params[{i}].setFrom_{t.lower()}(0);")
+        lines.append(f"{inner}cmdOut.params[{i}] = {CPP_DEFAULTS[t]};")
         lines.append(
             f"{inner}memcpy(cmdOut.params[{i}].getDataMutable(), &buffer[offset], {sz});"
         )
@@ -144,6 +145,7 @@ def _unpack_fixed_param(
         lines.append(f"{indent}}}")
     else:
         lines.append(f"{indent}if (remainingBytes < {sz}) return false;")
+        lines.append(f"{indent}cmdOut.params[{i}] = {CPP_DEFAULTS[t]};")
         lines.append(
             f"{indent}memcpy(cmdOut.params[{i}].getDataMutable(), &buffer[offset], {sz});"
         )
@@ -417,6 +419,7 @@ def generate(all_data: list[dict]) -> str:
                 set_unpack = (
                     f"            case {device_name}CommandType::SET_SETTING_{name}: {{\n"
                     f"                if (bufferSize < 2 + {sz}) return false;\n"
+                    f"                cmdOut.params[0] = {CPP_DEFAULTS[t]};\n"
                     f"                if (bufferSize - offset < {sz}) return false;\n"
                     f"                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], {sz});\n"
                     f"                offset += {sz};\n"
