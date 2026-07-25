@@ -159,3 +159,26 @@ DerivedData/
 *.[0-9][0-9][0-9]*
 *.[0-9][0-9]*
 *.[0-9]*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments (if you ever use one)
+.venv/
+venv/
+env/
+
+# pip
+*.egg-info/
+dist/
+build/*.egg
+
+
+# Manifests — ignore all device files except the example
+Software/manifests/*.yaml
+Software/manifests/*.yml
+!Software/manifests/example_device.yaml
