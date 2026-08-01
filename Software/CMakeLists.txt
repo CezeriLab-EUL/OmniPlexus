@@ -79,9 +79,15 @@ add_library(OmniPlexus
 )
 
 add_custom_target(SyncArduinoLibrary
+        COMMAND ${CMAKE_COMMAND} -E rm -rf
+        ${ARDUINO_LIBRARY_PATH}/opx
+
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/include/opx
         ${ARDUINO_LIBRARY_PATH}/opx
+
+        COMMAND ${CMAKE_COMMAND} -E rm -rf
+        ${ARDUINO_LIBRARY_PATH}/autogen
 
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/autogen

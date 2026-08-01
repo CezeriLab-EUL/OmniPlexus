@@ -43,7 +43,7 @@ int main() {
 
   session.setDeviceTimeout(10000);
 
-  if (!session.connectWiFi("192.168.0.107", 9000)) {
+  if (!session.connectWiFi("192.168.0.110", 9000)) {
     std::cerr << "Failed to connect to Deneyap Kart\n";
     return 1;
   }

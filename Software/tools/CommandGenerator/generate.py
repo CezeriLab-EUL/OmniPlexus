@@ -17,7 +17,7 @@ import sys
 import yaml
 
 from validation import validate, validate_all_cross_device
-from writer import write_files
+from writer import write_files, clean_directory
 from generators import (
     command_types,
     command_packer,
@@ -126,7 +126,17 @@ def generate_files(
     header_output_dir: str,
     source_output_dir: str,
 ) -> None:
-    """Generate all output files from validated device data."""
+    """Generate all output files from validated device data.
+
+    Cleans header_output_dir and source_output_dir completely before
+    writing, so renamed/removed manifests don't leave stale generated
+    files or folders behind. Only called after validation has fully
+    passed (see main()), so a failed run never wipes out the last
+    known-good generated output.
+    """
+    print("\nCleaning previous generated output...")
+    clean_directory(header_output_dir)
+    clean_directory(source_output_dir)
 
     def path(*parts: str) -> str:
         return os.path.join(*parts)

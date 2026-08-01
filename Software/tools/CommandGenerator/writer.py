@@ -1,5 +1,13 @@
 from __future__ import annotations
 import os
+import shutil
+
+
+def clean_directory(path: str) -> None:
+    """Remove a directory tree entirely if it exists, then recreate it empty."""
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
 
 
 def ensure_directory(path: str) -> None:
