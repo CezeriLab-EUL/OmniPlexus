@@ -3,7 +3,12 @@
 //
 
 #include "opx/pc/core/OpxSession.h"
+#include "opx/shared/constants/ProtocolConstants.h"
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
+#include "opx/shared/core/TriggerConfig.h"
+#include "opx/shared/core/ValueSource.h"
+#include "opx/shared/utils/Logger.h"
+#include <cstdint>
 
 #ifndef OPX_TARGET_EMBEDDED
 #include "opx/pc/transport/http/PcHttpTransport.h"
@@ -88,6 +93,28 @@ bool OpxSession::connectHttp(const char *host, uint16_t port) {
   return addTransport(transport, OpxTransportID::HTTP);
 }
 
+bool OpxSession::beginWiFi(uint16_t port) {
+  if (slotOccupied(OpxTransportID::WIFI)) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: WIFI slot already occupied. Call disconnect(WIFI) first.");
+    return false;
+  }
+
+  auto *transport = new PcWiFiTransport(port);
+  return addTransport(transport, OpxTransportID::WIFI);
+}
+
+bool OpxSession::beginHttpServer(uint16_t port) {
+  if (slotOccupied(OpxTransportID::HTTP)) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: HTTP slot already occupied. Call disconnect(HTTP) first.");
+    return false;
+  }
+
+  auto *transport = new PcHttpTransport(port);
+  return addTransport(transport, OpxTransportID::HTTP);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Transport Teardown
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,6 +140,10 @@ void OpxSession::disconnectAll() {
     }
   }
   activeSlots = 0;
+  delete settingsManager;
+  settingsManager = nullptr;
+  delete telemetryManager;
+  telemetryManager = nullptr;
   // cm is destroyed after transports so any final frames processed during
   // stopThreads() can still be dispatched. Controllers are cleared after cm
   // because their destructors may reference cm internals.
@@ -169,7 +200,7 @@ void OpxSession::onCommand(CommandHandler handler) {
   commandHandler = std::move(handler);
 }
 
-void OpxSession::onCommandResponse(ResponseHandler handler) {
+void OpxSession::onResponse(ResponseHandler handler) {
   responseHandler = std::move(handler);
   if (cm.has_value()) {
     cm->onResponseReceived(responseBridge, this);
@@ -181,6 +212,22 @@ void OpxSession::onSetting(SettingHandler handler) {
   if (cm.has_value()) {
     cm->onSettingReceived(settingBridge, this);
   }
+}
+
+void OpxSession::onDiscover(ProtocolCommandHook hook) {
+  discoverHook = std::move(hook);
+}
+
+void OpxSession::onAnnounce(ProtocolCommandHook hook) {
+  announceHook = std::move(hook);
+}
+
+void OpxSession::onHeartbeat(ProtocolCommandHook hook) {
+  heartbeatHook = std::move(hook);
+}
+
+void OpxSession::onHeartbeatAck(ProtocolCommandHook hook) {
+  heartbeatAckHook = std::move(hook);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -213,6 +260,23 @@ uint8_t OpxSession::transportIDFor(uint8_t typeShift) const {
   return deviceRegistry.transportIDFor(typeShift);
 }
 
+void OpxSession::setTypeShift(uint8_t typeShift) { ownTypeShift = typeShift; }
+
+void OpxSession::announce() {
+  if (!cm.has_value()) {
+    return;
+  }
+  if (ownTypeShift == 0xFF) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: announce() called but typeShift not set");
+    return;
+  }
+  Command cmd;
+  cmd.commandType = ProtocolConstants::ANNOUNCE_COMMAND;
+  cmd.params[0] = ownTypeShift;
+  cm->dispatch(cmd);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Heartbeat
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,6 +289,10 @@ void OpxSession::setDeviceTimeout(uint32_t timeoutMs) {
   deviceRegistry.setDeviceTimeout(timeoutMs);
 }
 
+void OpxSession::setAnnounceInterval(uint32_t intervalMs) {
+  announceIntervalMs = intervalMs;
+}
+
 // dispatch() and getAllSettings() are defined inline in OpxSession.h
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +301,111 @@ void OpxSession::setDeviceTimeout(uint32_t timeoutMs) {
 // getDevice<TController>() is a template, defined inline in OpxSession.h
 
 CommandRegistry &OpxSession::registry() { return reg; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Telemetry Management (session as identity)
+// ─────────────────────────────────────────────────────────────────────────────
+
+bool OpxSession::registerTelemetry(uint16_t sourceID, TriggerConfig trigger) {
+  ensureTelemetryManager();
+  return telemetryManager->registerSource(sourceID, trigger);
+}
+
+bool OpxSession::updateTelemetry(uint16_t sourceID, const ValueSource &value) {
+  if (!telemetryManager) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: updateTelemetry() before registerTelemetry()");
+    return false;
+  }
+  telemetryManager->update(sourceID, value);
+  return true;
+}
+
+bool OpxSession::sendTelemetryNow(uint16_t sourceID) {
+  if (!telemetryManager) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: sendTelemetryNow() before registerTelemetry()");
+    return false;
+  }
+  return telemetryManager->sendOne(sourceID);
+}
+
+bool OpxSession::setTelemetryTrigger(uint16_t sourceID, TriggerConfig trigger) {
+  if (!telemetryManager) {
+    return false;
+  }
+  return telemetryManager->setTrigger(sourceID, trigger);
+}
+
+bool OpxSession::enableTelemetry(uint16_t sourceID) {
+  if (!telemetryManager)
+    return false;
+  return telemetryManager->enable(sourceID);
+}
+
+bool OpxSession::disableTelemetry(uint16_t sourceID) {
+  if (!telemetryManager)
+    return false;
+  return telemetryManager->disable(sourceID);
+}
+
+bool OpxSession::unregisterTelemetry(uint16_t sourceID) {
+  if (!telemetryManager)
+    return false;
+  return telemetryManager->unregisterSource(sourceID);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Settings Management (session as identity)
+// ─────────────────────────────────────────────────────────────────────────────
+
+bool OpxSession::registerSetting(uint16_t settingID, ValueType type) {
+  ensureSettingsManager();
+  return settingsManager->registerSetting(settingID, type);
+}
+
+bool OpxSession::updateSetting(uint16_t settingID, const ValueSource &value,
+                               bool broadcast) {
+  if (!settingsManager) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: updateSetting() before registerSetting()");
+    return false;
+  }
+  return settingsManager->update(settingID, value, broadcast);
+}
+
+bool OpxSession::attachSettingCallback(
+    uint16_t settingID, SettingsManager::SettingChangedCallback cb,
+    void *context) {
+  if (!settingsManager) {
+    LOG(LogLevel::OP_WARNING,
+        "OpxSession: attachSettingCallback() before registerSetting()");
+    return false;
+  }
+  return settingsManager->attachCallback(settingID, cb, context);
+}
+
+void OpxSession::onAnySettingChanged(SettingsManager::SettingChangedCallback cb,
+                                     void *context) {
+  ensureSettingsManager();
+  settingsManager->onAnySettingChanged(cb, context);
+}
+
+void OpxSession::broadcastAllSettings() {
+  if (settingsManager)
+    settingsManager->broadcastAll();
+}
+
+void OpxSession::broadcastOneSetting(uint16_t settingID) {
+  if (settingsManager)
+    settingsManager->broadcastOne(settingID);
+}
+
+const SettingsData *OpxSession::getSetting(uint16_t settingID) const {
+  if (!settingsManager)
+    return nullptr;
+  return settingsManager->get(settingID);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal Helpers
@@ -271,6 +444,21 @@ void OpxSession::ensureCommunicationManager() {
   rewireHandlers();
 }
 
+void OpxSession::ensureTelemetryManager() {
+  if (telemetryManager)
+    return;
+  ensureCommunicationManager();
+  telemetryManager = new TelemetryManager(&clock, &cm.value());
+}
+
+void OpxSession::ensureSettingsManager() {
+  if (settingsManager)
+    return;
+  ensureCommunicationManager();
+  settingsManager = new SettingsManager(&cm.value());
+  cm->onSettingReceived(settingBridge, this);
+}
+
 bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
   // Find an inactive slot to store this transport
   TransportSlot *slot = nullptr;
@@ -306,6 +494,10 @@ bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
   // Start background threads on the first transport
   if (activeSlots == 1) {
     startThreads();
+  }
+
+  if (ownTypeShift != 0xFF) {
+    announce();
   }
 
   return true;
@@ -368,13 +560,25 @@ void OpxSession::startThreads() {
       cm->processCommands();
       cm->processResponses();
 
-      // Send heartbeat if interval has elapsed
-      const uint32_t now = clock.millis();
-      if (now - lastHeartbeatSentMs >= heartbeatIntervalMs) {
-        Command hb;
-        hb.commandType = ProtocolConstants::HEARTBEAT_COMMAND;
-        cm->dispatchCommandToAll(hb);
-        lastHeartbeatSentMs = now;
+      if (telemetryManager)
+        telemetryManager->send();
+
+      if (isAnyConnected()) {
+        // Send heartbeat if interval has elapsed
+        const uint32_t now = clock.millis();
+        if (now - lastHeartbeatSentMs >= heartbeatIntervalMs) {
+          Command hb;
+          hb.commandType = ProtocolConstants::HEARTBEAT_COMMAND;
+          hb.params[0] = ownTypeShift;
+          cm->dispatchCommandToAll(hb);
+          lastHeartbeatSentMs = now;
+        }
+
+        if (ownTypeShift != 0xFF &&
+            now - lastAnnounceSentMs >= announceIntervalMs) {
+          announce();
+          lastAnnounceSentMs = now;
+        }
       }
 
       deviceRegistry.checkTimeouts();
@@ -413,27 +617,63 @@ void OpxSession::telemetryBridge(const Telemetry &telemetry,
 void OpxSession::commandBridge(const Command &cmd, const uint8_t &seqNum,
                                uint8_t sourceTransportID, void *context) {
   auto *session = static_cast<OpxSession *>(context);
+
+  if (cmd.commandType == ProtocolConstants::DISCOVER_COMMAND) {
+    session->announce();
+    if (session->discoverHook) {
+      session->discoverHook(cmd, sourceTransportID);
+    }
+    return;
+  }
+
   // Handle protocol-level commands
   if (cmd.commandType == ProtocolConstants::ANNOUNCE_COMMAND) {
     const uint8_t peerTypeShift = static_cast<uint8_t>(cmd.params[0]);
     session->deviceRegistry.handleAnnounce(peerTypeShift, sourceTransportID);
-    return;
-  }
-
-  if (cmd.commandType == ProtocolConstants::DISCOVER_COMMAND) {
-    // PC doesn't respond to discover for now — device role only
+    if (session->announceHook) {
+      session->announceHook(cmd, sourceTransportID);
+    }
     return;
   }
 
   if (cmd.commandType == ProtocolConstants::HEARTBEAT_COMMAND) {
-    // PC doesn't respond to heartbeat commands for now — device role only
+    const uint8_t senderTypeShift = static_cast<uint8_t>(cmd.params[0]);
+    if (senderTypeShift != 0xFF) {
+      session->deviceRegistry.markAlive(senderTypeShift);
+    }
+
+    Command ack;
+    ack.commandType = ProtocolConstants::HEARTBEAT_ACK;
+    ack.params[0] = session->ownTypeShift;
+    if (session->cm.has_value()) {
+      session->cm->dispatch(ack, sourceTransportID);
+    }
+
+    if (session->heartbeatHook) {
+      session->heartbeatHook(cmd, sourceTransportID);
+    }
+
     return;
   }
 
   if (cmd.commandType == ProtocolConstants::HEARTBEAT_ACK) {
     const uint8_t peerTypeShift = static_cast<uint8_t>(cmd.params[0]);
     session->deviceRegistry.markAlive(peerTypeShift);
+    if (session->heartbeatAckHook) {
+      session->heartbeatAckHook(cmd, sourceTransportID);
+    }
     return;
+  }
+
+  if (session->settingsManager) {
+    const uint8_t category = (cmd.commandType >> 8) & 0x07;
+    const bool isSettingCmd =
+        (category == 0x2 || category == 0x3) ||
+        cmd.commandType == ProtocolConstants::GET_ALL_SETTINGS_COMMAND;
+    if (isSettingCmd) {
+      session->settingsManager->handleCommand(cmd, sourceTransportID);
+      return;
+    }
   }
 
   if (session->commandHandler) {

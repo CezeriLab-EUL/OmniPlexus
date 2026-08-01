@@ -14,6 +14,9 @@ version: "1.0"
 description: A brief description of what this device does
 device: ExampleDevice
 typeShift: 1
+# target can also be pc
+target: embedded
+identityOnly: false
 
 commands:
   # A command with no parameters

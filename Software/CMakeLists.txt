@@ -125,21 +125,22 @@ add_dependencies(OmniPlexus GenerateCommands)
 ##        tests/test_command_registry.cpp
 #)
 
-# add_executable(OmniPlexus_Test_SerialTransport
-# #        tests/transport/test_serial_transport.cpp
-# #        tests/transport/serial_round_trip.cpp
-# #        tests/transport/serial_receive_single.cpp
-# #        tests/transport/serial_receive_multithreaded.cpp
-# #        tests/transport/serial_command_response.cpp
-# #        tests/transport/serial_telemetry_receive.cpp
-# #        tests/transport/http/send_command.cpp
-# #        tests/transport/http/receive_telemetry.cpp
-#         # tests/transport/wifi/send_command.cpp
-# )
+add_executable(OmniPlexus_Test_SerialTransport
+#        tests/transport/test_serial_transport.cpp
+#        tests/transport/serial_round_trip.cpp
+#        tests/transport/serial_receive_single.cpp
+#        tests/transport/serial_receive_multithreaded.cpp
+#        tests/transport/serial_command_response.cpp
+#        tests/transport/serial_telemetry_receive.cpp
+#        tests/transport/http/send_command.cpp
+#        tests/transport/http/receive_telemetry.cpp
+        # tests/transport/wifi/send_command.cpp
+        tests/test_symmetry.cpp
+)
 
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)
 #target_link_libraries(SmartDrive_Test_Command PRIVATE SmartDrive)
-# target_link_libraries(OmniPlexus_Test_SerialTransport PRIVATE OmniPlexus)
+target_link_libraries(OmniPlexus_Test_SerialTransport PRIVATE OmniPlexus)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)

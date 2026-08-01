@@ -1,5 +1,7 @@
 #pragma once
 
+#include "opx/shared/core/Config.h"
+
 #ifdef OPX_TARGET_EMBEDDED
 #include <Arduino.h>
 
@@ -62,11 +64,9 @@
 #include "autogen/shared/CommandPacker.h"
 #include "autogen/shared/CommandTypes.h"
 #include "autogen/shared/GeneratedConfig.h"
-
-#include "autogen/embedded/SettingIDs.h"
-#include "autogen/embedded/TelemetrySourceIDs.h"
-
-#include "OpxDevices.h"
+#include "autogen/shared/OpxDevices.h"
+#include "autogen/shared/SettingIDs.h"
+#include "autogen/shared/TelemetrySourceIDs.h"
 
 class ArduinoLogger {
 public:

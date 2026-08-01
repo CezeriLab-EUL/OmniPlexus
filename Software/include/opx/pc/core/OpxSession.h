@@ -5,6 +5,9 @@
 #pragma once
 
 #include "opx/shared/core/Config.h" // IWYU pragma: keep
+#include "opx/shared/core/ValueSource.h"
+#include "opx/shared/types/RobotData.h"
+#include <cstdint>
 
 #ifndef OPX_TARGET_EMBEDDED
 #include <atomic>
@@ -19,7 +22,10 @@
 #include "opx/shared/core/CommunicationManager.h"
 #include "opx/shared/core/DeviceRegistry.h"
 #include "opx/shared/core/PlatformClock.h"
+#include "opx/shared/core/SettingsManager.h"
+#include "opx/shared/core/TelemetryManager.h"
 #include "opx/shared/core/TransportManager.h"
+#include "opx/shared/core/TriggerConfig.h"
 #include "opx/shared/interfaces/ITransport.h"
 #include "opx/shared/mutex/StdMutex.h"
 #include "opx/shared/protocol/BinaryEncoder.h"
@@ -41,6 +47,9 @@ public:
   using SettingHandler = std::function<void(const SettingsData &setting,
                                             uint8_t sourceTransportID)>;
 
+  using ProtocolCommandHook =
+      std::function<void(const Command &cmd, uint8_t sourceTransportID)>;
+
   // ── Construction / Destruction ─────────────────────────────────────────────
   OpxSession();
 
@@ -54,7 +63,8 @@ public:
 
   OpxSession &operator=(OpxSession &&) = delete;
 
-  // ── Transport Setup ─────────────────────────────────────────────────────────
+  // ── Transport Setup
+  // ─────────────────────────────────────────────────────────
   bool connectWiFi(const char *host, uint16_t port,
                    uint8_t maxReconnectAttempts = 5,
                    uint32_t reconnectDelayMs = 2000);
@@ -63,26 +73,42 @@ public:
 
   bool connectHttp(const char *host, uint16_t port);
 
-  // ── Transport Teardown ──────────────────────────────────────────────────────
+  bool beginWiFi(uint16_t port);
+
+  bool beginHttpServer(uint16_t port);
+
+  // ── Transport Teardown
+  // ──────────────────────────────────────────────────────
   void disconnect(OpxTransportID id);
 
   void disconnectAll();
 
-  // ── Connection Status ───────────────────────────────────────────────────────
+  // ── Connection Status
+  // ───────────────────────────────────────────────────────
   bool isConnected(OpxTransportID id) const;
 
   bool isAnyConnected() const;
 
-  // ── Event Handlers ───────────────────────────────────────────────────────────
+  // ── Event Handlers
+  // ───────────────────────────────────────────────────────────
   void onTelemetry(TelemetryHandler handler);
 
   void onCommand(CommandHandler handler);
 
-  void onCommandResponse(ResponseHandler handler);
+  void onResponse(ResponseHandler handler);
 
   void onSetting(SettingHandler handler);
 
-  // ── Discovery ────────────────────────────────────────────────────────────────
+  void onDiscover(ProtocolCommandHook hook);
+
+  void onAnnounce(ProtocolCommandHook hook);
+
+  void onHeartbeat(ProtocolCommandHook hook);
+
+  void onHeartbeatAck(ProtocolCommandHook hook);
+
+  // ── Discovery
+  // ────────────────────────────────────────────────────────────────
   void discover();
   void onDeviceConnected(DeviceRegistry::DeviceConnectedCallback cb,
                          void *context = nullptr);
@@ -90,12 +116,17 @@ public:
                             void *context = nullptr);
   bool isDeviceConnected(uint8_t typeShift) const;
   uint8_t transportIDFor(uint8_t typeShift) const;
+  void setTypeShift(uint8_t typeShift);
+  void announce();
 
-  // ── Heartbeat ────────────────────────────────────────────────────────────────
+  // ── Heartbeat
+  // ────────────────────────────────────────────────────────────────
   void setHeartbeatInterval(uint32_t intervalMs);
   void setDeviceTimeout(uint32_t timeoutMs);
+  void setAnnounceInterval(uint32_t intervalMs);
 
-  // ── Sending ──────────────────────────────────────────────────────────────────
+  // ── Sending
+  // ──────────────────────────────────────────────────────────────────
   bool dispatch(const Command &cmd,
                 uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT) {
     if (!cm.has_value())
@@ -110,29 +141,61 @@ public:
     return dispatch(cmd, transportID);
   }
 
-  // ── Device Access ────────────────────────────────────────────────────────────
+  // ── Telemetry Management (session as identity)
+  // ──────────────────────────────
+  bool registerTelemetry(uint16_t sourceID, TriggerConfig trigger);
+  bool updateTelemetry(uint16_t sourceID, const ValueSource &value);
+  bool sendTelemetryNow(uint16_t sourceID);
+  bool setTelemetryTrigger(uint16_t sourceID, TriggerConfig trigger);
+  bool enableTelemetry(uint16_t sourceID);
+  bool disableTelemetry(uint16_t sourceID);
+  bool unregisterTelemetry(uint16_t sourceID);
+
+  // ── Settings Management (session as identity)
+  // ────────────────────────────────────────────────────────────
+  bool registerSetting(uint16_t settingID, ValueType type);
+  bool updateSetting(uint16_t settingID, const ValueSource &value,
+                     bool broadcast = false);
+  bool attachSettingCallback(uint16_t settingID,
+                             SettingsManager::SettingChangedCallback cb,
+                             void *context = nullptr);
+  void onAnySettingChanged(SettingsManager::SettingChangedCallback cb,
+                           void *context = nullptr);
+  void broadcastAllSettings();
+  void broadcastOneSetting(uint16_t settingID);
+  const SettingsData *getSetting(uint16_t settingID) const;
+
+  // ── Device Access
+  // ────────────────────────────────────────────────────────────
   template <typename TController> TController &getDevice();
 
   CommandRegistry &registry();
 
 private:
-  // ── Nested types ─────────────────────────────────────────────────────────────
+  // ── Nested types
+  // ─────────────────────────────────────────────────────────────
   struct TransportSlot {
     ITransport *transport = nullptr;
     OpxTransportID id;
     bool active = false;
   };
 
-  // ── Core protocol state ───────────────────────────────────────────────────────
+  // ── Core protocol state
+  // ───────────────────────────────────────────────────────
   BinaryEncoder encoder;
   StdMutex sendMutex;
   StdMutex listenMutex;
   TransportManager tm;
   std::optional<CommunicationManager> cm;
+  SettingsManager *settingsManager = nullptr;
+  TelemetryManager *telemetryManager = nullptr;
 
   void ensureCommunicationManager();
+  void ensureSettingsManager();
+  void ensureTelemetryManager();
 
-  // ── Transport slots ───────────────────────────────────────────────────────────
+  // ── Transport slots
+  // ───────────────────────────────────────────────────────────
   TransportSlot slots[OPX_MAX_TRANSPORTS];
   uint8_t activeSlots = 0;
 
@@ -146,7 +209,8 @@ private:
 
   void removeTransport(OpxTransportID id);
 
-  // ── User callbacks ────────────────────────────────────────────────────────────
+  // ── User callbacks
+  // ────────────────────────────────────────────────────────────
   TelemetryHandler telemetryHandler;
   CommandHandler commandHandler;
   ResponseHandler responseHandler;
@@ -154,7 +218,8 @@ private:
 
   void rewireHandlers();
 
-  // ── Registries ───────────────────────────────────────────────────────────────
+  // ── Registries
+  // ───────────────────────────────────────────────────────────────
   DeviceRegistry deviceRegistry;
   CommandRegistry reg;
 
@@ -162,7 +227,8 @@ private:
   std::unordered_map<uint16_t, std::unique_ptr<void, ControllerDeleter>>
       controllerMap;
 
-  // ── Background threads ────────────────────────────────────────────────────────
+  // ── Background threads
+  // ────────────────────────────────────────────────────────
   std::atomic<bool> running{false};
   std::thread listenerThread;
   std::thread processingThread;
@@ -171,10 +237,20 @@ private:
 
   void stopThreads();
 
-  // ── Heartbeat state ───────────────────────────────────────────────────────────
+  // ── Heartbeat state
+  // ───────────────────────────────────────────────────────────
   PlatformClock clock;
   uint32_t heartbeatIntervalMs = 1000;
   uint32_t lastHeartbeatSentMs = 0;
+  uint8_t ownTypeShift = 0xFF;
+  // Periodic re-announce: self-heals a missed/lost initial announce.
+  uint32_t announceIntervalMs = 15000;
+  uint32_t lastAnnounceSentMs = 0;
+
+  ProtocolCommandHook discoverHook;
+  ProtocolCommandHook announceHook;
+  ProtocolCommandHook heartbeatHook;
+  ProtocolCommandHook heartbeatAckHook;
 
   // ── Static protocol bridges (CommunicationManager callbacks) ──────────────
   static void telemetryBridge(const Telemetry &telemetry,

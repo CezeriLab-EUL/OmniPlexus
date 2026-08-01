@@ -16,13 +16,19 @@ def generate(all_data: list[dict]) -> str:
 
     for data in all_data:
         device_name = data["device"]
+        identity_only = data.get("identityOnly", False)
+        target = data["target"]
+        subdir = "pc" if target == "pc" else "embedded"
+
         lines.append(f"// {device_name}")
         lines.append(f'#include "devices/{device_name}/{device_name}Controller.h"')
+
+        if not identity_only:
+            lines.append(
+                f'#include "../{subdir}/devices/{device_name}/{device_name}RegisterAll.h"'
+            )
         lines.append(
-            f'#include "../embedded/devices/{device_name}/{device_name}RegisterAll.h"'
-        )
-        lines.append(
-            f'#include "../embedded/devices/{device_name}/{device_name}Register.h"'
+            f'#include "../{subdir}/devices/{device_name}/{device_name}Register.h"'
         )
         lines.append("")
 

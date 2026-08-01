@@ -15,6 +15,7 @@
 #include "opx/shared/core/TransportManager.h"
 #include "opx/shared/core/TriggerConfig.h"
 #include "opx/shared/core/platform.h"
+#include "opx/shared/interfaces/IConnectable.h"
 #include "opx/shared/interfaces/IPlatformClock.h"
 #include "opx/shared/interfaces/ITransport.h"
 #include "opx/shared/protocol/BinaryEncoder.h"
@@ -59,6 +60,8 @@ public:
                                    uint8_t sourceTransportID, void *context);
   using TelemetryHandler = void (*)(const Telemetry &,
                                     uint8_t sourceTransportID, void *context);
+  using SettingHandler = void (*)(const SettingsData &,
+                                  uint8_t sourceTransportID, void *context);
   using ConnectionLostHandler = void (*)();
 
   // ── Construction / Destruction ─────────────────────────────────────────────
@@ -92,10 +95,12 @@ public:
   void end(OpxDeviceTransportID id);
   void endAll();
 
-  // ── Main Loop ───────────────────────────────────────────────────────────────
+  // ── Main Loop
+  // ───────────────────────────────────────────────────────────────
   void update();
 
-  // ── Sending ─────────────────────────────────────────────────────────────────
+  // ── Sending
+  // ─────────────────────────────────────────────────────────────────
   bool
   sendCommand(const Command &cmd,
               uint8_t transportID = ProtocolConstants::TRANSPORT_ID_DEFAULT);
@@ -104,13 +109,16 @@ public:
                     ProtocolConstants::ResponseStatus status);
   bool sendTelemetry(const Telemetry &telemetry);
 
-  // ── Event Handlers ──────────────────────────────────────────────────────────
+  // ── Event Handlers
+  // ──────────────────────────────────────────────────────────
   void onCommand(CommandHandler handler, void *context = nullptr);
   void onResponse(ResponseHandler handler, void *context = nullptr);
-  void onIncomingTelemetry(TelemetryHandler handler, void *context = nullptr);
+  void onTelemetry(TelemetryHandler handler, void *context = nullptr);
+  void onSetting(SettingHandler handler, void *context = nullptr);
   void onConnectionLost(ConnectionLostHandler callback);
 
-  // ── Discovery ────────────────────────────────────────────────────────────────
+  // ── Discovery
+  // ────────────────────────────────────────────────────────────────
   void setTypeShift(uint8_t typeShift);
   void announce();
   void discover();
@@ -133,8 +141,11 @@ public:
   void onHeartbeat(ProtocolCommandHook hook, void *ctx = nullptr);
   void onHeartbeatAck(ProtocolCommandHook hook, void *ctx = nullptr);
 
-  // ── Heartbeat ────────────────────────────────────────────────────────────────
+  // ── Heartbeat
+  // ────────────────────────────────────────────────────────────────
   void setHeartbeatTimeout(uint32_t timeoutMs);
+  void setPeerHeartbeatInterval(uint32_t intervalMs);
+  void setAnnounceInterval(uint32_t intervalMs);
 
   // ── Telemetry management ──────────────────────────────────────────────────
   bool registerTelemetry(uint16_t sourceID, TriggerConfig trigger);
@@ -158,11 +169,13 @@ public:
   void broadcastOneSetting(uint16_t settingID);
   const SettingsData *getSetting(uint16_t settingID) const;
 
-  // ── Forwarding ───────────────────────────────────────────────────────────────
+  // ── Forwarding
+  // ───────────────────────────────────────────────────────────────
   bool forwardBetween(uint8_t transportA, uint8_t transportB);
 
 #if OPX_CDNC_MASTER
-  // ── CDnC master ──────────────────────────────────────────────────────────────
+  // ── CDnC master
+  // ──────────────────────────────────────────────────────────────
   using CdncSlaveCallback = void (*)(uint8_t slaveIndex, void *context);
   void onCdncSlaveConnected(CdncSlaveCallback cb, void *context = nullptr);
   void onCdncSlaveDisconnected(CdncSlaveCallback cb, void *context = nullptr);
@@ -181,19 +194,33 @@ public:
 #endif
 
 #if OPX_CDNC_SLAVE
-  // ── CDnC slave ───────────────────────────────────────────────────────────────
+  // ── CDnC slave
+  // ───────────────────────────────────────────────────────────────
   bool beginCDnC(uint8_t dataPin, uint8_t clkPin);
   void endCDnCSlave();
 #endif
 
-  // ── Escape hatch ─────────────────────────────────────────────────────────────
+  // ── Escape hatch
+  // ─────────────────────────────────────────────────────────────
   CommunicationManager *comms();
   TransportManager *transportManager() { return &tm; }
 
+  // ── Device Access ────────────────────────────────────────────────────────
+  // Unlike OpxSession::getDevice<T>(), this returns a fresh, cheap-to-construct
+  // value each call rather than a cached reference — generated Controller
+  // classes are stateless wrappers around CommunicationManager&, so there's
+  // nothing worth caching, and avoiding a heap-backed cache keeps this safe
+  // on constrained targets (AVR, etc.).
+  template <typename TController> TController getDevice() {
+    return TController(*comms());
+  }
+
 private:
-  // ── Nested types ─────────────────────────────────────────────────────────────
+  // ── Nested types
+  // ─────────────────────────────────────────────────────────────
   struct TransportSlot {
     ITransport *transport = nullptr;
+    IConnectable *connectable = nullptr;
     OpxDeviceTransportID id;
     bool active = false;
   };
@@ -204,7 +231,8 @@ private:
     bool active = false;
   };
 
-  // ── Core protocol state ───────────────────────────────────────────────────────
+  // ── Core protocol state
+  // ───────────────────────────────────────────────────────
   BinaryEncoder encoder;
   PlatformClock clock;
   TransportManager tm;
@@ -230,35 +258,51 @@ private:
   void ensureSettingsManager();
   void rewireHandlers();
 
-  // ── Transport slots ───────────────────────────────────────────────────────────
+  // ── Transport slots
+  // ───────────────────────────────────────────────────────────
   static constexpr uint8_t MAX_DEVICE_TRANSPORTS = 3;
   TransportSlot slots[MAX_DEVICE_TRANSPORTS];
   uint8_t activeSlotCount = 0;
 
   TransportSlot *findSlot(OpxDeviceTransportID id);
   bool slotOccupied(OpxDeviceTransportID id) const;
-  bool addTransport(ITransport *transport, OpxDeviceTransportID id);
+  bool hasAnyConnectedPeer() const;
+  bool addTransport(ITransport *transport, OpxDeviceTransportID id,
+                    IConnectable *connectable = nullptr);
   void removeTransport(OpxDeviceTransportID id);
 
-  // ── Forwarding ───────────────────────────────────────────────────────────────
+  // ── Forwarding
+  // ───────────────────────────────────────────────────────────────
   ForwardingPair forwardingPairs[MAX_FORWARDING_PAIRS];
   void handleForwarding(const TaggedFrame &frame);
   static uint8_t extractTypeShift(const RawData &frame);
   static void forwardBridge(const TaggedFrame &frame, void *context);
 
-  // ── Heartbeat state ───────────────────────────────────────────────────────────
+  // ── Heartbeat state
+  // ───────────────────────────────────────────────────────────
   uint32_t heartbeatTimeoutMs = 3000;
   uint32_t lastHeartbeatMs = 0;
   bool heartbeatReceived = false;
   bool connectionLost = false;
+  // this device sending heartbeats to its own peers
+  uint32_t peerHeartbeatIntervalMs = 1000;
+  uint32_t lastPeerHeartbeatSentMs = 0;
+  // Periodic re-announce: self-heals a missed/lost initial announce.
+  // Deliberately much longer than peerHeartbeatIntervalMs — announce is
+  // heavier and doesn't need heartbeat-frequency repetition.
+  uint32_t announceIntervalMs = 15000;
+  uint32_t lastAnnounceSentMs = 0;
 
-  // ── User callbacks ────────────────────────────────────────────────────────────
+  // ── User callbacks
+  // ────────────────────────────────────────────────────────────
   CommandHandler commandHandler = nullptr;
   void *commandHandlerContext = nullptr;
   ResponseHandler responseHandler = nullptr;
   void *responseHandlerContext = nullptr;
   TelemetryHandler telemetryHandler = nullptr;
   void *telemetryHandlerContext = nullptr;
+  SettingHandler settingHandler = nullptr;
+  void *settingHandlerContext = nullptr;
   ConnectionLostHandler connectionLostCallback = nullptr;
 
   // Protocol-level command hooks
@@ -282,7 +326,8 @@ private:
                             uint8_t sourceTransportID, void *context);
 
 #if OPX_TARGET_ESP32
-  // ── ESP32 listen task ─────────────────────────────────────────────────────────
+  // ── ESP32 listen task
+  // ─────────────────────────────────────────────────────────
   TaskHandle_t listenTaskHandle = nullptr;
   volatile bool listenTaskShouldStop = false;
   SemaphoreHandle_t listenTaskDoneSem = nullptr;
@@ -293,7 +338,8 @@ private:
 #endif
 
 #if OPX_CDNC_MASTER
-  // ── CDnC master state ─────────────────────────────────────────────────────────
+  // ── CDnC master state
+  // ─────────────────────────────────────────────────────────
   CDnCManager *cdncManager = nullptr;
   bool cdncActive = false;
   uint16_t _cdncPrevAliveMask = 0;
@@ -305,7 +351,8 @@ private:
 #endif
 
 #if OPX_CDNC_SLAVE
-  // ── CDnC slave state ──────────────────────────────────────────────────────────
+  // ── CDnC slave state
+  // ──────────────────────────────────────────────────────────
   CDnCSlaveManager *_cdncSlaveManager = nullptr;
   bool _cdncSlaveActive = false;
 #endif

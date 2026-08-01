@@ -27,8 +27,9 @@ def generate(all_data: list[dict]) -> str:
 
 #include "opx/pc/registry/CommandRegistry.h"
 #include "autogen/shared/CommandTypes.h"
+#include "opx/shared/core/Config.h"
 
-#ifndef OPX_EMBEDDED
+#ifndef OPX_TARGET_EMBEDDED
 
 void CommandRegistry::initialize() {
 """)
@@ -86,6 +87,6 @@ void CommandRegistry::initialize() {
             lines.append(f"    }});\n")
 
     lines.append("} // CommandRegistry::initialize()\n")
-    lines.append("#endif // OPX_EMBEDDED\n")
+    lines.append("#endif // OPX_TARGET_EMBEDDED\n")
 
     return "\n".join(lines)

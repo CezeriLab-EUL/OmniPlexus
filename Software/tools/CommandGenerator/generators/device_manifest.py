@@ -15,8 +15,9 @@ def generate(all_data: list[dict]) -> str:
 //
 
 #pragma once
+#include "opx/shared/core/Config.h"
 
-#ifndef OPX_EMBEDDED
+#ifndef OPX_TARGET_EMBEDDED
 
 #include <cstdint>
 #include <string>
@@ -77,7 +78,7 @@ inline const std::vector<DeviceManifestEntry>& getDeviceManifest() {
     return manifest;
 }
 
-#endif // OPX_EMBEDDED
+#endif // OPX_TARGET_EMBEDDED
 """)
 
     return "\n".join(lines)

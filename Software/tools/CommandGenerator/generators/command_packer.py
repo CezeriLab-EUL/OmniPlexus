@@ -248,7 +248,9 @@ PROTOCOL_PACK_CASES = """\
             }
 
             case 0xFC00: {
-                // Protocol-level HEARTBEAT — no parameters
+                // Protocol-level HEARTBEAT — one uint8_t (typeShift)
+                memcpy(&buffer[offset], cmd.params[0].getData(), sizeof(uint8_t));
+                offset += sizeof(uint8_t);
                 return offset;
             }
 
@@ -281,7 +283,11 @@ PROTOCOL_UNPACK_CASES = """\
             }
 
             case 0xFC00: {
-                // Protocol-level HEARTBEAT — no parameters
+                // Protocol-level HEARTBEAT — one uint8_t (typeShift)
+                if (bufferSize - offset < sizeof(uint8_t)) return false;
+                cmdOut.params[0] = uint8_t(0);
+                memcpy(cmdOut.params[0].getDataMutable(), &buffer[offset], sizeof(uint8_t));
+                offset += sizeof(uint8_t);
                 return true;
             }
 
@@ -299,7 +305,7 @@ PROTOCOL_PACKED_SIZE_CASES = """\
             case 0xFF00: return 2;
             case 0xFD00: return 2;
             case 0xFD01: return 3;
-            case 0xFC00: return 2;
+            case 0xFC00: return 3;
             case 0xFC01: return 3;
 """
 

@@ -151,28 +151,36 @@ def generate_files(
     }
 
     if has_telemetry:
-        files[path(embedded_dir, "TelemetrySourceIDs.h")] = (
-            telemetry_source_ids.generate(all_data)
+        files[path(shared_dir, "TelemetrySourceIDs.h")] = telemetry_source_ids.generate(
+            all_data
         )
 
     if has_settings:
-        files[path(embedded_dir, "SettingIDs.h")] = setting_ids.generate(all_data)
+        files[path(shared_dir, "SettingIDs.h")] = setting_ids.generate(all_data)
 
     # ── Per-device files ──────────────────────────────────────────────────────
     for data in all_data:
         device_name = data["device"]
+        target = data["target"]
 
         shared_device_dir = path(shared_dir, "devices", device_name)
-        embedded_device_dir = path(embedded_dir, "devices", device_name)
 
         files[path(shared_device_dir, f"{device_name}Controller.h")] = (
             controller.generate(data)
         )
-        files[path(embedded_device_dir, f"{device_name}RegisterAll.h")] = (
-            register_all.generate(data)
-        )
-        files[path(embedded_device_dir, f"{device_name}Register.h")] = (
-            register.generate(data)
+
+        if target == "pc":
+            target_device_dir = path(pc_dir, "devices", device_name)
+        else:
+            target_device_dir = path(embedded_dir, "devices", device_name)
+
+        if not data.get("identityOnly", False):
+            files[path(target_device_dir, f"{device_name}RegisterAll.h")] = (
+                register_all.generate(data)
+            )
+
+        files[path(target_device_dir, f"{device_name}Register.h")] = register.generate(
+            data
         )
 
     print("\nGenerating files...")

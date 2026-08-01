@@ -44,7 +44,34 @@ def validate_device_fields(data: dict, result: ValidationResult) -> bool:
             f"Must be between 0 and 31"
         )
 
+    # ── target ────────────────────────────────────────────────────────────────
+    valid_targets = ("embedded", "pc")
+    if "target" not in data:
+        result.add_error(
+            f"'target' field is missing. Must be one of: {', '.join(valid_targets)}"
+        )
+        return False
+
+    if data["target"] not in valid_targets:
+        result.add_error(
+            f"'target' value '{data['target']}' is invalid. "
+            f"Must be one of: {', '.join(valid_targets)}"
+        )
+        return False
+
+    # ── identityOnly ──────────────────────────────────────────────────────────
+    identity_only = data.get("identityOnly", False)
+
+    if not isinstance(identity_only, bool):
+        result.add_error("'identityOnly' field must be a boolean")
+        return False
+
     # ── commands array presence ───────────────────────────────────────────────
+    if identity_only:
+        # Identity-only manifests deliberately have no commands — they exist
+        # solely to reserve a typeShift. Skip the commands requirement.
+        return True
+
     if "commands" not in data:
         result.add_error("JSON is missing the top-level 'commands' array")
         return False

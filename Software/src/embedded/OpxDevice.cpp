@@ -36,6 +36,7 @@ OpxDevice::OpxDevice() {
   for (uint8_t i = 0; i < MAX_FORWARDING_PAIRS; i++) {
     forwardingPairs[i].active = false;
   }
+  deviceRegistry.setClock(&clock);
 #ifdef OPX_TARGET_ESP32
   listenTaskDoneSem = xSemaphoreCreateBinary();
 #endif
@@ -83,7 +84,7 @@ bool OpxDevice::beginWiFi(uint16_t port, uint32_t stackSize) {
     return false;
   }
   auto *transport = new EspWiFiTransport(port);
-  if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI))
+  if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI, transport))
     return false;
   ensureListenTaskStarted(stackSize);
   return true;
@@ -124,7 +125,7 @@ bool OpxDevice::connectWiFi(const char *host, uint16_t port,
   }
   auto *transport =
       new EspWiFiTransport(host, port, maxReconnectAttempts, reconnectDelayMs);
-  if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI))
+  if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI, transport))
     return false;
   ensureListenTaskStarted(stackSize);
   return true;
@@ -199,7 +200,6 @@ void OpxDevice::endAll() {
 }
 
 // endCDnC() is defined inline in OpxDevice.h
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Loop
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,6 +219,25 @@ void OpxDevice::update() {
 
   if (telemetryManager)
     telemetryManager->send();
+
+  if (hasAnyConnectedPeer()) {
+    const uint32_t now = clock.millis();
+    if (now - lastPeerHeartbeatSentMs >= peerHeartbeatIntervalMs) {
+      Command hb;
+      hb.commandType = ProtocolConstants::HEARTBEAT_COMMAND;
+      hb.params[0] = ownTypeShift;
+      cm->dispatchCommandToAll(hb);
+      lastPeerHeartbeatSentMs = now;
+    }
+
+    if (ownTypeShift != 0xFF &&
+        now - lastAnnounceSentMs >= announceIntervalMs) {
+      announce();
+      lastAnnounceSentMs = now;
+    }
+  }
+
+  deviceRegistry.checkTimeouts();
 
   if (heartbeatReceived && !connectionLost) {
     const uint32_t now = clock.millis();
@@ -292,11 +311,18 @@ void OpxDevice::onResponse(ResponseHandler handler, void *context) {
     cm->onResponseReceived(responseBridge, this);
 }
 
-void OpxDevice::onIncomingTelemetry(TelemetryHandler handler, void *context) {
+void OpxDevice::onTelemetry(TelemetryHandler handler, void *context) {
   telemetryHandler = handler;
   telemetryHandlerContext = context;
   if (cm)
     cm->onTelemetryReceived(telemetryBridge, this);
+}
+
+void OpxDevice::onSetting(SettingHandler handler, void *context) {
+  settingHandler = handler;
+  settingHandlerContext = context;
+  if (cm)
+    cm->onSettingReceived(settingBridge, this);
 }
 
 void OpxDevice::onConnectionLost(ConnectionLostHandler callback) {
@@ -346,8 +372,9 @@ uint8_t OpxDevice::transportIDFor(uint8_t typeShift) const {
   return deviceRegistry.transportIDFor(typeShift);
 }
 
-// Protocol-level command hooks (onDiscover/onAnnounce/onHeartbeat/onHeartbeatAck)
-// are defined inline in OpxDevice.h
+// Protocol-level command hooks
+// (onDiscover/onAnnounce/onHeartbeat/onHeartbeatAck) are defined inline in
+// OpxDevice.h
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Heartbeat
@@ -355,6 +382,14 @@ uint8_t OpxDevice::transportIDFor(uint8_t typeShift) const {
 
 void OpxDevice::setHeartbeatTimeout(uint32_t timeoutMs) {
   heartbeatTimeoutMs = timeoutMs;
+}
+
+void OpxDevice::setPeerHeartbeatInterval(uint32_t intervalMs) {
+  peerHeartbeatIntervalMs = intervalMs;
+}
+
+void OpxDevice::setAnnounceInterval(uint32_t intervalMs) {
+  announceIntervalMs = intervalMs;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -499,7 +534,6 @@ uint8_t OpxDevice::extractTypeShift(const RawData &frame) {
 #include "opx/embedded/core/OpxDevice.h"
 #include "opx/shared/constants/ProtocolConstants.h" // IWYU pragma: keep
 #include "opx/shared/core/Config.h"                 // IWYU pragma: keep
-
   }
 }
 
@@ -575,6 +609,21 @@ bool OpxDevice::slotOccupied(OpxDeviceTransportID id) const {
   return false;
 }
 
+bool OpxDevice::hasAnyConnectedPeer() const {
+  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+    if (!slots[i].active)
+      continue;
+    if (slots[i].connectable) {
+      if (slots[i].connectable->isConnected())
+        return true;
+    } else {
+      return true; // transport doesn't track connection state (e.g. serial) —
+                   // assume usable
+    }
+  }
+  return false;
+}
+
 void OpxDevice::ensureCommunicationManager() {
   if (cm)
     return;
@@ -616,7 +665,8 @@ void OpxDevice::rewireHandlers() {
   }
 }
 
-bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id) {
+bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id,
+                             IConnectable *connectable) {
   TransportSlot *slot = nullptr;
   for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
     if (!slots[i].active) {
@@ -636,6 +686,7 @@ bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id) {
     return false;
   }
   slot->transport = transport;
+  slot->connectable = connectable;
   slot->id = id;
   slot->active = true;
   activeSlotCount++;
@@ -715,6 +766,12 @@ void OpxDevice::commandBridge(const Command &cmd, const uint8_t &seqNum,
     device->lastHeartbeatMs = device->clock.millis();
     device->heartbeatReceived = true;
     device->connectionLost = false;
+
+    const uint8_t senderTypeShift = static_cast<uint8_t>(cmd.params[0]);
+    if (senderTypeShift != 0xFF) {
+      device->deviceRegistry.markAlive(senderTypeShift);
+    }
+
     Command ack;
     ack.commandType = ProtocolConstants::HEARTBEAT_ACK;
     ack.params[0] = device->ownTypeShift;
@@ -770,11 +827,6 @@ void OpxDevice::responseBridge(const CommandResponse &response,
 void OpxDevice::telemetryBridge(const Telemetry &telemetry,
                                 uint8_t sourceTransportID, void *context) {
   auto *device = static_cast<OpxDevice *>(context);
-  const uint8_t telemetryTypeShift = (telemetry.sourceID >> 8) & 0xFF;
-  const bool isForMe = (device->ownTypeShift == 0xFF) ||
-                       (telemetryTypeShift == device->ownTypeShift);
-  if (!isForMe)
-    return;
   if (device->telemetryHandler)
     device->telemetryHandler(telemetry, sourceTransportID,
                              device->telemetryHandlerContext);
@@ -783,12 +835,9 @@ void OpxDevice::telemetryBridge(const Telemetry &telemetry,
 void OpxDevice::settingBridge(const SettingsData &setting,
                               uint8_t sourceTransportID, void *context) {
   auto *device = static_cast<OpxDevice *>(context);
-  const uint8_t settingTypeShift = (setting.settingsID >> 8) & 0xFF;
-  const bool isForMe = (device->ownTypeShift == 0xFF) ||
-                       (settingTypeShift == device->ownTypeShift);
-  if (!isForMe)
-    return;
-  // Future: fire user callback for incoming setting frames from peers
+  if (device->settingHandler)
+    device->settingHandler(setting, sourceTransportID,
+                           device->settingHandlerContext);
 }
 
 #endif // OPX_FRAMEWORK_ARDUINO
