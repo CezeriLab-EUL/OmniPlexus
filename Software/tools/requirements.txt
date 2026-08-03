@@ -1,0 +1,7 @@
+# Python dependencies for Software/tools/ (CommandGenerator, ManifestAuthoring).
+# This is not part of the C++ library itself — dev-tooling only.
+# Install with: pip install -r requirements.txt
+
+pyyaml>=6.0      
+questionary>=2.0 
+rich>=13.0       

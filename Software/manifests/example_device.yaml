@@ -50,8 +50,8 @@ commands:
       - name: message
         type: STRING
         required: true
-        maxLength: 20
-        description: Message to display (max 20 chars)
+        maxLength: 16
+        description: Message to display (max 16 chars)
 
   # A command with an optional parameter and a default value
   - id: 4

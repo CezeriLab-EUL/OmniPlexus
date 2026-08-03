@@ -1,6 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
+from display import print_warning, print_error, print_line
+
 
 @dataclass
 class ValidationResult:
@@ -28,13 +30,14 @@ class ValidationResult:
             print(f"\nValidating: {label}...")
 
         for warning in self.warnings:
-            print(f"  ⚠  WARNING: {warning}")
+            print_warning(warning)
 
         for error in self.errors:
-            print(f"  ✗  ERROR: {error}")
+            print_error(error)
 
-        print(
+        summary = (
             f"\nValidation result: "
             f"{len(self.errors)} error(s), "
             f"{len(self.warnings)} warning(s)"
         )
+        print_line(summary, "green" if self.valid else "red")

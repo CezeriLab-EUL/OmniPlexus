@@ -13,11 +13,11 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-
 import yaml
-
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "Shared"))
 from validation import validate, validate_all_cross_device
 from writer import write_files, clean_directory
+
 from generators import (
     command_types,
     command_packer,

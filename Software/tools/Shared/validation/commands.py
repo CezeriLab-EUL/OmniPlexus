@@ -56,6 +56,12 @@ def validate_param(
                 f"Command '{cmd_name}' param '{param_name}' is missing a valid "
                 f"'maxLength' field (must be a positive integer)"
             )
+        elif param["maxLength"] > 16:
+            result.add_error(
+                f"Command '{cmd_name}' param '{param_name}' has 'maxLength' "
+                f"{param['maxLength']}, which exceeds the maximum of 16 "
+                f"(ValueSource's fixed 16-byte storage)."
+            )
 
         if not param.get("required", True) and "default" in param:
             default_val = param["default"]
