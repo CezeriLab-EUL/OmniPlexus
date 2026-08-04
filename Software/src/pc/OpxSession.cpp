@@ -22,7 +22,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 OpxSession::OpxSession() {
-  for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     slots[i].active = false;
     slots[i].transport = nullptr;
   }
@@ -37,8 +37,11 @@ OpxSession::~OpxSession() { disconnectAll(); }
 
 bool OpxSession::connectWiFi(const char *host, uint16_t port,
                              uint8_t maxReconnectAttempts,
-                             uint32_t reconnectDelayMs) {
-  if (slotOccupied(OpxTransportID::WIFI)) {
+                             uint32_t reconnectDelayMs, uint8_t instance) {
+  const uint8_t id =
+      opxComposeSessionTransportID(OpxTransportCategory::OPX_WIFI, instance);
+
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING,
         "OpxSession: WIFI slot already occupied. Call disconnect(WIFI) first.");
     return false;
@@ -56,11 +59,14 @@ bool OpxSession::connectWiFi(const char *host, uint16_t port,
     delete transport;
     return false;
   }
-  return addTransport(transport, OpxTransportID::WIFI);
+  return addTransport(transport, id);
 }
 
-bool OpxSession::connectSerial(const char *port, uint32_t baudRate) {
-  if (slotOccupied(OpxTransportID::SERIAL)) {
+bool OpxSession::connectSerial(const char *port, uint32_t baudRate,
+                               uint8_t instance) {
+  const uint8_t id =
+      opxComposeSessionTransportID(OpxTransportCategory::OPX_SERIAL, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING, "OpxSession: SERIAL slot already occupied. Call "
                               "disconnect(SERIAL) first.");
     return false;
@@ -79,48 +85,56 @@ bool OpxSession::connectSerial(const char *port, uint32_t baudRate) {
     return false;
   }
 
-  return addTransport(transport, OpxTransportID::SERIAL);
+  return addTransport(transport, id);
 }
 
-bool OpxSession::connectHttp(const char *host, uint16_t port) {
-  if (slotOccupied(OpxTransportID::HTTP)) {
+bool OpxSession::connectHttp(const char *host, uint16_t port,
+                             uint8_t instance) {
+  const uint8_t id =
+      opxComposeSessionTransportID(OpxTransportCategory::OPX_HTTP, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING,
         "OpxSession: HTTP slot already occupied. Call disconnect(HTTP) first.");
     return false;
   }
 
   auto *transport = new PcHttpTransport(host, port);
-  return addTransport(transport, OpxTransportID::HTTP);
+  return addTransport(transport, id);
 }
 
-bool OpxSession::beginWiFi(uint16_t port) {
-  if (slotOccupied(OpxTransportID::WIFI)) {
+bool OpxSession::beginWiFi(uint16_t port, uint8_t instance) {
+  const uint8_t id =
+      opxComposeSessionTransportID(OpxTransportCategory::OPX_WIFI, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING,
         "OpxSession: WIFI slot already occupied. Call disconnect(WIFI) first.");
     return false;
   }
 
   auto *transport = new PcWiFiTransport(port);
-  return addTransport(transport, OpxTransportID::WIFI);
+  return addTransport(transport, id);
 }
 
-bool OpxSession::beginHttpServer(uint16_t port) {
-  if (slotOccupied(OpxTransportID::HTTP)) {
+bool OpxSession::beginHttpServer(uint16_t port, uint8_t instance) {
+  const uint8_t id =
+      opxComposeSessionTransportID(OpxTransportCategory::OPX_HTTP, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING,
         "OpxSession: HTTP slot already occupied. Call disconnect(HTTP) first.");
     return false;
   }
 
   auto *transport = new PcHttpTransport(port);
-  return addTransport(transport, OpxTransportID::HTTP);
+  return addTransport(transport, id);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Transport Teardown
 // ─────────────────────────────────────────────────────────────────────────────
 
-void OpxSession::disconnect(OpxTransportID id) {
-  deviceRegistry.removeByTransport(static_cast<uint8_t>(id));
+void OpxSession::disconnect(OpxTransportCategory category, uint8_t instance) {
+  const uint8_t id = opxComposeSessionTransportID(category, instance);
+  deviceRegistry.removeByTransport(id);
   removeTransport(id);
   // controllerMap intentionally not cleared — controllers survive
   // individual transport disconnections and are reusable on reconnect
@@ -131,7 +145,7 @@ void OpxSession::disconnectAll() {
   // calls accumulate() on active transports — deleting a transport while the
   // thread is reading from it is undefined behavior.
   stopThreads();
-  for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active) {
       tm.remove(static_cast<uint8_t>(slots[i].id));
       delete slots[i].transport;
@@ -156,7 +170,9 @@ void OpxSession::disconnectAll() {
 // Connection Status
 // ─────────────────────────────────────────────────────────────────────────────
 
-bool OpxSession::isConnected(OpxTransportID id) const {
+bool OpxSession::isConnected(OpxTransportCategory category,
+                             uint8_t instance) const {
+  const uint8_t id = opxComposeSessionTransportID(category, instance);
   const TransportSlot *slot = findSlot(id);
   if (slot == nullptr || !slot->active) {
     return false;
@@ -169,7 +185,7 @@ bool OpxSession::isConnected(OpxTransportID id) const {
 }
 
 bool OpxSession::isAnyConnected() const {
-  for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active) {
       const auto *connectable =
           dynamic_cast<const IConnectable *>(slots[i].transport);
@@ -411,12 +427,12 @@ const SettingsData *OpxSession::getSetting(uint16_t settingID) const {
 // Internal Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-bool OpxSession::slotOccupied(OpxTransportID id) const {
+bool OpxSession::slotOccupied(uint8_t id) const {
   return findSlot(id) != nullptr;
 }
 
-OpxSession::TransportSlot *OpxSession::findSlot(OpxTransportID id) {
-  for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
+OpxSession::TransportSlot *OpxSession::findSlot(uint8_t id) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active && slots[i].id == id) {
       return &slots[i];
     }
@@ -424,8 +440,8 @@ OpxSession::TransportSlot *OpxSession::findSlot(OpxTransportID id) {
   return nullptr;
 }
 
-const OpxSession::TransportSlot *OpxSession::findSlot(OpxTransportID id) const {
-  for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
+const OpxSession::TransportSlot *OpxSession::findSlot(uint8_t id) const {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active && slots[i].id == id) {
       return &slots[i];
     }
@@ -459,10 +475,10 @@ void OpxSession::ensureSettingsManager() {
   cm->onSettingReceived(settingBridge, this);
 }
 
-bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
+bool OpxSession::addTransport(ITransport *transport, uint8_t id) {
   // Find an inactive slot to store this transport
   TransportSlot *slot = nullptr;
-  for (uint8_t i = 0; i < OPX_MAX_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (!slots[i].active) {
       slot = &slots[i];
       break;
@@ -480,7 +496,7 @@ bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
   // Without cm, received frames would have nowhere to go.
   ensureCommunicationManager();
 
-  if (!tm.add(transport, static_cast<uint8_t>(id))) {
+  if (!tm.add(transport, id)) {
     LOG(LogLevel::OP_ERROR, "OpxSession: TransportManager rejected transport.");
     delete transport;
     return false;
@@ -503,7 +519,7 @@ bool OpxSession::addTransport(ITransport *transport, OpxTransportID id) {
   return true;
 }
 
-void OpxSession::removeTransport(OpxTransportID id) {
+void OpxSession::removeTransport(uint8_t id) {
   TransportSlot *slot = findSlot(id);
   if (slot == nullptr) {
     LOG(LogLevel::OP_WARNING,
@@ -518,7 +534,7 @@ void OpxSession::removeTransport(OpxTransportID id) {
     stopThreads();
   }
 
-  tm.remove(static_cast<uint8_t>(id));
+  tm.remove(id);
   delete slot->transport;
   slot->transport = nullptr;
   slot->active = false;

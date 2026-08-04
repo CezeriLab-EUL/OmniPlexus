@@ -31,10 +31,21 @@
 #include "opx/shared/protocol/BinaryEncoder.h"
 #include "opx/shared/types/ProtocolTypes.h"
 
-enum class OpxTransportID : uint8_t { WIFI = 0, SERIAL = 1, HTTP = 2 };
+enum class OpxTransportCategory : uint8_t {
+  OPX_WIFI = 0,
+  OPX_SERIAL = 1,
+  OPX_HTTP = 2
+};
 
-static constexpr uint8_t OPX_MAX_TRANSPORTS = 3;
-
+// OPX_SESSION_TRANSPORT_ID_STRIDE = instance slots reserved per category
+// (see the identical note in OpxDevice.h — same reasoning, no CDnC
+// low-ID concern on the PC side, so this starts at 0 instead of 0x30).
+static constexpr uint8_t OPX_SESSION_TRANSPORT_ID_STRIDE = 8;
+constexpr uint8_t opxComposeSessionTransportID(OpxTransportCategory category,
+                                               uint8_t instance) {
+  return static_cast<uint8_t>(category) * OPX_SESSION_TRANSPORT_ID_STRIDE +
+         instance;
+}
 class OpxSession {
 public:
   // ── Handler type aliases ───────────────────────────────────────────────────
@@ -67,25 +78,25 @@ public:
   // ─────────────────────────────────────────────────────────
   bool connectWiFi(const char *host, uint16_t port,
                    uint8_t maxReconnectAttempts = 5,
-                   uint32_t reconnectDelayMs = 2000);
+                   uint32_t reconnectDelayMs = 2000, uint8_t instance = 0);
 
-  bool connectSerial(const char *port, uint32_t baudRate);
+  bool connectSerial(const char *port, uint32_t baudRate, uint8_t instance = 0);
 
-  bool connectHttp(const char *host, uint16_t port);
+  bool connectHttp(const char *host, uint16_t port, uint8_t instance = 0);
 
-  bool beginWiFi(uint16_t port);
+  bool beginWiFi(uint16_t port, uint8_t instance = 0);
 
-  bool beginHttpServer(uint16_t port);
+  bool beginHttpServer(uint16_t port, uint8_t instance = 0);
 
   // ── Transport Teardown
   // ──────────────────────────────────────────────────────
-  void disconnect(OpxTransportID id);
+  void disconnect(OpxTransportCategory category, uint8_t instance = 0);
 
   void disconnectAll();
 
   // ── Connection Status
   // ───────────────────────────────────────────────────────
-  bool isConnected(OpxTransportID id) const;
+  bool isConnected(OpxTransportCategory category, uint8_t instance = 0) const;
 
   bool isAnyConnected() const;
 
@@ -176,7 +187,7 @@ private:
   // ─────────────────────────────────────────────────────────────
   struct TransportSlot {
     ITransport *transport = nullptr;
-    OpxTransportID id;
+    uint8_t id;
     bool active = false;
   };
 
@@ -196,18 +207,18 @@ private:
 
   // ── Transport slots
   // ───────────────────────────────────────────────────────────
-  TransportSlot slots[OPX_MAX_TRANSPORTS];
+  TransportSlot slots[MAX_TRANSPORTS];
   uint8_t activeSlots = 0;
 
-  bool slotOccupied(OpxTransportID id) const;
+  bool slotOccupied(uint8_t id) const;
 
-  TransportSlot *findSlot(OpxTransportID id);
+  TransportSlot *findSlot(uint8_t id);
 
-  const TransportSlot *findSlot(OpxTransportID id) const;
+  const TransportSlot *findSlot(uint8_t id) const;
 
-  bool addTransport(ITransport *transport, OpxTransportID id);
+  bool addTransport(ITransport *transport, uint8_t id);
 
-  void removeTransport(OpxTransportID id);
+  void removeTransport(uint8_t id);
 
   // ── User callbacks
   // ────────────────────────────────────────────────────────────

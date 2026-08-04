@@ -42,14 +42,25 @@
 #include "opx/embedded/transport/cdnc/CDnCSlaveTransport.h"
 #endif
 
-// IDs for the transports OpxDevice can own directly (see TransportSlot).
-// CDnC and other raw/manually-added transports are identified by their own
-// TransportManager-assigned IDs and don't appear here.
-enum class OpxDeviceTransportID : uint8_t {
-  OPX_SERIAL = 0x30,
-  OPX_WIFI = 0x31,
-  OPX_HTTP = 0x32,
+enum class OpxDeviceTransportCategory : uint8_t {
+  OPX_SERIAL = 0,
+  OPX_WIFI = 1,
+  OPX_HTTP = 2
 };
+
+// OPX_TRANSPORT_ID_STRIDE = instance slots reserved per category.
+// NOT the same as MAX_TRANSPORTS (Config.h) — that caps how many
+// transports can be simultaneously registered; this just sizes the ID
+// address space per category so instances don't collide across categories.
+
+static constexpr uint8_t OPX_TRANSPORT_ID_BASE = 0x30;
+static constexpr uint8_t OPX_TRANSPORT_ID_STRIDE = 8;
+
+constexpr uint8_t opxComposeTransportID(OpxDeviceTransportCategory category,
+                                        uint8_t instance) {
+  return OPX_TRANSPORT_ID_BASE +
+         static_cast<uint8_t>(category) * OPX_TRANSPORT_ID_STRIDE + instance;
+}
 
 class OpxDevice {
 public:
@@ -72,27 +83,30 @@ public:
 
   // ── Transport Setup ────────────────────────────────────────────────────────
   template <typename SerialType>
-  bool beginSerial(SerialType &serial, uint32_t baud);
+  bool beginSerial(SerialType &serial, uint32_t baud, uint8_t instance = 0);
 
   template <typename SerialType>
-  bool connectSerial(SerialType &serial, uint32_t baud) {
-    return beginSerial(serial, baud);
+  bool connectSerial(SerialType &serial, uint32_t baud, uint8_t instance = 0) {
+    return beginSerial(serial, baud, instance);
   }
 
 #if OPX_TARGET_ESP32
-  bool beginWiFi(uint16_t port, uint32_t stackSize = 4096);
-  bool beginHttpServer(uint16_t port, uint32_t stackSize = 4096);
-  bool beginHttpClient(const char *host, uint16_t port);
+  bool beginWiFi(uint16_t port, uint8_t instance = 0,
+                 uint32_t stackSize = 4096);
+  bool beginHttpServer(uint16_t port, uint8_t instance = 0,
+                       uint32_t stackSize = 4096);
+  bool beginHttpClient(const char *host, uint16_t port, uint8_t instance = 0);
   bool connectWiFi(const char *host, uint16_t port,
                    uint8_t maxReconnectAttempts = 5,
-                   uint32_t reconnectDelayMs = 2000, uint32_t stackSize = 4096);
-  bool connectHttp(const char *host, uint16_t port);
+                   uint32_t reconnectDelayMs = 2000, uint8_t instance = 0,
+                   uint32_t stackSize = 4096);
+  bool connectHttp(const char *host, uint16_t port, uint8_t instance = 0);
 #endif
 
   bool addRawTransport(ITransport *transport, uint8_t id);
 
   // ── Transport Teardown ─────────────────────────────────────────────────────
-  void end(OpxDeviceTransportID id);
+  void end(OpxDeviceTransportCategory category, uint8_t instance = 0);
   void endAll();
 
   // ── Main Loop
@@ -221,7 +235,7 @@ private:
   struct TransportSlot {
     ITransport *transport = nullptr;
     IConnectable *connectable = nullptr;
-    OpxDeviceTransportID id;
+    uint8_t id = 0;
     bool active = false;
   };
 
@@ -260,16 +274,15 @@ private:
 
   // ── Transport slots
   // ───────────────────────────────────────────────────────────
-  static constexpr uint8_t MAX_DEVICE_TRANSPORTS = 3;
-  TransportSlot slots[MAX_DEVICE_TRANSPORTS];
+  TransportSlot slots[MAX_TRANSPORTS];
   uint8_t activeSlotCount = 0;
 
-  TransportSlot *findSlot(OpxDeviceTransportID id);
-  bool slotOccupied(OpxDeviceTransportID id) const;
+  TransportSlot *findSlot(uint8_t id);
+  bool slotOccupied(uint8_t id) const;
   bool hasAnyConnectedPeer() const;
-  bool addTransport(ITransport *transport, OpxDeviceTransportID id,
+  bool addTransport(ITransport *transport, uint8_t id,
                     IConnectable *connectable = nullptr);
-  void removeTransport(OpxDeviceTransportID id);
+  void removeTransport(uint8_t id);
 
   // ── Forwarding
   // ───────────────────────────────────────────────────────────────
@@ -360,15 +373,18 @@ private:
 
 // ── beginSerial() template definition ────────────────────────────────────────
 template <typename SerialType>
-bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud) {
-  if (slotOccupied(OpxDeviceTransportID::OPX_SERIAL)) {
-    LOG(LogLevel::OP_WARNING,
-        "OpxDevice: SERIAL slot already occupied. Call end(SERIAL) first.");
+bool OpxDevice::beginSerial(SerialType &serial, uint32_t baud,
+                            uint8_t instance) {
+  const uint8_t id =
+      opxComposeTransportID(OpxDeviceTransportCategory::OPX_SERIAL, instance);
+  if (slotOccupied(id)) {
+    LOG(LogLevel::OP_WARNING, "OpxDevice: SERIAL slot already occupied. Call "
+                              "end(SERIAL, instance) first.");
     return false;
   }
   auto *transport = new ArduinoSerialTransport<SerialType>(serial, baud);
   transport->begin();
-  return addTransport(transport, OpxDeviceTransportID::OPX_SERIAL);
+  return addTransport(transport, id);
 }
 
 // ── Protocol hook setters (inline — see note below) ──────────────────────────

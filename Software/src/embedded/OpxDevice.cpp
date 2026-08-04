@@ -29,7 +29,7 @@ void opxListenTask(void *param) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 OpxDevice::OpxDevice() {
-  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     slots[i].active = false;
     slots[i].transport = nullptr;
   }
@@ -78,13 +78,15 @@ void OpxDevice::ensureListenTaskStarted(uint32_t stackSize) {
 #endif
 
 #ifdef OPX_TARGET_ESP32
-bool OpxDevice::beginWiFi(uint16_t port, uint32_t stackSize) {
-  if (slotOccupied(OpxDeviceTransportID::OPX_WIFI)) {
+bool OpxDevice::beginWiFi(uint16_t port, uint8_t instance, uint32_t stackSize) {
+  const uint8_t id =
+      opxComposeTransportID(OpxDeviceTransportCategory::OPX_WIFI, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING, "OpxDevice: WIFI slot already occupied.");
     return false;
   }
   auto *transport = new EspWiFiTransport(port);
-  if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI, transport))
+  if (!addTransport(transport, id, transport))
     return false;
   ensureListenTaskStarted(stackSize);
   return true;
@@ -95,44 +97,53 @@ bool OpxDevice::addRawTransport(ITransport *transport, uint8_t id) {
   return tm.add(transport, id);
 }
 
-bool OpxDevice::beginHttpServer(uint16_t port, uint32_t stackSize) {
-  if (slotOccupied(OpxDeviceTransportID::OPX_HTTP)) {
+bool OpxDevice::beginHttpServer(uint16_t port, uint8_t instance,
+                                uint32_t stackSize) {
+  const uint8_t id =
+      opxComposeTransportID(OpxDeviceTransportCategory::OPX_HTTP, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING, "OpxDevice: HTTP slot already occupied.");
     return false;
   }
   auto *transport = new EspHttpTransport(port);
-  if (!addTransport(transport, OpxDeviceTransportID::OPX_HTTP))
+  if (!addTransport(transport, id))
     return false;
   ensureListenTaskStarted(stackSize);
   return true;
 }
 
-bool OpxDevice::beginHttpClient(const char *host, uint16_t port) {
-  if (slotOccupied(OpxDeviceTransportID::OPX_HTTP)) {
+bool OpxDevice::beginHttpClient(const char *host, uint16_t port,
+                                uint8_t instance) {
+  const uint8_t id =
+      opxComposeTransportID(OpxDeviceTransportCategory::OPX_HTTP, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING, "OpxDevice: HTTP slot already occupied.");
     return false;
   }
   auto *transport = new EspHttpTransport(host, port);
-  return addTransport(transport, OpxDeviceTransportID::OPX_HTTP);
+  return addTransport(transport, id);
 }
 
 bool OpxDevice::connectWiFi(const char *host, uint16_t port,
                             uint8_t maxReconnectAttempts,
-                            uint32_t reconnectDelayMs, uint32_t stackSize) {
-  if (slotOccupied(OpxDeviceTransportID::OPX_WIFI)) {
+                            uint32_t reconnectDelayMs, uint8_t instance,
+                            uint32_t stackSize) {
+  const uint8_t id =
+      opxComposeTransportID(OpxDeviceTransportCategory::OPX_WIFI, instance);
+  if (slotOccupied(id)) {
     LOG(LogLevel::OP_WARNING, "OpxDevice: WIFI slot already occupied.");
     return false;
   }
   auto *transport =
       new EspWiFiTransport(host, port, maxReconnectAttempts, reconnectDelayMs);
-  if (!addTransport(transport, OpxDeviceTransportID::OPX_WIFI, transport))
+  if (!addTransport(transport, id, transport))
     return false;
   ensureListenTaskStarted(stackSize);
   return true;
 }
 
-bool OpxDevice::connectHttp(const char *host, uint16_t port) {
-  return beginHttpClient(host, port);
+bool OpxDevice::connectHttp(const char *host, uint16_t port, uint8_t instance) {
+  return beginHttpClient(host, port, instance);
 }
 #endif // OPX_TARGET_ESP32
 
@@ -144,8 +155,8 @@ bool OpxDevice::connectHttp(const char *host, uint16_t port) {
 // Transport Teardown
 // ─────────────────────────────────────────────────────────────────────────────
 
-void OpxDevice::end(OpxDeviceTransportID id) {
-  removeTransport(id);
+void OpxDevice::end(OpxDeviceTransportCategory category, uint8_t instance) {
+  removeTransport(opxComposeTransportID(category, instance));
 #ifdef OPX_TARGET_ESP32
   bool cdncStillActive = false;
 #if OPX_CDNC_MASTER
@@ -161,7 +172,7 @@ void OpxDevice::endAll() {
 #ifdef OPX_TARGET_ESP32
   stopListenTask();
 #endif
-  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active) {
       tm.remove(static_cast<uint8_t>(slots[i].id));
       delete slots[i].transport;
@@ -593,16 +604,16 @@ CommunicationManager *OpxDevice::comms() { return cm; }
 // Internal Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-OpxDevice::TransportSlot *OpxDevice::findSlot(OpxDeviceTransportID id) {
-  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+OpxDevice::TransportSlot *OpxDevice::findSlot(uint8_t id) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active && slots[i].id == id)
       return &slots[i];
   }
   return nullptr;
 }
 
-bool OpxDevice::slotOccupied(OpxDeviceTransportID id) const {
-  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+bool OpxDevice::slotOccupied(uint8_t id) const {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (slots[i].active && slots[i].id == id)
       return true;
   }
@@ -610,7 +621,7 @@ bool OpxDevice::slotOccupied(OpxDeviceTransportID id) const {
 }
 
 bool OpxDevice::hasAnyConnectedPeer() const {
-  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (!slots[i].active)
       continue;
     if (slots[i].connectable) {
@@ -665,10 +676,10 @@ void OpxDevice::rewireHandlers() {
   }
 }
 
-bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id,
+bool OpxDevice::addTransport(ITransport *transport, uint8_t id,
                              IConnectable *connectable) {
   TransportSlot *slot = nullptr;
-  for (uint8_t i = 0; i < MAX_DEVICE_TRANSPORTS; i++) {
+  for (uint8_t i = 0; i < MAX_TRANSPORTS; i++) {
     if (!slots[i].active) {
       slot = &slots[i];
       break;
@@ -680,7 +691,7 @@ bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id,
     return false;
   }
   ensureCommunicationManager();
-  if (!tm.add(transport, static_cast<uint8_t>(id))) {
+  if (!tm.add(transport, id)) {
     LOG(LogLevel::OP_ERROR, "OpxDevice: TransportManager rejected transport.");
     delete transport;
     return false;
@@ -695,13 +706,13 @@ bool OpxDevice::addTransport(ITransport *transport, OpxDeviceTransportID id,
   return true;
 }
 
-void OpxDevice::removeTransport(OpxDeviceTransportID id) {
+void OpxDevice::removeTransport(uint8_t id) {
   TransportSlot *slot = findSlot(id);
   if (slot == nullptr) {
     LOG(LogLevel::OP_WARNING, "OpxDevice: end() called for inactive slot.");
     return;
   }
-  tm.remove(static_cast<uint8_t>(id));
+  tm.remove(id);
   delete slot->transport;
   slot->transport = nullptr;
   slot->active = false;
