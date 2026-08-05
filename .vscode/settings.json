@@ -1,0 +1,4 @@
+{
+  "cmake.sourceDirectory": "${workspaceFolder}/Software",
+  "python.analysis.extraPaths": ["Software/tools/Shared"]
+}

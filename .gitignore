@@ -72,7 +72,6 @@ Testing/
 # Editor files and directories
 
 # Visual Studio Code
-.vscode/
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -182,3 +181,5 @@ build/*.egg
 Software/manifests/*.yaml
 Software/manifests/*.yml
 !Software/manifests/example_device.yaml
+
+Software/stubs/
