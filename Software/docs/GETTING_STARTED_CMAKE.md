@@ -15,7 +15,7 @@ how the library works.
 
 - **CMake 3.16** or higher — [cmake.org/download](https://cmake.org/download/)
 - **Python 3** — [python.org/downloads](https://www.python.org/downloads/)
-- **pyyaml** — the only Python dependency
+- **pyyaml**, **questionary**, **rich** — Python dependencies for the tools
 - **Boost** (system component) — [boost.org](https://www.boost.org/)
 - **A C++17 compiler** — GCC, Clang, or MSVC
 - **Arduino IDE** (1.8.x or 2.x) or **Arduino CLI** — for flashing firmware
@@ -24,11 +24,15 @@ how the library works.
 
 ## Step 1 — Install dependencies
 
-### pyyaml
+### Python packages
 
 ```bash
-pip install pyyaml
+pip install pyyaml questionary rich
 ```
+
+(Once you've cloned the repo in [Step 2](#step-2--clone-the-repository), you
+can instead run `pip install -r tools/requirements.txt` from `Software/` —
+same three packages, listed there for convenience.)
 
 ### Boost
 
@@ -75,6 +79,8 @@ Software/
     └── SensorBoard.yaml
 ```
 
+### Option A — Write YAML by hand
+
 A fully documented example is available at
 `manifests/example_device.yaml`. Use it as a reference for the correct
 structure and all available options.
@@ -120,8 +126,20 @@ settings:
     type: UINT8
 ```
 
+### Option B — Author it interactively
+
+```bash
+cd tools
+python -m ManifestAuthoring ../manifests
+```
+
+This walks you through the same fields interactively, validating each one
+and showing a preview before writing anything. Either option produces the
+same kind of manifest.
+
 > **Remember:** every device in your project must have a unique `typeShift`
-> value between 0 and 31. See [Concepts](CONCEPTS.md#typeshift) for details.
+> value between 0 and 31, and a unique `device` name. See
+> [Concepts](CONCEPTS.md#typeshift) for details.
 
 ---
 
@@ -165,11 +183,31 @@ This copies:
 to `~/Arduino/libraries/Opx/src/` (or the equivalent path on your platform).
 
 > **Note:** Run `SyncArduinoLibrary` again any time you modify the library
-> source code or regenerate files from updated manifests.
+> source code or regenerate files from updated manifests. `sync_arduino.py`
+> (the plain-Python equivalent, no CMake required) does the same thing —
+> useful for first-time setup on a machine with no CMake at all, or if
+> you're developing the library's own C++ source directly.
 
 ---
 
 ## Step 6 — Write your embedded firmware
+
+### Option A — Generate a starting point with SessionBootstrap
+
+```bash
+cd tools
+python -m SessionBootstrap ../manifests ../stubs
+```
+
+It asks for a target (pick `esp32` or `avr`), which transport(s) this board
+uses, and whether it should forward frames between them. It always resolves
+or authors a manifest for it — every node needs its own `typeShift` and
+`register()` call, regardless of role — then asks which callback stubs you
+actually want generated; a purely-forwarding board can select none. The
+result is written to `stubs/<NodeName>/<NodeName>.ino`, along with the exact
+`cmake --build` commands to run afterward.
+
+### Option B — Write it by hand
 
 In your Arduino sketch:
 
@@ -181,7 +219,8 @@ OpxDevice device;
 void setup() {
     ArduinoLogger::begin(115200);
 
-    // Register your device (generated from your manifest)
+    // Register your device (generated from your manifest — sets its
+    // typeShift and registers its settings/telemetry)
     registerMotorBoard(device);
 
     // Start serial transport
@@ -204,39 +243,85 @@ void loop() {
 }
 ```
 
+Call `registerMotorBoard()` early in `setup()`, before opening any
+transports — see
+[Concepts: claiming your typeShift at runtime](CONCEPTS.md#claiming-your-typeshift-at-runtime)
+for why this matters even for a board that's only forwarding traffic.
+
 ---
 
 ## Step 7 — Write your PC application
 
-On the PC side, use `OpxSession` to connect to your devices:
+On the PC side, use `OpxSession` to connect to your devices. Just like an
+embedded device, your PC application always needs its own manifest and a
+`register()` call — even if all it does is send commands to other devices
+and read their telemetry. This applies regardless of role: OmniPlexus's
+architecture is fully symmetric, so every participant, PC or embedded,
+needs to properly announce itself and be tracked like any other device on
+the network. If your app genuinely has no commands, telemetry, or settings
+of its own, give it an `identityOnly` manifest instead of skipping
+`register()` — see [Concepts](CONCEPTS.md#claiming-your-typeshift-at-runtime).
+
+Generate this with
+[SessionBootstrap](CONCEPTS.md#bootstrapping-a-nodes-session-code--sessionbootstrap)
+(target `pc`), or wire it up by hand:
 
 ```cpp
+#include "autogen/pc/devices/PcController/PcControllerRegister.h"
 #include "opx/pc/core/OpxSession.h"
 #include "autogen/shared/devices/MotorBoard/MotorBoardController.h"
 #include "autogen/pc/DeviceManifest.h"
 
-int main() {
-    OpxSession session;
+#include <atomic>
+#include <chrono>
+#include <csignal>
+#include <thread>
 
-    // Add a serial transport
+std::atomic<bool> running{true};
+void handleSigint(int) { running = false; }
+
+OpxSession session;
+
+int main() {
+    std::signal(SIGINT, handleSigint);
+
+    // Claims this app's own identity — required even though everything
+    // below is just controlling another device (MotorBoard), not
+    // handling commands addressed to this app itself.
+    registerPcController(session);
+
     session.connectSerial("/dev/ttyUSB0", 115200);
 
     // Get a typed controller for the MotorBoard
-    auto* motor = session.getDevice<MotorBoardController>();
+    auto& motor = session.getDevice<MotorBoardController>();
+    motor.setSpeed(-200);
 
-    // Send a command
-    motor->setSpeed(-200);
-
-    // Listen for telemetry
     session.onTelemetry([](const Telemetry& t, uint8_t transportID) {
         if (t.sourceID == TelemetrySource::MotorBoardTelemetrySource::CURRENT_SPEED) {
             // Handle telemetry
         }
     });
 
-    session.run();
+    // OpxSession runs its listen/processing threads internally once a
+    // transport is added — there's no run() to call. This loop just
+    // keeps main() alive until Ctrl+C.
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
     return 0;
 }
+```
+
+If your PC app should also *receive* its own commands (not just control
+other devices), register the handler the same way you would on an
+embedded device:
+
+```cpp
+session.onCommand([](const Command& cmd, uint8_t seqNum, uint8_t transportID) {
+    if (cmd.commandType == PcControllerCommandType::SOME_COMMAND) {
+        // Handle it
+    }
+});
 ```
 
 Link your PC application against the OmniPlexus library in your
@@ -283,8 +368,8 @@ After setup your `Software/` folder will look like this:
 
 ```
 Software/
-├── manifests/              ← your YAML device manifests (gitignored except example)
-├── autogen/                ← generated C++ files (gitignored, always regenerated)
+├── manifests/               ← your YAML device manifests (gitignored except example)
+├── autogen/                 ← generated C++ files (gitignored, always regenerated)
 │   ├── shared/
 │   │   ├── CommandTypes.h
 │   │   ├── CommandPacker.h
@@ -302,9 +387,10 @@ Software/
 │   │           └── MotorBoardRegister.h
 │   └── pc/
 │       └── DeviceManifest.h
-├── include/opx/            ← library headers
-├── src/                    ← library source files
-├── tools/                  ← generator tool
+├── stubs/                   ← generated session-bootstrap starting points (gitignored)
+├── include/opx/             ← library headers
+├── src/                     ← library source files
+├── tools/                   ← CommandGenerator, ManifestAuthoring, SessionBootstrap, Shared
 ├── CMakeLists.txt
 ├── generate_for_arduino.py
 └── sync_arduino.py
@@ -329,6 +415,17 @@ Run `--validate-only` to see the specific validation error:
 python tools/CommandGenerator/generate.py --validate-only manifests/
 ```
 
+**`ModuleNotFoundError: No module named 'questionary'` (or `rich`)**
+You only need these two if you're using ManifestAuthoring or
+SessionBootstrap interactively — `GenerateCommands` itself only strictly
+needs `pyyaml` and `rich` (used for its own validation output). Either way,
+`pip install questionary rich` fixes it.
+
+**Running `python -m ManifestAuthoring` or `python -m SessionBootstrap` fails
+with an import error**
+These must be run from inside `Software/tools/`, not the repo root —
+`cd tools` first.
+
 **Arduino sketch does not compile after sync**
 Make sure you ran both `GenerateCommands` and `SyncArduinoLibrary` after
 your last manifest change. Check that the Arduino IDE has refreshed its
@@ -338,6 +435,10 @@ library cache (restarting the IDE forces a refresh).
 Make sure your PC application's `CMakeLists.txt` links against
 `OmniPlexus::OmniPlexus` and that `find_package(OmniPlexus)` points at
 the correct build or install directory.
+
+**Board never shows as connected / peers never see it**
+Make sure `register<DeviceName>()` is actually being called — see
+[Concepts: claiming your typeShift at runtime](CONCEPTS.md#claiming-your-typeshift-at-runtime).
 
 ---
 
