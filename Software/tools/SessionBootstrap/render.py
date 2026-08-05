@@ -1,0 +1,348 @@
+#
+# render.py
+# Turns a stub config dict into actual .ino/.cpp source text. This is the
+# one file that has to match OpxDevice's/OpxSession's real method
+# signatures exactly.
+#
+# Both paths below are grounded in verified, compiled source:
+# - embedded (OpxDevice, esp32/avr): includes the asymmetric stack_size
+#   handling (WiFi server+client and HTTP server take it; HTTP client
+#   does not, since it never starts the ESP32 listen task).
+# - pc (OpxSession): note it has NO stack_size anywhere (std::thread, not
+#   FreeRTOS), NO forwardBetween() at all (gated in forwarding.py, not
+#   here — see its device_class check), and its callback types are
+#   std::function-based with no void* context parameter, unlike
+#   OpxDevice's C-style function pointers. connectSerial() takes a
+#   filesystem port path string, not an object reference.
+
+from __future__ import annotations
+
+
+def _wifi_begin_call(t: dict) -> str:
+    instance = t["instance"]
+    if t["mode"] == "server":
+        stack = t.get("stack_size", 4096)
+        if instance == 0 and stack == 4096:
+            return f"device.beginWiFi({t['port']});"
+        return f"device.beginWiFi({t['port']}, {instance}, {stack});"
+
+    attempts = t.get("max_reconnect_attempts", 5)
+    delay = t.get("reconnect_delay_ms", 2000)
+    stack = t.get("stack_size", 4096)
+    return (
+        f'device.connectWiFi("{t["host"]}", {t["port"]}, '
+        f"{attempts}, {delay}, {instance}, {stack});"
+    )
+
+
+def _http_begin_call(t: dict) -> str:
+    instance = t["instance"]
+    if t["mode"] == "server":
+        stack = t.get("stack_size", 4096)
+        if instance == 0 and stack == 4096:
+            return f"device.beginHttpServer({t['port']});"
+        return f"device.beginHttpServer({t['port']}, {instance}, {stack});"
+
+    if instance == 0:
+        return f'device.connectHttp("{t["host"]}", {t["port"]});'
+    return f'device.connectHttp("{t["host"]}", {t["port"]}, {instance});'
+
+
+def _serial_global_decl(t: dict) -> str | None:
+    """SoftwareSerial instances need a global object declared above
+    setup(); HardwareSerial (Serial1 etc.) already exists as a global
+    from the Arduino core, so nothing to declare."""
+    if t.get("serial_kind") != "software":
+        return None
+    return f"SoftwareSerial {t['serial_object']}({t['rx_pin']}, {t['tx_pin']});"
+
+
+def _serial_begin_call(t: dict) -> str:
+    obj = t["serial_object"]
+    instance = t["instance"]
+    if instance == 0:
+        return f"device.beginSerial({obj}, {t['baud']});"
+    return f"device.beginSerial({obj}, {t['baud']}, {instance});"
+
+
+def _transport_id_expr(t: dict) -> str:
+    category_enum = {
+        "wifi": "OpxDeviceTransportCategory::OPX_WIFI",
+        "serial": "OpxDeviceTransportCategory::OPX_SERIAL",
+        "http": "OpxDeviceTransportCategory::OPX_HTTP",
+    }[t["category"]]
+    return f"opxComposeTransportID({category_enum}, {t['instance']})"
+
+
+_CALLBACK_SIGNATURES = {
+    "onCommand": "void onCommand(const Command &cmd, const uint8_t &seqNum, uint8_t sourceTransportID, void *context)",
+    "onResponse": "void onResponse(const CommandResponse &response, uint8_t sourceTransportID, void *context)",
+    "onTelemetry": "void onTelemetry(const Telemetry &telemetry, uint8_t sourceTransportID, void *context)",
+    "onSetting": "void onSetting(const SettingsData &setting, uint8_t sourceTransportID, void *context)",
+    # OpxDevice-only — no connection-lost tracking exists on OpxSession at all.
+    "onConnectionLost": "void onConnectionLost()",
+    # DeviceRegistry::DeviceConnectedCallback / DeviceDisconnectedCallback —
+    # identical signature on both classes (C-style, not std::function).
+    "onDeviceConnected": "void onDeviceConnected(uint8_t typeShift, uint8_t transportID, void *context)",
+    "onDeviceDisconnected": "void onDeviceDisconnected(uint8_t typeShift, uint8_t transportID, void *context)",
+    # ProtocolCommandHook (OpxDevice) — takes a trailing context, unlike
+    # OpxSession's std::function-based equivalent below.
+    "onDiscover": "void onDiscover(const Command &cmd, uint8_t sourceTransportID, void *context)",
+    "onAnnounce": "void onAnnounce(const Command &cmd, uint8_t sourceTransportID, void *context)",
+    "onHeartbeat": "void onHeartbeat(const Command &cmd, uint8_t sourceTransportID, void *context)",
+    "onHeartbeatAck": "void onHeartbeatAck(const Command &cmd, uint8_t sourceTransportID, void *context)",
+    # SettingsManager::SettingChangedCallback — identical on both classes.
+    "onAnySettingChanged": "void onAnySettingChanged(uint16_t settingID, const ValueSource &newValue, void *context)",
+}
+
+
+def _render_embedded(config: dict) -> str:
+    lines: list[str] = []
+    node = config["node_name"]
+    target = config["target"]
+    transports = config["transports"]
+    identity = config.get("identity")
+
+    lines += [
+        "//",
+        f"// {node}.ino",
+        "// Generated by OmniPlexus SessionBootstrap — starting point,",
+        "// safe to hand-edit from here on.",
+        "//",
+        "",
+        "#include <Opx.h>",
+    ]
+    # No explicit include for {DeviceName}Register.h needed here — Opx.h
+    # already pulls in OpxDevices.h, which includes every device's
+    # Register.h transitively. This is Arduino-specific convenience;
+    # the pc path below needs an explicit include since it has no such
+    # umbrella header.
+
+    if any(
+        t["category"] == "serial" and t.get("serial_kind") == "software"
+        for t in transports
+    ):
+        lines.append("#include <SoftwareSerial.h>")
+
+    if target == "esp32" and any(t["category"] == "wifi" for t in transports):
+        lines.append("#include <WiFi.h>")
+
+    lines += ["", "OpxDevice device;"]
+
+    for t in transports:
+        if t["category"] == "serial":
+            decl = _serial_global_decl(t)
+            if decl:
+                lines.append(decl)
+
+    lines.append("")
+
+    if identity:
+        for cb in identity["callbacks"]:
+            lines.append(f"{_CALLBACK_SIGNATURES[cb]} {{")
+            lines.append(f"  // TODO: handle {cb}")
+            lines.append("}")
+            lines.append("")
+
+    lines.append("void setup() {")
+    lines.append("  Serial.begin(115200);")
+    lines.append("")
+
+    wifi_creds = config.get("wifi_credentials")
+    if wifi_creds:
+        lines += [
+            f'  WiFi.begin("{wifi_creds["ssid"]}", "{wifi_creds["password"]}");',
+            "  while (WiFi.status() != WL_CONNECTED) {",
+            "    delay(500);",
+            '    Serial.print(".");',
+            "  }",
+            '  Serial.println("\\nWiFi connected.");',
+            '  Serial.print("IP address: ");',
+            "  Serial.println(WiFi.localIP());",
+            "",
+        ]
+
+    if identity:
+        # register{DeviceName}() (from CommandGenerator's register.py output)
+        # already calls setTypeShift() internally, plus registers this
+        # device's settings/telemetry (or just claims the typeShift, if
+        # the manifest is identityOnly) — so no separate setTypeShift()
+        # call is needed here.
+        lines.append(f"  register{identity['device_name']}(device);")
+        for cb in identity["callbacks"]:
+            lines.append(f"  device.{cb}({cb});")
+        lines.append("")
+
+    for t in transports:
+        if t["category"] == "serial":
+            lines.append(f"  {_serial_begin_call(t)}")
+        elif t["category"] == "wifi":
+            lines.append(f"  {_wifi_begin_call(t)}")
+        elif t["category"] == "http":
+            lines.append(f"  {_http_begin_call(t)}")
+
+    for from_t, to_t in config.get("forwarding_pairs", []):
+        lines.append(
+            f"  device.forwardBetween({_transport_id_expr(from_t)}, "
+            f"{_transport_id_expr(to_t)});"
+        )
+
+    lines += ["}", "", "void loop() {", "  device.update();", "}", ""]
+
+    return "\n".join(lines)
+
+
+_PC_CALLBACK_SIGNATURES = {
+    # OpxSession's handler types are std::function-based with NO void*
+    # context parameter — a genuinely different shape from OpxDevice's
+    # C-style function pointers above, not just a naming difference.
+    "onCommand": "void onCommand(const Command &cmd, uint8_t seqNum, uint8_t sourceTransportID)",
+    "onResponse": "void onResponse(const CommandResponse &response, uint8_t sourceTransportID)",
+    "onTelemetry": "void onTelemetry(const Telemetry &telemetry, uint8_t sourceTransportID)",
+    "onSetting": "void onSetting(const SettingsData &setting, uint8_t sourceTransportID)",
+    # ProtocolCommandHook on OpxSession — std::function-based, no context,
+    # unlike OpxDevice's version of the same four hooks above.
+    "onDiscover": "void onDiscover(const Command &cmd, uint8_t sourceTransportID)",
+    "onAnnounce": "void onAnnounce(const Command &cmd, uint8_t sourceTransportID)",
+    "onHeartbeat": "void onHeartbeat(const Command &cmd, uint8_t sourceTransportID)",
+    "onHeartbeatAck": "void onHeartbeatAck(const Command &cmd, uint8_t sourceTransportID)",
+    # DeviceRegistry::DeviceConnectedCallback / DeviceDisconnectedCallback —
+    # these two specifically ARE C-style with a context param, even on
+    # OpxSession (they don't use the std::function handler types above).
+    "onDeviceConnected": "void onDeviceConnected(uint8_t typeShift, uint8_t transportID, void *context)",
+    "onDeviceDisconnected": "void onDeviceDisconnected(uint8_t typeShift, uint8_t transportID, void *context)",
+    # SettingsManager::SettingChangedCallback — same C-style type on both classes.
+    "onAnySettingChanged": "void onAnySettingChanged(uint16_t settingID, const ValueSource &newValue, void *context)",
+}
+
+
+def _pc_wifi_call(t: dict) -> str:
+    instance = t["instance"]
+    if t["mode"] == "server":
+        if instance == 0:
+            return f"session.beginWiFi({t['port']});"
+        return f"session.beginWiFi({t['port']}, {instance});"
+
+    attempts = t.get("max_reconnect_attempts", 5)
+    delay = t.get("reconnect_delay_ms", 2000)
+    return f'session.connectWiFi("{t["host"]}", {t["port"]}, {attempts}, {delay}, {instance});'
+
+
+def _pc_http_call(t: dict) -> str:
+    instance = t["instance"]
+    if t["mode"] == "server":
+        if instance == 0:
+            return f"session.beginHttpServer({t['port']});"
+        return f"session.beginHttpServer({t['port']}, {instance});"
+
+    # OpxSession has only connectHttp for the client case — no separate
+    # beginHttpClient alias like OpxDevice has.
+    if instance == 0:
+        return f'session.connectHttp("{t["host"]}", {t["port"]});'
+    return f'session.connectHttp("{t["host"]}", {t["port"]}, {instance});'
+
+
+def _pc_serial_call(t: dict) -> str:
+    # OpxSession::connectSerial(const char *port, uint32_t baudRate,
+    # instance) — a filesystem port path, not an object reference. There
+    # is no begin/connect split for PC serial, only connectSerial.
+    instance = t["instance"]
+    if instance == 0:
+        return f'session.connectSerial("{t["port_path"]}", {t["baud"]});'
+    return f'session.connectSerial("{t["port_path"]}", {t["baud"]}, {instance});'
+
+
+def _render_pc(config: dict) -> str:
+    lines: list[str] = []
+    node = config["node_name"]
+    transports = config["transports"]
+    identity = config.get("identity")
+
+    lines += [
+        "//",
+        f"// {node}.cpp",
+        "// Generated by OmniPlexus SessionBootstrap — starting point,",
+        "// safe to hand-edit from here on.",
+        "//",
+        "",
+    ]
+
+    if identity:
+        # PC has no umbrella header like Opx.h — this include is required,
+        # unlike the embedded path where it's pulled in transitively.
+        device_name = identity["device_name"]
+        lines.append(
+            f'#include "autogen/pc/devices/{device_name}/{device_name}Register.h"'
+        )
+
+        # A callback that inspects cmd.commandType/sourceID against generated
+        # constants needs the matching autogen header — gated on exactly
+        # which callbacks were selected, since a pass-through-only node
+        # never touches these types directly.
+        cbs = set(identity["callbacks"])
+        if "onCommand" in cbs or "onResponse" in cbs:
+            lines.append('#include "autogen/shared/CommandTypes.h"')
+        if "onTelemetry" in cbs:
+            lines.append('#include "autogen/shared/TelemetrySourceIDs.h"')
+        if "onSetting" in cbs:
+            lines.append('#include "autogen/shared/SettingIDs.h"')
+
+    lines += [
+        '#include "opx/pc/core/OpxSession.h"',
+        "#include <chrono>",
+        "#include <thread>",
+        "",
+        "OpxSession session;",
+        "",
+    ]
+
+    if identity:
+        for cb in identity["callbacks"]:
+            lines.append(f"{_PC_CALLBACK_SIGNATURES[cb]} {{")
+            lines.append(f"  // TODO: handle {cb}")
+            lines.append("}")
+            lines.append("")
+
+    lines.append("int main() {")
+
+    if identity:
+        # register{DeviceName}() already calls setTypeShift() internally
+        # (plus settings/telemetry registration, or just the typeShift
+        # claim if identityOnly) — matches the real working example,
+        # called right after construction, before transport connects.
+        lines.append(f"  register{identity['device_name']}(session);")
+        for cb in identity["callbacks"]:
+            lines.append(f"  session.{cb}({cb});")
+        lines.append("")
+
+    for t in transports:
+        if t["category"] == "serial":
+            lines.append(f"  {_pc_serial_call(t)}")
+        elif t["category"] == "wifi":
+            lines.append(f"  {_pc_wifi_call(t)}")
+        elif t["category"] == "http":
+            lines.append(f"  {_pc_http_call(t)}")
+
+    lines += [
+        "",
+        "  // OpxSession runs its listen/processing threads internally once a",
+        "  // transport is added — nothing needs polling here. This block just",
+        "  // keeps main() alive; it's a starting-point guess, not grounded in",
+        "  // an existing PC main.cpp convention from this project, so replace",
+        "  // it with your actual application logic.",
+        "  while (true) {",
+        "    std::this_thread::sleep_for(std::chrono::seconds(1));",
+        "  }",
+        "",
+        "  return 0;",
+        "}",
+        "",
+    ]
+
+    return "\n".join(lines)
+
+
+def render_stub(config: dict) -> str:
+    if config["target"] == "pc":
+        return _render_pc(config)
+    return _render_embedded(config)

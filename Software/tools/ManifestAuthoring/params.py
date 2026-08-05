@@ -20,14 +20,16 @@ from .identifiers import check_identifier, warn_if_not_upper_snake
 DEFAULT_MAX_PARAMS = 3
 
 
-def build_param(param_index: int, has_optional_already: bool) -> dict:
+def build_param(
+    param_index: int, has_optional_already: bool, existing_names: set[str]
+) -> dict:
     """Build and confirm a single command parameter."""
     while True:
         name = prompt_text(
             "  Param name",
-            validator=check_identifier,
-            error_msg="Must start with a letter/underscore and contain only "
-            "letters, digits, and underscores.",
+            validator=lambda n: check_identifier(n) and n not in existing_names,
+            error_msg="Must be a valid identifier not already used by "
+            "another param on this command.",
         )
         warn_if_not_upper_snake(name, "param name")
 
@@ -74,6 +76,7 @@ def build_params(max_params: int = DEFAULT_MAX_PARAMS) -> list[dict]:
     rule live rather than deferring to validate()."""
     params: list[dict] = []
     has_optional = False
+    existing_names: set[str] = set()
 
     if not prompt_confirm("Does this command take any parameters?", default=False):
         return params
@@ -83,8 +86,9 @@ def build_params(max_params: int = DEFAULT_MAX_PARAMS) -> list[dict]:
             print(f"  Reached the {max_params}-param limit for a command.")
             break
 
-        param = build_param(len(params), has_optional)
+        param = build_param(len(params), has_optional, existing_names)
         params.append(param)
+        existing_names.add(param["name"])
         if not param["required"]:
             has_optional = True
 
