@@ -51,11 +51,20 @@ def print_running_list(label: str, items: list[str]) -> None:
     console.print(f"[dim]{label}: {', '.join(items)}[/dim]")
 
 
+def print_code(text: str, lexer: str = "text") -> None:
+    """Syntax-highlighted code preview for the given rich/pygments lexer
+    name (e.g. 'yaml', 'cpp')."""
+    console.print(Syntax(text, lexer, theme="monokai", background_color="default"))
+
+
 def print_yaml(yaml_text: str) -> None:
     """Syntax-highlighted YAML preview."""
-    console.print(
-        Syntax(yaml_text, "yaml", theme="monokai", background_color="default")
-    )
+    print_code(yaml_text, "yaml")
+
+
+def print_cpp(cpp_text: str) -> None:
+    """Syntax-highlighted C++ preview."""
+    print_code(cpp_text, "cpp")
 
 
 def print_line(text: str, style: str = "") -> None:

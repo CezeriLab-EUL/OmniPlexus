@@ -116,6 +116,26 @@ def validate_param_ordering(
         )
 
 
+def validate_param_names_unique(
+    params: list, cmd_name: str, result: ValidationResult
+) -> None:
+    """Validate that no two params within the same command share a name.
+    Params are scoped per-command (unlike command names/ids, which are
+    checked device-wide in validate_commands) — two different commands
+    can each have a param named e.g. SPEED without conflict."""
+    seen_names: set[str] = set()
+    for param in params:
+        name = param.get("name")
+        if not isinstance(name, str) or not name:
+            continue  # already flagged by validate_param
+        if name in seen_names:
+            result.add_error(
+                f"Command '{cmd_name}' has duplicate param name '{name}' "
+                f"— params must have unique names within a command"
+            )
+        seen_names.add(name)
+
+
 def validate_commands(
     data: dict,
     result: ValidationResult,
@@ -187,6 +207,7 @@ def validate_commands(
             validate_param(param, name, j, result)
 
         validate_param_ordering(cmd["params"], name, result, max_optional)
+        validate_param_names_unique(cmd["params"], name, result)
 
         # ── description ───────────────────────────────────────────────────────
         if not cmd.get("description"):

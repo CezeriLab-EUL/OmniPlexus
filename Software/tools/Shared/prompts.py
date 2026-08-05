@@ -1,5 +1,7 @@
 #
-# Interactive prompting primitives shared by ManifestAuthoring. Supports the following set of operations (text entry
+# Interactive prompting primitives shared by ManifestAuthoring and (later)
+# the session-bootstrap tool, built on questionary. This replaces the old
+# input()-based io_helpers.py — the same set of operations (text entry
 # with inline validation, yes/no with Enter-to-accept-default, single
 # choice from a list, an ID prompt with a pre-computed suggestion) but
 # with arrow-key selection and inline re-editable validation instead of
@@ -71,6 +73,35 @@ def prompt_int(
 
     result = questionary.text(f"{label}:", validate=_validate).ask()
     return int(_unwrap(result).strip())
+
+
+def prompt_int_with_default(
+    label: str,
+    default: int,
+    min_val: int | None = None,
+    max_val: int | None = None,
+) -> int:
+    """Prompt for an integer with a pre-filled default; Enter accepts it.
+    Same Enter-to-accept convention as prompt_id_with_suggestion, for
+    non-ID integer fields (e.g. reconnect attempts, stack size)."""
+
+    def _validate(text: str) -> bool | str:
+        text = text.strip()
+        if text == "":
+            return True
+        try:
+            value = int(text)
+        except ValueError:
+            return "Please enter a whole number."
+        if min_val is not None and value < min_val:
+            return f"Must be >= {min_val}."
+        if max_val is not None and value > max_val:
+            return f"Must be <= {max_val}."
+        return True
+
+    result = questionary.text(f"{label} [default: {default}]:", validate=_validate).ask()
+    result = _unwrap(result).strip()
+    return default if result == "" else int(result)
 
 
 def prompt_confirm(label: str, default: bool = True) -> bool:
@@ -148,11 +179,24 @@ def prompt_optional_float(label: str) -> float | None:
             return "Please enter a number (or leave blank to skip)."
         return True
 
-    result = questionary.text(
-        f"{label} (optional, Enter to skip):", validate=_validate
-    ).ask()
+    result = questionary.text(f"{label} (optional, Enter to skip):", validate=_validate).ask()
     result = _unwrap(result).strip()
     return float(result) if result else None
+
+
+def prompt_multi_select(
+    label: str, options: list[str], default_selected: list[str] | None = None
+) -> list[str]:
+    """Prompt the user to pick zero or more options via a checkbox menu
+    (space to toggle, Enter to confirm). default_selected pre-checks the
+    given option values."""
+    default_selected = default_selected or []
+    choices = [
+        questionary.Choice(title=opt, checked=(opt in default_selected))
+        for opt in options
+    ]
+    result = questionary.checkbox(label, choices=choices).ask()
+    return _unwrap(result)
 
 
 def confirm_shape(label: str, shape: dict) -> bool:

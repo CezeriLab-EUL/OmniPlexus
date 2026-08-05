@@ -13,6 +13,27 @@ from utils import (
 def validate_cross_device(all_data: list[dict], result: ValidationResult) -> None:
     """Validate across all devices for typeShift and ID collisions."""
 
+    # ── device name uniqueness ────────────────────────────────────────────────
+    # Without this check, two manifests sharing a device name pass every
+    # other check cleanly, but generate.py's per-device output files are
+    # keyed by device name in a plain dict — the second device's generated
+    # controller/registration files silently overwrite the first's, with
+    # no error or warning anywhere.
+    seen_device_names: set[str] = set()
+
+    for data in all_data:
+        if "device" not in data:
+            continue
+        device_name = data["device"]
+
+        if device_name in seen_device_names:
+            result.add_error(
+                f"Duplicate device name '{device_name}' — two manifests "
+                f"both declare this device. Each manifest must have a "
+                f"unique 'device' name."
+            )
+        seen_device_names.add(device_name)
+
     # ── typeShift uniqueness ──────────────────────────────────────────────────
     seen_shifts: dict[int, str] = {}
 
