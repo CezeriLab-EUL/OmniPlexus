@@ -81,7 +81,7 @@ settings:
     type: UINT16
 ```
 
-A complete working example is available in `manifests/example_device.yaml`.
+A complete working example is available in `manifests/ExampleDevice.yaml`.
 
 ---
 

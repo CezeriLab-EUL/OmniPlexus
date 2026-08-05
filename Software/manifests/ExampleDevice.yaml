@@ -8,6 +8,7 @@
 #   - command/telemetry/setting names: UPPER_SNAKE_CASE
 #   - param types: UINT8, INT8, UINT16, INT16, UINT32, INT32, FLOAT, STRING
 #   - id values: start from 1, must be unique within each section
+#   - identityOnly: true if this device only needs to be identified, and will not send/receive commands or telemetry
 # ─────────────────────────────────────────────────────────────────────────────
 
 version: "1.0"

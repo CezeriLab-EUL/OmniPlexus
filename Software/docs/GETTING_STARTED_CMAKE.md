@@ -82,7 +82,7 @@ Software/
 ### Option A — Write YAML by hand
 
 A fully documented example is available at
-`manifests/example_device.yaml`. Use it as a reference for the correct
+`manifests/ExampleDevice.yaml`. Use it as a reference for the correct
 structure and all available options.
 
 Here is a minimal example:
@@ -312,7 +312,7 @@ int main() {
 }
 ```
 
-If your PC app should also *receive* its own commands (not just control
+If your PC app should also _receive_ its own commands (not just control
 other devices), register the handler the same way you would on an
 embedded device:
 
@@ -446,7 +446,7 @@ Make sure `register<DeviceName>()` is actually being called — see
 
 - Read the full [Concepts](CONCEPTS.md) page for details on triggers,
   param types, and manifest rules
-- See `manifests/example_device.yaml` for a complete manifest with all
+- See `manifests/ExampleDevice.yaml` for a complete manifest with all
   supported features documented inline
 - For embedded-only development without CMake, see the
   [Arduino guide](GETTING_STARTED_ARDUINO.md)
