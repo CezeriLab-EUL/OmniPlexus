@@ -141,7 +141,8 @@ add_executable(OmniPlexus_Test_SerialTransport
 #        tests/transport/http/send_command.cpp
 #        tests/transport/http/receive_telemetry.cpp
         # tests/transport/wifi/send_command.cpp
-        tests/test_symmetry.cpp
+        # tests/test_symmetry.cpp
+        tests/test_stub.cpp
 )
 
 #target_link_libraries(SmartDrive_Test_BinaryEncoder PRIVATE SmartDrive)

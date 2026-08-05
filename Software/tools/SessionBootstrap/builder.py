@@ -85,4 +85,41 @@ def review_and_write(config: dict, stubs_folder: str) -> bool:
 
     write_file(out_path, source)
     print_success(f"\u2713 Wrote: {out_path}")
+    _print_next_steps(config, out_path)
     return True
+
+
+def _print_next_steps(config: dict, out_path: str) -> None:
+    print_header("Next steps")
+
+    if config["target"] == "pc":
+        print("\n1. Regenerate the library's generated headers (if a manifest was added):")
+        print("     cmake --build . --target GenerateCommands")
+        print("     (or just rebuild — it's part of ALL)")
+        print(f"\n2. Build and run: {out_path}")
+        print("   PC targets need a build system — this project's CMakeLists.txt")
+        print("   is what sets that up; wire the .cpp into your own build if you're")
+        print("   not using it.")
+    else:
+        print("\n1. Regenerate the library's generated headers (if a manifest was added).")
+        print("   Pick whichever you actually use:")
+        print("     CMake:     cmake --build . --target GenerateCommands")
+        print("                then: cmake --build . --target SyncArduinoLibrary")
+        print(
+            "     No CMake:  python generate_for_arduino.py   (from the Software/ repo root)"
+        )
+        print("                — writes straight into your Arduino library folder;")
+        print("                  no separate sync needed for a manifest-only change")
+        print("                  like this one.")
+        print(f"\n2. Open and upload: {out_path}")
+        print(
+            "\n   First time setting up this library on this machine? Also run "
+            "sync_arduino.py once"
+        )
+        print(
+            "   (or the CMake SyncArduinoLibrary target) — that copies the core "
+            "library files themselves,"
+        )
+        print("   not just the generated ones.")
+
+    print()
