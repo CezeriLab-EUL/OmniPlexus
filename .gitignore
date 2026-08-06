@@ -180,6 +180,6 @@ build/*.egg
 # Manifests — ignore all device files except the example
 Software/manifests/*.yaml
 Software/manifests/*.yml
-!Software/manifests/example_device.yaml
+!Software/manifests/ExampleDevice.yaml
 
 Software/stubs/
