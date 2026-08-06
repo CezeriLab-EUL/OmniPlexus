@@ -86,7 +86,7 @@ my_robot/
 ### Option A — Write YAML by hand
 
 A fully documented example is available at
-`OmniPlexus/Software/manifests/ExampleDevice.yaml`. Use it as a reference
+`OmniPlexus/Software/manifests/examples/ExampleDevice.yaml`. Use it as a reference
 for the correct structure and all available options.
 
 Here is a minimal example to get started:
@@ -315,6 +315,6 @@ see [Concepts: claiming your typeShift at runtime](CONCEPTS.md#claiming-your-typ
 
 - Read the full [Concepts](CONCEPTS.md) page for details on triggers,
   param types, and manifest rules
-- See `manifests/ExampleDevice.yaml` for a complete manifest with all
+- See `manifests/examples/ExampleDevice.yaml` for a complete manifest with all
   supported features documented inline
 - For PC-side development, see the [CMake guide](GETTING_STARTED_CMAKE.md)
